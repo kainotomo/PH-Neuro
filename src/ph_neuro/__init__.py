@@ -2,6 +2,7 @@
 
 __version__ = "0.1.0.dev0"
 
+from ph_neuro.core.activation import ternary_sign
 from ph_neuro.core.hebbian_rules import (
     anti_hebbian_update,
     bcm_update,
@@ -27,6 +28,7 @@ __all__ = [
     # Core
     "TernaryTensor",
     "LatentScoreTensor",
+    "ternary_sign",
     "hebbian_update",
     "anti_hebbian_update",
     "oja_update",

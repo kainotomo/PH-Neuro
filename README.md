@@ -62,13 +62,43 @@ trainer.fit(train_loader, epochs=10)
 
 ---
 
+## Testing
+
+Run the full test suite from the project root:
+
+```bash
+.venv/bin/python -m pytest tests/ -v
+```
+
+Or individual test files:
+
+```bash
+# Ternary activation function (ternary_sign)
+.venv/bin/python -m pytest tests/core/test_activation.py -v
+
+# TernaryTensor storage (naive + packed modes)
+.venv/bin/python -m pytest tests/core/test_ternary_tensor.py -v
+
+# Weight packing utilities
+.venv/bin/python -m pytest tests/utils/test_packing.py -v
+
+# Latent scores and Hebbian rules
+.venv/bin/python -m pytest tests/core/test_latent_scores.py -v
+.venv/bin/python -m pytest tests/core/test_hebbian_rules.py -v
+
+# Hebbian linear layer
+.venv/bin/python -m pytest tests/layers/test_linear.py -v
+```
+
+---
+
 ## Roadmap
 
 See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full development plan.
 
 | Phase | Milestone | Status |
 |-------|-----------|--------|
-| 0 | Core Mechanism — MNIST >95% | 🔴 Not started |
+| 0 | Core Mechanism — MNIST >95% | � In progress |
 | 1 | Vision POC — CIFAR-10 + Continual Learning | 🔴 Not started |
 | 2 | Multi-Layer & Hierarchical Representations | 🔴 Not started |
 | 3 | First Language Model — TinyStories | 🔴 Not started |
