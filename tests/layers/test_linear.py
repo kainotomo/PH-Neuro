@@ -63,3 +63,54 @@ class TestTernaryHebbianLinear:
         assert "784" in r
         assert "10" in r
         assert "5.0" in r or "5" in r
+
+    # --- Freeze / unfreeze tests ---
+
+    def test_requires_hebbian_false_prevents_update(self):
+        """Freezing should make hebbian_update a no-op."""
+        layer = TernaryHebbianLinear(5, 3)
+        layer.requires_hebbian_(False)
+        old_scores = layer._latent_scores.scores.clone()
+
+        pre = torch.tensor([[1, 0, -1, 1, 0]], dtype=torch.int8)
+        post = torch.tensor([[1, -1, 0]], dtype=torch.int8)
+        layer.hebbian_update(pre, post, lr=10.0)
+
+        assert torch.equal(layer._latent_scores.scores, old_scores), (
+            "Scores should not change when Hebbian learning is disabled"
+        )
+
+    def test_requires_hebbian_false_prevents_decay(self):
+        """Freezing should make apply_decay a no-op."""
+        layer = TernaryHebbianLinear(5, 3)
+        layer.requires_hebbian_(False)
+        old_scores = layer._latent_scores.scores.clone()
+
+        layer.apply_decay(decay_rate=1.0)  # would zero out scores
+
+        assert torch.equal(layer._latent_scores.scores, old_scores), (
+            "Scores should not change when decay is disabled"
+        )
+
+    # --- No-autograd verification ---
+
+    def test_no_autograd_graph(self):
+        """Forward pass and hebbian_update should produce no autograd nodes."""
+        layer = TernaryHebbianLinear(784, 10)
+        x = torch.randn(32, 784)
+
+        # Forward pass
+        out = layer(x)
+        assert out.grad_fn is None, "Forward output should not have grad_fn"
+
+        # Hebbian update
+        pre = ternary_sign(x)
+        post = ternary_sign(out.detach())
+        layer.hebbian_update(pre, post, lr=0.01)
+
+        # Verify no gradient info on parameters
+        for name, param in layer.named_parameters():
+            assert param.grad is None, f"Parameter {name} should not have grad"
+            assert param.requires_grad is False, (
+                f"Parameter {name} should not require grad"
+            )
