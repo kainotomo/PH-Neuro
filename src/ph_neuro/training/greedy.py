@@ -24,6 +24,7 @@ import torch.nn.functional as F  # noqa: N812
 from torch.utils.data import DataLoader
 
 from ph_neuro.core.activation import ternary_sign
+from ph_neuro.layers.conv import TernaryHebbianConv2d
 from ph_neuro.layers.linear import TernaryHebbianLinear
 from ph_neuro.models.mlp import HebbianMLP
 
@@ -1137,3 +1138,324 @@ class MultiLayerHebbianClassifier:
             + "".join(f"\u2192{s}" for s in sizes[1:])
             + f", {self.n_layers} layers)"
         )
+
+
+# ═══════════════════════════════════════════════════════════════════
+# CNN Training Functions (Phase 1.2)
+# ═══════════════════════════════════════════════════════════════════
+
+
+def _init_conv_connectivity(
+    conv_layer: TernaryHebbianConv2d,
+    density: float = 0.1,
+    seed: int | None = None,
+) -> None:
+    """Bootstrap a conv layer with sparse random ternary weights.
+
+    Before any Hebbian update, all-zero weights produce zero output,
+    making Hebbian learning impossible. This sets a fraction of latent
+    scores above ``theta_upper`` to create random filter patterns.
+
+    Args:
+        conv_layer: ``TernaryHebbianConv2d`` to initialize.
+        density: Fraction of weights to activate (default 0.1).
+        seed: Optional random seed.
+    """
+    if seed is not None:
+        torch.manual_seed(seed)
+
+    scores = conv_layer._latent_scores.scores
+    n_total = scores.numel()
+    n_active = max(1, int(n_total * density))
+
+    idx = torch.randperm(n_total, device=scores.device)[:n_active]
+    flat_scores = scores.flatten()
+    active_values = (
+        (torch.randint(0, 2, (n_active,), device=scores.device) * 2 - 1).float()
+        * (conv_layer.theta_upper + 1.0)
+    ).to(scores.dtype)
+    flat_scores[idx] = active_values
+    conv_layer.refresh_weights()
+
+
+def train_conv_competitive_epoch(
+    conv_layer: TernaryHebbianConv2d,
+    loader: DataLoader,
+    frozen_encoder: nn.Module | None,
+    device: torch.device,
+    lr: float,
+    decay: float,
+    epsilon: float = 0.1,
+) -> dict[str, float]:
+    """Train one conv hidden layer via per-position competitive Hebbian.
+
+    At each spatial position ``(i,j)`` of the output feature map, the
+    filter with the strongest activation "wins." The winner's weights
+    are updated toward the input patch at that position; losers get a
+    mild anti-Hebbian weakening.
+
+    This is the convolutional analog of online competitive Hebbian
+    from Phase 1.1 — different filters naturally specialize on different
+    visual features (edges, colors, textures) because they win at
+    different spatial positions.
+
+    Args:
+        conv_layer: The ``TernaryHebbianConv2d`` to train.
+        loader: DataLoader yielding ``(inputs, targets)`` (targets ignored).
+        frozen_encoder: Optional callable running before ``conv_layer``.
+            If the encoder produces ``(N, C, H, W)`` output, it is used
+            directly. If ``None``, input is treated as raw image.
+        device: Torch device.
+        lr: Hebbian learning rate.
+        decay: Homeostatic decay rate.
+        epsilon: Dead-zone for ``ternary_sign``.
+
+    Returns:
+        Dict with ``flip_rate`` and ``n_flips``.
+    """
+    total_flips = 0
+    total_weights = 0
+    n_batches = 0
+
+    for batch in loader:
+        # Support both labeled and unlabeled batches
+        if isinstance(batch, (list, tuple)):
+            x = batch[0]
+        else:
+            x = batch
+        x = x.to(device)
+
+        # Quantize to ternary {-1, 0, +1}
+        h = ternary_sign(x, epsilon=epsilon).float()
+
+        # Forward through frozen encoder (if any)
+        if frozen_encoder is not None:
+            h = ternary_sign(frozen_encoder(h), epsilon=epsilon).float()
+
+        # Forward through current conv layer — raw float output
+        raw = conv_layer(h)  # (N, C_out, H_out, W_out)
+        N, C_out, H_out, W_out = raw.shape
+        L = H_out * W_out
+
+        # Snapshot weights before refresh
+        old_w = conv_layer.weight.unpack().clone()
+        if old_w.device != device:
+            old_w = old_w.to(device)
+
+        # ── Per-position competitive Hebbian ────────────────────
+        # Flatten spatial: raw → (N, C_out, L)
+        raw_flat = raw.reshape(N, C_out, L)
+
+        # Winner at each spatial position: filter with max activation
+        winners = raw_flat.argmax(dim=1)  # (N, L) — winner filter index per position
+
+        # One-hot winner mask: (N, L, C_out) → (N, C_out, L)
+        winner_mask = F.one_hot(winners, C_out).float().permute(0, 2, 1)
+
+        # ── Direct competitive Hebbian update ───────────────────
+        # We update scores directly (not via hebbian_update) because
+        # hebbian_update divides by (N * L), which kills the signal
+        # when only 1/C_out of positions contribute to each filter.
+        #
+        # Δscore[f, c, kh, kw] = lr × Σ_{b,(i,j) where f wins} input_patch[b,i,j,c,kh,kw]
+        #
+        # Vectorized: patches is (N, C_in*kH*kW, L), winner_mask is (N, C_out, L)
+        # delta_2d = lr × bmm(winner_mask, patches.T).sum(0)  → (C_out, C_in*kHW)
+
+        # Unfold input to patches
+        patches = torch.nn.functional.unfold(
+            h,
+            kernel_size=conv_layer.kernel_size,
+            dilation=conv_layer._dilation,
+            padding=conv_layer._padding,
+            stride=conv_layer._stride,
+        )  # (N, C_in*kH*kW, L)
+
+        # Batch MatMul: (N, C_out, L) × (N, C_in*kHW, L)^T → (N, C_out, C_in*kHW)
+        delta_2d = torch.bmm(winner_mask, patches.float().transpose(1, 2))  # (N, C_out, C_in*kHW)
+        delta_2d = delta_2d.sum(dim=0)  # (C_out, C_in*kHW) — sum over batch
+        delta_2d = lr * delta_2d  # no division by N*L!
+
+        # Reshape to weight shape: (C_out, C_in, kH, kW)
+        delta = delta_2d.reshape(
+            conv_layer._out_channels, conv_layer._in_channels,
+            *conv_layer.kernel_size,
+        )
+
+        scores = conv_layer._latent_scores.scores
+        if scores.device != delta.device:
+            scores = scores.to(delta.device)
+        scores += delta.to(scores.dtype)
+
+        if decay > 0:
+            conv_layer.apply_decay(decay)
+
+        conv_layer.refresh_weights()
+
+        # Track flips
+        new_w = conv_layer.weight.unpack()
+        if new_w.device != device:
+            new_w = new_w.to(device)
+        total_flips += (old_w != new_w).sum().item()
+        total_weights += new_w.numel()
+        n_batches += 1
+
+    return {
+        "flip_rate": total_flips / max(total_weights, 1),
+        "n_flips": total_flips,
+    }
+
+
+def train_conv_class_guided_epoch(
+    conv_layer: TernaryHebbianConv2d,
+    loader: DataLoader,
+    frozen_encoder: nn.Module | None,
+    device: torch.device,
+    lr: float,
+    decay: float,
+    epsilon: float = 0.1,
+    n_classes: int = 10,
+) -> dict[str, float]:
+    """Train one conv layer via class-guided Hebbian learning.
+
+    Each conv filter is assigned to a fixed output class. When a sample
+    of the filter's class is presented, the filter strengthens toward
+    the input pattern (Hebbian). When a different class is shown, the
+    filter weakens (anti-Hebbian).
+
+    This creates class-specific feature detectors in the conv layer,
+    avoiding the "useful but not discriminative" problem of unsupervised
+    competitive Hebbian.
+
+    Args:
+        conv_layer: The ``TernaryHebbianConv2d`` to train.
+        loader: DataLoader yielding ``(inputs, targets)``.
+        frozen_encoder: Optional callable running before ``conv_layer``.
+        device: Torch device.
+        lr: Hebbian learning rate for class-matching filters.
+        decay: Homeostatic decay rate.
+        epsilon: Dead-zone for ``ternary_sign``.
+        n_classes: Number of output classes (default 10).
+
+    Returns:
+        Dict with ``flip_rate`` and ``n_flips``.
+    """
+    # Assign filters to classes
+    n_filters = conv_layer._out_channels
+    filter_classes = _assign_neuron_classes(n_filters, n_classes).to(device)
+    class_onehot = F.one_hot(filter_classes, num_classes=n_classes).float()
+
+    total_flips = 0
+    total_weights = 0
+    n_batches = 0
+
+    for x, y in loader:
+        x = x.to(device)
+        y = y.to(device)
+
+        # Quantize to ternary {-1, 0, +1}
+        h = ternary_sign(x, epsilon=epsilon).float()
+
+        # Forward through frozen encoder (if any)
+        if frozen_encoder is not None:
+            h = ternary_sign(frozen_encoder(h), epsilon=epsilon).float()
+
+        # Snapshot weights before refresh
+        old_w = conv_layer.weight.unpack().clone()
+        if old_w.device != device:
+            old_w = old_w.to(device)
+
+        # ── Class-guided Hebbian update (direct scores) ────────
+        # For each filter: +1 for matching class, -0.1 for non-matching
+        y_onehot = F.one_hot(y, num_classes=n_classes).float()  # (N, n_classes)
+        match = y_onehot @ class_onehot.T  # (N, n_filters) — 1 if class matches
+        post_2d = match - 0.1 * (1.0 - match)  # {+1.0 for match, -0.1 for non-match}
+
+        # We update scores directly (not via hebbian_update which divides by N*L).
+        # The update should be normalized by L (spatial positions) so each position
+        # contributes proportionally:
+        #   ΔW[f] = lr × Σ_b post[b,f] × mean_{i,j} input_patch[b,i,j]
+        #
+        # Unfold input to patches
+        patches = torch.nn.functional.unfold(
+            h,
+            kernel_size=conv_layer.kernel_size,
+            dilation=conv_layer._dilation,
+            padding=conv_layer._padding,
+            stride=conv_layer._stride,
+        )  # (N, C_in*kH*kW, L)
+
+        patches_mean = patches.mean(dim=2)  # (N, C_in*kH*kW) — avg over spatial positions
+
+        # delta_2d: (n_filters, C_in*kH*kW)
+        delta_2d = lr * (post_2d.T @ patches_mean)  # no N division (batch handles implicitly)
+
+        # Reshape to weight shape
+        delta = delta_2d.reshape(
+            conv_layer._out_channels, conv_layer._in_channels,
+            *conv_layer.kernel_size,
+        )
+
+        # Reshape to weight shape
+        delta = delta_2d.reshape(
+            conv_layer._out_channels, conv_layer._in_channels,
+            *conv_layer.kernel_size,
+        )
+
+        scores = conv_layer._latent_scores.scores
+        if scores.device != delta.device:
+            scores = scores.to(delta.device)
+        scores += delta.to(scores.dtype)
+
+        if decay > 0:
+            conv_layer.apply_decay(decay)
+
+        conv_layer.refresh_weights()
+
+        # Track flips
+        new_w = conv_layer.weight.unpack()
+        if new_w.device != device:
+            new_w = new_w.to(device)
+        total_flips += (old_w != new_w).sum().item()
+        total_weights += new_w.numel()
+        n_batches += 1
+
+    return {
+        "flip_rate": total_flips / max(total_weights, 1),
+        "n_flips": total_flips,
+    }
+
+
+@torch.no_grad()
+def evaluate_cnn(
+    model: nn.Module,
+    test_loader: DataLoader,
+    device: torch.device,
+    epsilon: float = 0.1,
+) -> float:
+    """Evaluate a HebbianCNN on a test set.
+
+    Args:
+        model: A ``HebbianCNN`` (or any ``nn.Module`` with a forward
+            that returns ``(N, n_classes)`` logits).
+        test_loader: DataLoader yielding ``(inputs, targets)``.
+        device: Torch device.
+        epsilon: Dead-zone for ``ternary_sign``.
+
+    Returns:
+        Accuracy as a float in ``[0.0, 1.0]``.
+    """
+    model.eval()
+    correct = 0
+    total = 0
+
+    for x, y in test_loader:
+        x = x.to(device)
+        y = y.to(device)
+
+        out = model(x, epsilon=epsilon)
+        pred = out.argmax(dim=1)
+        correct += (pred == y).sum().item()
+        total += y.size(0)
+
+    return correct / max(total, 1)

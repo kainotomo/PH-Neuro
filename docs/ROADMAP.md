@@ -37,16 +37,22 @@ Build a **deep learning framework that learns without backpropagation** — usin
 |:------|:------|:------:|
 | 0 | Core Mechanism | ✅ Complete (88.4% MNIST) |
 | 1 | Vision POC — Multi-layer MLP | ✅ Complete (87.9% MNIST, 7 variants tested) |
-| 1 | Vision POC — CNN on CIFAR-10 | ⬜ Not started |
+| 1 | Vision POC — CNN on CIFAR-10 | ✅ Complete (33% — below >55% target, architecture verified) |
 | 1 | Vision POC — Continual learning | ⬜ Not started |
 | 2 | Multi-Layer Theory | ⬜ Not started |
 | 3 | Language Model | ⬜ Not started |
 | 4 | Scale | ⬜ Not started |
 | 5 | Package & Publish | ⬜ Not started |
 
-## Phase 1 Key Finding
+## Phase 1 Key Findings
 
-The correct unsupervised Hebbian rule for ternary hidden layers is **online competitive Hebbian with conscience** (winner-take-all + fairness bias). Basic Hebbian, Oja, BCM, and other variants all fail to create useful representations. This is now documented in `docs/experiments/E002-mnist-multilayer-mlp.md`.
+### 1.1 Multi-Layer MLP on MNIST
+The correct unsupervised Hebbian rule for ternary hidden layers is **online competitive Hebbian with conscience** (winner-take-all + fairness bias). Basic Hebbian, Oja, BCM, and other variants all fail to create useful representations. **Depth does not improve accuracy** beyond the single-layer ~88% bound. Documented in `docs/experiments/E002-mnist-multilayer-mlp.md`.
+
+### 1.2 CNN on CIFAR-10
+The `TernaryHebbianConv2d` layer and `HebbianCNN` architecture are fully implemented and verified (132 tests, no `.backward()`, ternary weight invariant, flip rate stabilization). **However, unsupervised Hebbian for conv layers does not improve over random projections** for CIFAR-10 classification. Three variants tested: competitive (32.6%), class-guided (21.9%), and random baseline (33.0%). The architecture works but Hebbian feature learning doesn't provide a classification benefit. Documented in `docs/experiments/E003-cifar10-cnn.md`.
+
+**The real value of PH-Neuro is in Phase 1.3 — continual learning**, where Hebbian's local updates and ternary weights should provide inherent resistance to catastrophic forgetting.
 
 2. **H2 — No catastrophic forgetting**: Because weights are discrete and Hebbian updates are local, learning new tasks does not overwrite old knowledge. Target: <5% forgetting across 10 sequential tasks, vs >60% for backprop.
 
