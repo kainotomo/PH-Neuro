@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import torch
 
-from ph_neuro.layers.linear import TernaryHebbianLinear, ternary_sign
+from ph_neuro.core.activation import ternary_sign
+from ph_neuro.layers.linear import TernaryHebbianLinear
 
 
 class TestTernaryHebbianLinear:
@@ -54,20 +55,6 @@ class TestTernaryHebbianLinear:
         old = layer.latent_scores[0, 0].clone()
         layer.apply_decay(decay_rate=0.1)
         assert layer.latent_scores[0, 0] < old, "Decay should reduce scores"
-
-    def test_ternary_sign(self):
-        """Ternary sign should map values to {-1, 0, +1}."""
-        x = torch.tensor([2.0, 0.0, -3.0, 0.5, -0.5, 0.0])
-        result = ternary_sign(x)
-        expected = torch.tensor([1, 0, -1, 1, -1, 0], dtype=torch.int8)
-        assert torch.equal(result, expected)
-
-    def test_ternary_sign_with_epsilon(self):
-        """With epsilon, small values should become 0."""
-        x = torch.tensor([2.0, 0.1, -0.05, -3.0])
-        result = ternary_sign(x, epsilon=0.5)
-        expected = torch.tensor([1, 0, 0, -1], dtype=torch.int8)
-        assert torch.equal(result, expected)
 
     def test_extra_repr(self):
         """String representation should include key parameters."""

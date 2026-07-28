@@ -10,24 +10,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F  # noqa: N812
 
+from ph_neuro.core.activation import ternary_sign
 from ph_neuro.core.latent_scores import LatentScoreTensor
 from ph_neuro.core.ternary_tensor import TernaryTensor
-
-
-def ternary_sign(x: torch.Tensor, epsilon: float = 0.0) -> torch.Tensor:
-    """Map activations to {-1, 0, +1}.
-
-    Args:
-        x: Input tensor.
-        epsilon: Values in ``(-epsilon, +epsilon)`` map to 0.
-            With ``epsilon=0``, only exact zeros stay 0.
-
-    Returns:
-        int8 tensor with values in {-1, 0, +1}.
-    """
-    if epsilon > 0:
-        x = torch.where(torch.abs(x) < epsilon, torch.zeros_like(x), x)
-    return torch.sign(x).to(torch.int8)
 
 
 class TernaryHebbianLinear(nn.Module):

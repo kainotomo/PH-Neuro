@@ -11,7 +11,8 @@ from collections.abc import Callable
 import torch
 from torch.utils.data import DataLoader
 
-from ph_neuro.layers.linear import TernaryHebbianLinear, ternary_sign
+from ph_neuro.core.activation import ternary_sign
+from ph_neuro.layers.linear import TernaryHebbianLinear
 
 
 class HebbianTrainer:

@@ -12,7 +12,8 @@ from __future__ import annotations
 import torch
 from torch.nn.functional import one_hot
 
-from ph_neuro.layers.linear import TernaryHebbianLinear, ternary_sign
+from ph_neuro.core.activation import ternary_sign
+from ph_neuro.layers.linear import TernaryHebbianLinear
 from ph_neuro.training.data import get_mnist_loaders
 
 
