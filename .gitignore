@@ -48,6 +48,38 @@ coverage.xml
 *.cover
 *.py.cover
 .hypothesis/
+
+# ── Python virtual environment ──────────────────────────────────
+.venv/
+venv/
+env/
+
+# ── IDE / Editor ────────────────────────────────────────────────
+.vscode/*.log
+.vscode/.history/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Type checking ───────────────────────────────────────────────
+.mypy_cache/
+.ruff_cache/
+
+# ── PH-Neuro specific ───────────────────────────────────────────
+# Model checkpoints / saved models
+*.phn
+
+# Experiment outputs / logs
+docs/experiments/*.json
+docs/experiments/*.csv
+docs/experiments/*.pkl
+docs/experiments/*.pt
+!docs/experiments/.gitkeep
+
+# Temporary data downloads
+data/
+!docs/experiments/.gitkeep
 .pytest_cache/
 cover/
 
