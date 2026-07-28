@@ -86,21 +86,35 @@ class TernaryHebbianLinear(nn.Module):
         """fp16 latent scores (read-only)."""
         return self._latent_scores.scores
 
-    def to(self, *args, **kwargs):
-        """Move all tensors (including custom storage) to the given device."""
-        super().to(*args, **kwargs)
-        # Extract device from args/kwargs — nn.Module.to accepts device, dtype, or
-        # (device, dtype) positional, or device= keyword. We handle all variants.
-        device = None
-        if args:
-            device = args[0] if isinstance(args[0], (torch.device, str, int)) else args[0][0]
-        elif "device" in kwargs:
-            device = kwargs["device"]
-        if device is not None:
-            device = torch.device(device)
-            self._ternary_weight._data = self._ternary_weight._data.to(device)
-            self._latent_scores.scores = self._latent_scores.scores.to(device)
-        return self
+    @property
+    def theta_upper(self) -> float:
+        """Hysteresis upper threshold for weight activation (0 -> +/-1)."""
+        return self._theta_upper
+
+    @theta_upper.setter
+    def theta_upper(self, value: float) -> None:
+        self._theta_upper = value
+
+    @property
+    def theta_lower(self) -> float:
+        """Hysteresis lower threshold for weight deactivation (+/-1 -> 0)."""
+        return self._theta_lower
+
+    @theta_lower.setter
+    def theta_lower(self, value: float) -> None:
+        self._theta_lower = value
+
+    def _apply(self, fn: callable) -> TernaryHebbianLinear:
+        """Override ``_apply`` to move custom tensors alongside registered ones.
+
+        ``nn.Module.to()`` calls ``self._apply()`` on each submodule, so
+        overriding this ensures ``TernaryTensor._data`` and
+        ``LatentScoreTensor.scores`` are moved to the target device together
+        with all registered parameters and buffers.
+        """
+        self._ternary_weight._data = fn(self._ternary_weight._data)
+        self._latent_scores.scores = fn(self._latent_scores.scores)
+        return super()._apply(fn)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass: ternary MatMul + optional sign activation.

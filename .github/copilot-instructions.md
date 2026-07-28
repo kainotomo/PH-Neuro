@@ -5,6 +5,28 @@
 
 ---
 
+## Project Vision (KEEP THIS IN MIND)
+
+PH-Neuro aims for **brain-like learning**: small, online, continual.
+
+- **Small**: Ternary weights {-1, 0, +1} stored at 1 byte/weight (eventually 4 weights/byte). 
+  No optimizer states, no gradient buffers, no replay buffers. Total memory is ~4× less than
+  equivalent backprop networks.
+- **Online**: Each sample updates the network once, on the fly. No full-dataset epoch training,
+  no offline pre-training, no batch replay. The network learns while being used, same as a brain.
+- **Continual**: No catastrophic forgetting. New tasks don't require retraining from scratch.
+- **Local**: Every learning rule uses only pre-synaptic and post-synaptic activity at each synapse.
+  No global loss signal, no backward pass, no gradient transport between layers.
+
+### What this means for code decisions
+- Prefer **online** rules (update per sample) over **batch** rules (update per epoch)
+- Prefer **single-pass** learning over **multi-epoch** learning
+- No replay buffers, no experience replay, no rehearsal
+- Hidden layers must learn useful representations **without labels** (unsupervised)
+- The output layer uses label information (WTA Hebbian), but hidden layers do not
+
+---
+
 ## Core Rules (ALWAYS follow)
 
 ### 1. NEVER use backpropagation
@@ -145,15 +167,27 @@ def refresh_weights(self):
 
 ## Phase-Specific Context
 
-### Phase 0 (current): Core Mechanism
-- Single-layer `TernaryHebbianLinear` on MNIST
+### Phase 0 (complete): Core Mechanism
+- Single-layer `TernaryHebbianLinear` on MNIST — **88.4% accuracy**
 - Naive int8 storage (1 byte per weight)
 - Float MatMul (not popcount yet)
+- Winner-Take-All supervised Hebbian for output layer
 - Verify: no `.backward()` anywhere
 
-### Phase 1: Vision POC
-- Multi-layer, CNN, continual learning
-- `TernaryHebbianConv2d` with local Hebbian rule
+### Phase 1 (current): Multi-layer Vision POC
+- Multi-layer MLP on MNIST (greedy layer-wise training)
+- Hidden layers: **unsupervised competitive Hebbian** (winner-take-all with conscience mechanism)
+  — neurons compete to represent input patterns, only the winner learns
+  — this creates differentiated feature detectors, not PCA-like uniform features
+- Output layer: supervised WTA Hebbian (same as Phase 0)
+- `TernaryHebbianConv2d` with local Hebbian rule (later)
+- Continual learning on split MNIST (later)
+
+### Key Learning: Why basic Hebbian fails for hidden layers
+Basic Hebbian (`ΔW = lr × postᵀ @ pre`) makes all hidden neurons learn the same
+pattern (positive feedback loop). This is useless for hierarchical representations.
+**Competitive Hebbian** (winner-take-all + conscience) is required to force different
+neurons to specialize on different input patterns — analogous to cortical competition.
 
 ### Phase 3: Language
 - `PredictiveHebbianLayer` with echo state memory
