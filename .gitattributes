@@ -1,0 +1,13 @@
+*.py text diff=python
+*.md text
+*.toml text
+*.cfg text
+*.ini text
+*.json text
+*.yaml text
+*.yml text
+*.sh text eol=lf
+Makefile text eol=lf
+.gitignore text
+.gitattributes text
+LICENSE text
