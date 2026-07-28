@@ -1,313 +1,309 @@
-# Phase 3 — First Language Model
+# Phase 3 — Language: The Brain-Inspired Approach
 
-> **Goal:** Show ternary Hebbian Transformers can learn statistical regularities in text and generate coherent output.  
-> **Duration:** ~4-6 weeks  
-> **Hardware:** RTX 4060 8 GB — 100M model fits easily (~400 MB ternary weights + 200 MB latent scores)  
-> **Success:** 100M ternary Hebbian Transformer generates coherent paragraphs on TinyStories
+> **Goal:** Show ternary Hebbian networks can learn sequential structure and language — not by mimicking Transformers, but by mimicking the brain's modular, temporally-aware architecture.  
+> **Duration:** ~6-8 weeks (3a: 1-2 weeks, 3b: 2-3 weeks, 3c: 3-4 weeks)  
+> **Hardware:** RTX 4060 8 GB — all models fit easily  
+> **Success:** Coherent text generation from a brain-inspired architecture that never computes a gradient
 
 ---
 
 ## Overview
 
-This is genuinely unexplored territory. No Hebbian network has been trained on language before. SoftHebb only did vision. The Forward-Forward paper showed MNIST/CIFAR-10 results but no language experiments.
+The brain doesn't use backpropagation. It doesn't use Transformers. It doesn't minimize cross-entropy loss. Yet a 5-year-old child, exposed to ~10-50 million words, speaks fluently with grammar, syntax, and meaning.
 
-Phase 3 asks: can a network that learns by "cells that fire together wire together" capture the statistical structure of human language?
+**How?** The brain uses:
+1. **Predictive coding** — constantly predicting the next input, learning from prediction errors
+2. **Working memory** — echo state / reservoir dynamics that maintain temporal context
+3. **Hierarchical timescales** — different layers operate at different temporal resolutions (phoneme → word → phrase)
+4. **Modular architecture** — specialized regions (Broca, Wernicke, hippocampus), not one monolithic network
 
-The answer is probably "yes, but worse than backprop." The question is: HOW much worse, and is it still useful?
+Phase 3 asks: **can we replicate these principles with ternary Hebbian networks?**
+
+This is NOT "put a Transformer with Hebbian." This is "build a brain-inspired language architecture from scratch."
 
 ---
 
-## 3.1 Hebbian Transformer Architecture
+## Phase 3a — Sequence Learning (SANITY CHECK)
 
-### TernaryHebbianLinear for All Projections
+**Goal:** Before attempting natural language, prove the Hebbian mechanism can learn sequential structure at all.
 
-A standard Transformer block has 4 linear projections per attention layer + 2 in the FFN. All become `TernaryHebbianLinear`:
+**Duration:** ~1-2 weeks
 
-```
-Transformer Block:
-├── Attention:
-│   ├── Q: TernaryHebbianLinear(d_model → d_model)
-│   ├── K: TernaryHebbianLinear(d_model → d_model)
-│   ├── V: TernaryHebbianLinear(d_model → d_model)
-│   └── O: TernaryHebbianLinear(d_model → d_model)
-└── FFN:
-    ├── Up: TernaryHebbianLinear(d_model → 4*d_model)
-    └── Down: TernaryHebbianLinear(4*d_model → d_model)
-```
+### 3a.1 n-gram Prediction
 
-### Ternary Embeddings
+Train on synthetic sequences where P(next|context) follows a known distribution.
 
 ```python
-class TernaryHebbianEmbedding(nn.Module):
-    """Ternary embedding table: vocab_size × d_model, values in {-1, 0, +1}."""
-    def __init__(self, vocab_size, d_model, theta_upper=5.0, theta_lower=1.0):
-        self.latent = LatentScoreTensor(vocab_size, d_model)
-        self.weights = TernaryTensor(vocab_size, d_model)
-        # Initialize some embeddings to non-zero (random ternary)
-        self.weights.random_init_(sparsity=0.5)  # 50% zero, 25% +1, 25% -1
-    
-    def forward(self, token_ids):
-        return self.weights[token_ids]  # (batch, seq_len, d_model), ternary
+# Generate sequences from a known n-gram model
+# P(A|A)=0.6, P(B|A)=0.4, P(A|B)=0.3, P(B|B)=0.7 ...
+def generate_ngram_sequence(length, transition_probs):
+    seq = [random.choice(states)]
+    for _ in range(length - 1):
+        next_state = random.choices(states, 
+            weights=[transition_probs[seq[-1]][s] for s in states])[0]
+        seq.append(next_state)
+    return seq
 ```
 
-**Key question**: Should embeddings be trainable via Hebbian? Unlike other weights, embeddings don't have a clear "pre × post" pair — they're looked up by token ID.
+**Architecture**: Simple predictive Hebbian layer with working memory — no attention, no Transformer. Just: input → echo state → prediction → error → Hebbian update.
 
-Options:
-- **Fixed random ternary**: Don't train embeddings at all. Surprisingly common in some architectures.
-- **Train via co-occurrence Hebbian**: When two tokens appear in similar contexts, make their embeddings more similar. (Distributional hypothesis via Hebbian.)
-- **Train on output**: The embedding matrix IS the output projection (weight tying). Train via the output Hebbian signal.
+**Question**: Can a ternary Hebbian network learn P(next|previous)? This is the simplest possible sequential task.
 
-### Attention with Ternary Q, K, V
+**Success**: Matches count-based n-gram within 10%.
+
+### 3a.2 Reber Grammar
+
+Reber grammar is a classic artificial grammar — a finite-state automaton that generates strings like "BTSSXXVVE":
+
+```
+        ┌─── T ───┐
+        │         ▼
+   ┌─B─┴─P─────── X ── V ──┐
+   │            │           │
+   └──► S ──────┘           E
+        │                   ▲
+        └── T ── X ── S ────┘
+```
+
+Valid strings follow the grammar. Invalid strings violate it (e.g., "BTS" is invalid because S needs X after T).
+
+**Question**: Can Hebbian learning discover abstract grammatical rules, not just surface correlations?
+
+**Architecture**: 2-3 predictive Hebbian layers with echo state memory.
+
+**Success**: >90% accuracy on valid/invalid classification after training only on valid strings.
+
+### 3a.3 Toy Language
+
+A miniature natural language: 100 words, 5 grammar rules.
 
 ```python
-def ternary_scaled_dot_product_attention(Q, K, V, mask=None):
+# Grammar rules:
+# 1. S → NP VP
+# 2. NP → Det Adj* N
+# 3. VP → V NP | V
+# 4. Adj agrees with N (gender/number)
+# 5. Det agrees with N (definite/indefinite)
+
+# Vocabulary (~100 words):
+# Det: the, a, this, that
+# Adj: big, small, red, blue, happy, sad
+# N: cat, dog, bird, house, tree, book, boy, girl
+# V: sees, chases, likes, eats, finds, gives
+```
+
+**Question**: Can Hebbian learning capture syntactic structure (word order, agreement)?
+
+**Success**: Generates grammatically correct sentences >80% of the time.
+
+---
+
+## Phase 3b — Predictive Hebbian (THE MECHANISM)
+
+**Goal:** Implement and validate predictive coding as the core learning mechanism.
+
+**Duration:** ~2-3 weeks
+
+### The Theory: Why Predictive Coding?
+
+The brain doesn't say "this word follows that word." It says:
+> "Based on everything I've heard so far, I PREDICT the next word will be X. ... Oh, it was Y instead. The error (Y-X) tells me how to update my connections."
+
+| | Basic Hebbian | Predictive Hebbian |
+|---|---|---|
+| **What is learned** | Co-occurrence: "A and B happen together" | Causality: "A CAUSES B, and when it doesn't, something's wrong" |
+| **Update signal** | `pre × post` (correlation) | `pre × (post_actual - post_predicted)` (prediction error) |
+| **Temporal awareness** | None (stateless) | Implicit (prediction requires temporal model) |
+| **Biological basis** | LTP/LTD from co-activation | Cortical predictive coding (Rao & Ballard, 1999) |
+| **Language suitability** | Poor (language is sequential) | Good (prediction is the core of language processing) |
+
+### 3b.1 Working Memory (Echo State)
+
+```python
+class EchoStateMemory(nn.Module):
     """
-    Q, K, V: (batch, heads, seq_len, d_head) — ternary {-1, 0, +1}
-    
-    Attention scores: Q @ K^T → integer values in [-d_head, +d_head]
+    Leaky integrator — maintains a running average of past inputs.
+    No backprop-through-time needed. State evolves autonomously.
     """
-    # Attention scores are integers (popcount, not float multiply-add)
-    scores = Q @ K.transpose(-2, -1)  # Integer matmul
-    scores = scores / (d_head ** 0.5)  # Scale to prevent large values
+    def __init__(self, dim, decay=0.9):
+        super().__init__()
+        self.decay = decay
+        self.register_buffer('state', torch.zeros(1, dim))
     
-    if mask is not None:
-        scores = scores.masked_fill(mask == 0, float('-inf'))
+    def forward(self, x):
+        self.state = self.decay * self.state + (1 - self.decay) * x.mean(dim=0, keepdim=True)
+        return torch.cat([x, self.state.expand(x.shape[0], -1)], dim=-1)
     
-    # Softmax on integer scores — standard, but explore alternatives
-    attn_weights = F.softmax(scores.float(), dim=-1)
-    
-    # Weighted sum of ternary values → float output
-    # Then re-ternarize for next layer
-    output = attn_weights @ V.float()
-    return ternary_sign(output)
+    def reset(self):
+        self.state.zero_()
 ```
 
-**Alternative to softmax**: Hard attention (select top-k), sparsemax, or entmax. Softmax destroys the "integer purity" but may be necessary for gradient-free training.
+### 3b.2 Hierarchical Timescales
 
-### Position Encoding
+| Timescale | Duration | What it captures | Decay rate | Layer |
+|-----------|----------|-----------------|------------|-------|
+| Phonetic | ~50ms | Individual sounds | 0.3-0.5 | Layer 1 |
+| Syllabic | ~200ms | Syllable patterns | 0.7-0.8 | Layer 2 |
+| Lexical | ~500ms | Word identity | 0.9-0.95 | Layer 3 |
+| Phrasal | ~2s | Multi-word phrases | 0.98-0.99 | Layer 4 |
+| Sentential | ~5-10s | Sentence meaning | 0.995 | Global memory |
 
-RoPE is compatible with ternary Q/K: just rotate before attention. Or use ALiBi (additive bias, just integer addition).
+### 3b.3 Predictive Hebbian Layer
+
+```python
+class PredictiveHebbianLayer(nn.Module):
+    """
+    A layer that:
+    1. Maintains temporal context via echo state memory
+    2. PREDICTS its next output based on current input + memory
+    3. Computes prediction error when actual next input arrives
+    4. Updates weights via Hebbian rule on prediction error
+    """
+    def __init__(self, in_dim, out_dim, memory_decay=0.9,
+                 theta_upper=5.0, theta_lower=1.0):
+        super().__init__()
+        self.linear = TernaryHebbianLinear(in_dim * 2, out_dim,
+                                            theta_upper, theta_lower)
+        self.predictor = TernaryHebbianLinear(out_dim, out_dim,
+                                               theta_upper, theta_lower)
+        self.memory = EchoStateMemory(out_dim, decay=memory_decay)
+    
+    def forward(self, x):
+        x_with_memory = self.memory(x)
+        h = ternary_sign(self.linear(x_with_memory))
+        prediction = self.predictor(h)
+        return h, prediction
+    
+    def learn(self, x_current, x_next, lr):
+        _, prediction = self.forward(x_current)
+        actual = ternary_sign(x_next)
+        error = actual - prediction  # Prediction error
+        
+        x_with_memory = torch.cat([x_current, 
+            self.memory.state.expand(x_current.shape[0], -1)], dim=-1)
+        self.linear.hebbian_update(x_with_memory, error, lr)
+        self.predictor.hebbian_update(h_current, error, lr)
+```
+
+### 3b.4 Experiment: Basic vs Predictive Hebbian
+
+| Method | n-gram acc | Reber grammar | Toy language |
+|--------|-----------|---------------|-------------|
+| Basic Hebbian | ? | ? | ? |
+| Predictive Hebbian | ? | ? | ? |
+
+**Hypothesis**: Predictive Hebbian significantly outperforms basic Hebbian on sequential tasks.
 
 ---
 
-## 3.2 Training Strategy
+## Phase 3c — TinyStories (NATURAL LANGUAGE)
 
-### The Core Challenge
+**Goal:** Apply the predictive Hebbian architecture to real natural language.
 
-Hebbian learning has no loss function. Language modeling's objective is "predict the next token." How do you provide a Hebbian teaching signal for this?
+**Duration:** ~3-4 weeks
 
-### Approach A: Next-Token Hebbian (Primary)
+**⚠️ Only proceed after 3a and 3b succeed.**
 
-```python
-for batch in train_loader:
-    input_ids = batch[:, :-1]   # (batch, seq_len-1)
-    target_ids = batch[:, 1:]   # (batch, seq_len-1)
-    
-    # Forward pass through all layers
-    h = model.embedding(input_ids)  # (batch, seq_len, d_model), ternary
-    for layer in model.layers:
-        h = layer(h)  # Each layer: attention + FFN, output is ternary
-    
-    # Output: project to vocab space (TernaryHebbianLinear)
-    logits = model.output_projection(h)  # (batch, seq_len, vocab_size)
-    
-    # Convert targets to {-1, +1} one-hot
-    # +1 at correct token position, -1 elsewhere
-    target = torch.full((batch, seq_len, vocab_size), -1, dtype=torch.int8)
-    target.scatter_(-1, target_ids.unsqueeze(-1), 1)
-    
-    # Hebbian update for output layer
-    # Strengthen connections that predict the correct token
-    model.output_projection.hebbian_update(
-        h,                    # pre: hidden state (ternary)
-        target,               # post: one-hot target {-1, +1}
-        lr=lr_output
-    )
-    
-    # Hidden layers: self-organizing
-    # Each layer's "post" is its own output
-    for i, layer in enumerate(model.layers):
-        layer.hebbian_update(
-            layer_inputs[i],   # pre: input to this layer
-            layer_outputs[i],  # post: this layer's output
-            lr=lr_hidden
-        )
-    
-    # Refresh weights
-    model.refresh_all_weights()
+### 3c.1 Brain-Inspired Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    PH-Neuro Language Model              │
+│                                                         │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐          │
+│  │ ENCODER  │    │ WORKING  │    │ DECODER  │          │
+│  │(Wernicke)│───▶│ MEMORY   │───▶│ (Broca)  │──▶ output│
+│  │          │    │(Hippocam)│    │          │          │
+│  └──────────┘    └──────────┘    └──────────┘          │
+│                                                         │
+│  All modules: ternary weights, Hebbian, no backprop     │
+└─────────────────────────────────────────────────────────┘
 ```
 
-### Approach B: Contrastive Hebbian for Sequences
+| Module | Brain Region | Function | Timescale |
+|--------|-------------|----------|-----------|
+| **Encoder** | Wernicke's area | Input words → meaning | Fast (decay=0.85) |
+| **Working Memory** | Hippocampus | Episodic context | Very slow (decay=0.995) |
+| **Decoder** | Broca's area | Meaning → output words | Medium (decay=0.9) |
+
+### 3c.2 Training Loop
 
 ```python
-# Positive pass: real next token
-h_pos = model(input_ids)
-for layer, (inp, out) in zip(model.layers, layer_pairs_pos):
-    layer.hebbian_update(inp, out, lr=+lr)
-
-# Negative pass: random/wrong next token
-wrong_ids = torch.randint(0, vocab_size, target_ids.shape)
-# Or: use model's own prediction as negative
-h_neg = model(wrong_ids)
-for layer, (inp, out) in zip(model.layers, layer_pairs_neg):
-    layer.hebbian_update(inp, out, lr=-lr)  # Anti-Hebbian
-```
-
-### Approach C: Layer-wise Next-Token Prediction
-
-Each layer independently tries to predict the next token:
-
-```python
-for i, layer in enumerate(model.layers):
-    h = layer(h_prev)
+def train_step(model, batch, lr):
+    model.working_memory.reset()
     
-    # Each layer has its own output projection
-    layer_logits = layer.output_head(h)
-    
-    # Train layer i to predict next token from its own representation
-    layer.output_head.hebbian_update(h, target, lr)
+    for t in range(seq_len):
+        encoded = model.encoder(batch[:, t])
+        encoded_with_memory = model.working_memory(encoded)
+        logits_t = model.decoder(encoded_with_memory)
+        
+        target = F.one_hot(batch[:, t+1], vocab_size).float() * 2 - 1
+        prediction = ternary_sign(logits_t)
+        error = target - prediction.float()
+        
+        # Hebbian updates on ALL layers based on prediction error
+        model.encoder.update_all_layers(batch[:, t], error, lr)
+        model.decoder.update_all_layers(encoded_with_memory, error, lr)
+        
+        model.refresh_all_weights()
 ```
 
-This is like having a classifier at every layer (similar to how some interpretability work probes intermediate representations). The final model uses only the last layer's prediction, but training signal reaches all layers.
-
-### Approach D: Embedding Co-occurrence as Training Signal
-
-Instead of next-token prediction, train on token co-occurrence:
-
-```python
-# Within a window of size W, strengthen connections between co-occurring tokens
-for i in range(seq_len):
-    for j in range(max(0, i-W), min(seq_len, i+W+1)):
-        if i != j:
-            # Tokens i and j co-occur → make their embeddings more similar
-            emb_i = model.embedding.weights[input_ids[i]]
-            emb_j = model.embedding.weights[input_ids[j]]
-            # Hebbian update: emb_i and emb_j should be correlated
-```
-
-This builds a distributional embedding space — the foundation for understanding word meaning. Combined with Approach A for generation.
-
----
-
-## 3.3 TinyStories Experiment
-
-### Model Config
+### 3c.3 Model Config
 
 ```yaml
 model:
-  vocab_size: 5000  # TinyStories has small vocab
+  vocab_size: 5000
   d_model: 512
-  n_heads: 8
-  n_layers: 8
-  d_ff: 2048
-  max_seq_len: 256
+  encoder_layers: 4
+  decoder_layers: 4
+  memory_decay: 0.995    # Episodic — very slow
+  encoder_decay: 0.85     # Fast — word level
+  decoder_decay: 0.9      # Medium — phrase level
+  theta_upper: 5.0
+  theta_lower: 1.0
   total_params: ~100M
 
 training:
-  dataset: TinyStories (~2M stories, ~500M tokens)
-  batch_size: 32
+  dataset: TinyStories (~500M tokens)
+  batch_size: 1 (one story at a time)
   seq_len: 256
-  lr_output: 0.01
-  lr_hidden: 0.001
-  theta_upper: 5.0
-  theta_lower: 1.0
+  lr: 0.01
   decay: 1e-6
   steps: 50,000
 ```
 
-### Evaluation
+### 3c.4 Success Criteria
 
-1. **Perplexity**: Standard metric. Expect higher than backprop (maybe 2-5×) but should be << random baseline.
-2. **Generation quality**: Sample 100 continuations from 100 prompts. Human evaluation:
-   - 1: Nonsense / word salad
-   - 2: Some structure but incoherent
-   - 3: Mostly coherent with occasional errors
-   - 4: Coherent, grammatical, makes sense
-   - 5: Indistinguishable from human-written
-3. **Diversity**: Do different prompts produce different stories? Or does the model collapse to a few templates?
-4. **Grammar**: Does the model learn basic syntax? Subject-verb agreement? Word order?
-
-### Baselines
-
-| Model | Perplexity | Generation Quality |
-|-------|-----------|-------------------|
-| Random ternary weights | ~vocab_size | 1 (nonsense) |
-| PH-Neuro 100M (Hebbian) | ? | ? (target: ≥3) |
-| GPT-2 Small (backprop, 124M) | ~20-25 | 4-5 |
-| TinyStories-1M (backprop, ~1M) | ~30-40 | 3-4 |
-| n-gram baseline (n=5) | ~40-50 | 2-3 |
-
-### Success Criteria
-
-- **Minimum**: Perplexity <100, generation quality ≥2 (some structure)
-- **Good**: Perplexity <50, generation quality ≥3 (coherent)
-- **Exceptional**: Perplexity <30, generation quality ≥3.5 — competitive with small backprop models
+| Level | Perplexity | Generation Quality | Grammar |
+|-------|-----------|-------------------|---------|
+| Minimum | <200 | ≥2 (some structure) | — |
+| Good | <100 | ≥3 (coherent) | Basic syntax |
+| Exceptional | <60 | ≥3.5 | Proper agreement |
 
 ---
 
-## 3.4 Analysis
-
-### What Do Ternary Embeddings Look Like?
-
-```python
-# t-SNE of learned ternary embeddings
-embeddings = model.embedding.weights.unpack()  # (vocab_size, d_model)
-tsne = TSNE(n_components=2).fit_transform(embeddings.float())
-# Are semantically similar words close? (cat near dog, run near walk?)
-```
-
-### Attention Pattern Analysis
-
-```python
-# For a given input, what do attention heads attend to?
-# Are there:
-#   - Positional heads (attend to previous token)?
-#   - Syntactic heads (attend to subject/verb)?
-#   - Semantic heads (attend to related concepts)?
-```
-
-### Layer-wise Representations
-
-Probe each layer's hidden state with a linear classifier:
-- Can we predict the next token from layer 1? Layer 4? Layer 8?
-- Does representation quality improve monotonically with depth?
-- Or do intermediate layers sometimes lose information?
-
-### Weight Sparsity Over Time
-
-```python
-# Track % of ternary weights that are 0 during training
-# Initial: ~50% (random init)
-# After training: ? 
-# Hypothesis: sparsity increases as model becomes more selective
-```
-
----
-
-## 3.5 Ablations
+## Ablations
 
 | Ablation | Question |
 |----------|----------|
-| No hidden layer updates | Does only training the output layer work? |
-| Fixed random embeddings | Are learned embeddings necessary? |
-| Without softmax (hard attention) | Is softmax needed or can we use hard winner-take-all? |
-| Training approach A vs B vs C | Which Hebbian strategy works best for language? |
-| With/without anti-Hebbian | Does negative signal help? |
-| Different Hebbian variants | Basic vs Oja vs BCM for language? |
+| No working memory | Is temporal context essential? |
+| Single timescale | Are hierarchical timescales necessary? |
+| Monolithic vs modular | Does brain-inspired architecture outperform one big Transformer? |
+| Predictive vs basic Hebbian | Is prediction error better than co-occurrence? |
 
 ---
 
 ## Risks
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| Model doesn't learn anything (random output) | Medium | High | Try contrastive approach, simplify to bigram Hebbian, verify on tiny synthetic data |
-| Perplexity is very high (>200) | Medium | Medium | Accept this is inherent to Hebbian; focus on qualitative analysis |
-| Training is slow (popcount not optimized) | High | Low | Use float MatMul for initial experiments, optimize later |
-| Greedy layer-wise doesn't work for attention | Medium | High | Q/K/V/O can be trained with the same approach but attention mixes signals — may need different strategy |
+| Risk | Likelihood | Mitigation |
+|------|-----------|------------|
+| Predictive Hebbian doesn't help | Medium | Revisit theory; basic Hebbian + echo state may be enough |
+| Model produces word salad | Low-Medium | Fall back to toy language, simplify |
+| Sequential processing too slow | High | Batch-sequential with parallel memory states |
+| Working memory doesn't capture long context | Medium | Multiple memory slots, hierarchical memory |
 
 ---
 
 ## What's Next
 
-After Phase 3 → Phase 4: Scale to 1B+ parameters, explore MoE, advanced Hebbian rules, continual language learning.
+After Phase 3 → Phase 4: Scale to 1B+, explore MoE, continual language learning (English → French → Code without forgetting).

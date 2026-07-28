@@ -35,14 +35,17 @@ Build a **deep learning framework that learns without backpropagation** — usin
 
 4. **H4 — Layer-wise independence is sufficient**: Greedy layer-wise Hebbian learning (each layer trained independently, bottom-up) can build useful hierarchical representations without any backward signal.
 
-5. **H5 — Language is learnable without backprop**: Hebbian learning can capture the statistical regularities in text sufficient for coherent generation, even if perplexity is higher than backprop-trained models.
+5. **H5 — Language is learnable without backprop**: Hebbian learning combined with predictive coding can capture the sequential statistical structure of language sufficient for coherent generation. The brain does it; the mechanism is prediction error minimization, not next-token classification.
+
+6. **H6 — Brain-inspired architecture matters**: The brain uses specialized modules (Broca, Wernicke, hippocampus), hierarchical timescales (phoneme → syllable → word → phrase), and working memory (echo state, synfire chains). Mimicking this modular, temporally-aware architecture is essential — a monolithic Hebbian Transformer is not enough.
 
 ### What This Is NOT
 
 - **NOT a replacement for backprop** in high-accuracy regimes. We expect lower raw accuracy.
 - **NOT trying to beat GPT-4**. This is fundamental research into alternative learning paradigms.
 - **NOT a quantization technique**. The weights are natively ternary, not quantized from floats.
-- **NOT biologically detailed**. We borrow the Hebbian principle, not detailed synaptic dynamics (no STDP, no calcium models, no dopamine modulation — yet).
+- **NOT biologically detailed**. We borrow the Hebbian principle and predictive coding, not detailed synaptic dynamics (no STDP, no calcium models, no dopamine modulation — yet).
+- **NOT a monolithic Transformer**. We explore modular, brain-inspired architectures — not just "GPT with Hebbian."
 
 ---
 
@@ -104,7 +107,9 @@ Unlike PH-Net where 8 GB VRAM is a severe bottleneck (AdamW states alone are 2×
 | **M1: CNN Vision** | Ternary Hebbian CNN >60% CIFAR-10 | Experiment log |
 | **M1b: Continual Learning** | <5% forgetting on split MNIST (5 tasks), backprop baseline >40% forgetting | Experiment log + comparison table |
 | **M2: Multi-Layer** | 3-layer Hebbian CNN >65% CIFAR-10 (improvement over 1-layer) | Experiment log |
-| **M3: First LM** | 100M ternary Hebbian Transformer generates coherent paragraphs on TinyStories | Perplexity + human eval |
+| **M3a: Sequence Learning** | Hebbian network learns n-gram transitions, Reber grammar, toy language (100 words, 5 rules) | Experiment log |
+| **M3b: Predictive Hebbian** | Prediction error as teaching signal outperforms basic Hebbian on sequential tasks | Experiment log |
+| **M3c: First LM** | 100M ternary Hebbian Transformer generates coherent paragraphs on TinyStories | Perplexity + human eval |
 | **M4: Scale** | 1B ternary Hebbian model, competitive-ish with 1B backprop at 1/5th training cost | LM eval harness |
 | **M5: Package** | `pip install ph-neuro` — Hebbian training, ternary inference, one command | PyPI + docs |
 
@@ -124,12 +129,12 @@ For every benchmark, we report TWO numbers:
 ## Phases
 
 ```
-M0           M1-M1b          M2              M3              M4              M5
-[Core]   →   [Vision]    →   [Deep]      →   [Language]  →   [Scale]     →   [Ship]
- Mechanism    CNN proof       Multi-layer     TinyStories      1B+ models      Package
- MNIST        CIFAR-10        Hierarchical    Coherent text    Competitive     pip install
- + continual  + baselines     representations  + perplexity     + benchmarks     + docs
- ~1 week      ~2-3 weeks      ~3-4 weeks      ~4-6 weeks       ~2-3 months      ~1 week
+M0           M1-M1b          M2              M3a→M3b→M3c      M4              M5
+[Core]   →   [Vision]    →   [Deep]      →   [Language]    →   [Scale]     →   [Ship]
+ Mechanism    CNN proof       Multi-layer     Sequence →Pred  1B+ models      Package
+ MNIST        CIFAR-10        Hierarchical    → TinyStories   Competitive     pip install
+ + continual  + baselines     representations  Coherent text   + benchmarks     + docs
+ ~1 week      ~2-3 weeks      ~3-4 weeks      ~6-8 weeks      ~2-3 months      ~1 week
 
 All phases run on RTX 4060 8 GB except Phase 4-B (7B → cloud).
 ```
@@ -303,61 +308,139 @@ All phases run on RTX 4060 8 GB except Phase 4-B (7B → cloud).
 
 ---
 
-### Phase 3 — First Language Model
+### Phase 3 — Language: The Brain-Inspired Approach
 
-**Goal:** Show ternary Hebbian Transformers can learn statistical regularities in text and generate coherent output. This is genuinely unexplored — no Hebbian network has been trained on language before.
+**Goal:** Show ternary Hebbian networks can learn sequential structure and language — not by mimicking Transformers, but by mimicking the brain's architecture for language.
 
-**Duration:** ~4-6 weeks
+**Duration:** ~6-8 weeks (3a: 1-2 weeks, 3b: 2-3 weeks, 3c: 3-4 weeks)
 
-#### 3.1 Hebbian Transformer Components
+> **Key insight:** The brain doesn't use a monolithic Transformer. It has specialized modules (Broca, Wernicke, hippocampus), hierarchical timescales (phoneme → syllable → word → phrase), and working memory (echo state). Phase 3 is NOT "put a Transformer with Hebbian" — it's "build a brain-inspired language architecture."
 
-- [ ] `TernaryHebbianLinear` for all linear projections (Q, K, V, O, FFN)
-- [ ] `TernaryHebbianEmbedding`: ternary embedding table (tokens → {-1, 0, +1}^d)
-- [ ] Attention mechanism: standard scaled dot-product attention
-  - Q, K, V are ternary → attention scores are integers in [-d, +d]
-  - Softmax still needed (or explore alternatives like sparsemax, entmax)
-- [ ] Hebbian rule for attention: `ΔW_Q = lr × input × query_activation`, etc.
-  - Each projection matrix learns independently
-- [ ] RoPE or ALiBi for position encoding (ternary compatible)
+---
 
-#### 3.2 Training Strategy for Language
+#### Phase 3a — Sequence Learning (SANITY CHECK)
 
-- [ ] **Challenge**: Hebbian learning has no loss function. How do you train a language model?
-- [ ] **Approach A — Next-token Hebbian**:
-  - Input: sequence of tokens → ternary embeddings
-  - Output: the model's ternary activation at each position
-  - "Teacher" signal: one-hot vector of the actual next token
-  - Hebbian update on output layer: strengthen connections that predict correct token
-  - Anti-Hebbian on wrong tokens
-  - Hidden layers: self-organizing (their own output is the "post" signal)
-- [ ] **Approach B — Contrastive Hebbian for sequences**:
-  - Real next token → Hebbian update
-  - Random token → anti-Hebbian update
-  - Layer-wise: each layer gets its own contrastive signal
-- [ ] **Approach C — Masked Hebbian** (BERT-style):
-  - Mask some tokens, predict them
-  - Hebbian update based on correct vs incorrect predictions
+**Goal:** Before attempting natural language, prove the Hebbian mechanism can learn sequential structure at all.
 
-#### 3.3 TinyStories Experiments
+- [ ] **n-gram prediction**: Train on synthetic sequences where P(next|context) follows a known distribution
+  - Can the network learn "after A comes B with 80% probability"?
+  - Baseline: count-based n-gram model
+- [ ] **Reber grammar**: Artificial grammar with recursive rules (finite-state automaton)
+  - Generate valid/invalid strings from the grammar
+  - Can Hebbian learning discover the underlying rules?
+  - This tests whether Hebbian captures abstract structure, not just surface correlations
+- [ ] **Toy language**: 100 words, 5 grammar rules (SVO order, adjective-noun agreement, etc.)
+  - Generate sentences from a small formal grammar
+  - Train on sequences, evaluate on held-out grammatical sentences
+  - Perfect debugging environment — small enough to trace every weight
 
-- [ ] 100M-param ternary Hebbian Transformer
+**Success criteria:**
+- n-gram: matches count-based baseline within 10%
+- Reber grammar: >90% accuracy distinguishing valid from invalid strings
+- Toy language: generates grammatically correct sentences >80% of the time
+
+---
+
+#### Phase 3b — Predictive Hebbian (THE MECHANISM)
+
+**Goal:** Implement predictive coding as the learning mechanism. This is the brain's actual algorithm — not "fire together wire together" but "minimize prediction error."
+
+**Why this matters:** The brain constantly predicts its next input. When prediction matches reality → strengthen (LTP). When prediction fails → correct (LTD via prediction error). This is fundamentally different from basic Hebbian and is essential for sequential learning.
+
+```python
+class PredictiveHebbianLayer(nn.Module):
+    """
+    Brain-inspired predictive learning:
+    1. Receive current input
+    2. PREDICT next input (forward prediction)
+    3. Compare prediction with actual next input
+    4. Hebbian update based on PREDICTION ERROR
+    """
+    def forward(self, x_current):
+        return self.predict(x_current)  # What comes next?
+    
+    def learn(self, x_current, x_next, lr):
+        predicted = self.predict(x_current)
+        error = x_next - predicted  # Prediction error
+        
+        # Hebbian: "these inputs led to this error → fix the weights"
+        # Positive error → strengthen (under-predicted)
+        # Negative error → weaken (over-predicted)
+        self.hebbian_update(x_current, error, lr)
+```
+
+**Components to build:**
+
+- [ ] **Working Memory (Echo State)**: Leaky integration of past inputs
+  - `state[t] = decay × state[t-1] + (1-decay) × input[t]`
+  - Provides temporal context without backprop-through-time
+  - Different decay rates for different temporal scales
+- [ ] **Predictive Hebbian Update**: `Δw = lr × pre_current × (post_actual - post_predicted)`
+  - NOT just correlation — it's correlation CONDITIONAL on prediction error
+  - This is Rao & Ballard's predictive coding, adapted for ternary weights
+- [ ] **Hierarchical Timescales**: Each layer has its own temporal integration window
+  - Layer 1 (fast): decay=0.5 — phoneme-level patterns (~50ms)
+  - Layer 2 (medium): decay=0.9 — word-level patterns (~500ms)
+  - Layer 3 (slow): decay=0.99 — phrase-level patterns (~2s)
+  - Higher layers "see" longer context
+- [ ] **Layer-wise Prediction**: Each layer predicts the NEXT layer's output (not the next token directly)
+  - Layer L predicts what Layer L+1 will output
+  - This creates a hierarchy of predictions at increasing abstraction levels
+
+**Experiment: Compare basic Hebbian vs predictive Hebbian on sequence tasks (from 3a)**
+
+| Method | n-gram accuracy | Reber grammar | Toy language grammar |
+|--------|----------------|---------------|---------------------|
+| Basic Hebbian | ? | ? | ? |
+| Predictive Hebbian | ? (expected: better) | ? (expected: better) | ? (expected: much better) |
+| Baseline (n-gram / FSA) | 100% | 100% | 100% |
+
+---
+
+#### Phase 3c — TinyStories (NATURAL LANGUAGE)
+
+**Goal:** Apply the predictive Hebbian architecture to real natural language. Generate coherent paragraphs.
+
+**Only proceed after 3a and 3b succeed.**
+
+- [ ] **Brain-inspired architecture** (not a monolithic Transformer):
+
+| Module | Brain Region | Function | Implementation |
+|--------|-------------|----------|----------------|
+| Encoder | Wernicke's area | Input → meaning | Predictive Hebbian layers (fast timescale) |
+| Latent Memory | Hippocampus | Episodic context | Echo state with slow decay (decay=0.99) |
+| Decoder | Broca's area | Meaning → output | Predictive Hebbian layers (medium timescale) |
+| Attention | Prefrontal cortex | Task focus | Ternary Hebbian attention (learned relevance) |
+
+- [ ] **Training strategy**: Predictive Hebbian at every layer
+  - Input: current token
+  - Each layer predicts the next layer's output
+  - Final layer predicts the next token
+  - Prediction error drives Hebbian updates at ALL layers (local, not backpropagated)
+- [ ] 100M total parameters across all modules
 - [ ] Train on TinyStories (~2M children's stories, ~500M tokens)
-- [ ] Evaluate:
-  - Perplexity (expect higher than backprop, but should be << random)
+- [ ] **Evaluation**:
+  - Perplexity (expect higher than backprop, but << random — the brain doesn't minimize perplexity, it minimizes prediction error)
   - Generation quality: human evaluation of 100 generated paragraphs
   - Coherence: do the stories have a beginning, middle, end?
   - Grammar: does the model learn basic English syntax?
-- [ ] Success: generates paragraphs a human can read without cringing
-- [ ] Stretch goal: perplexity within 2× of a same-size backprop model
+  - Diversity: do different prompts produce different stories?
+- [ ] **Analysis**:
+  - What do ternary embeddings look like? (t-SNE)
+  - Do different layers learn different linguistic features?
+  - Does the working memory actually capture long-range dependencies?
+  - Weight sparsity patterns across brain-inspired modules
 
-#### 3.4 Analysis
-
-- [ ] What do the ternary embeddings look like? (t-SNE of token embeddings)
-- [ ] Which attention heads learn interpretable patterns?
-- [ ] Do different layers learn different linguistic features? (syntax early, semantics late?)
-- [ ] Weight sparsity: what % of attention weights are 0?
+**Success criteria:**
+- Generates paragraphs a human can read without cringing (quality ≥3/5)
+- Demonstrates basic grammar (subject-verb agreement, word order)
+- Different modules show functional specialization (encoder vs decoder vs memory)
 
 📄 See: [`phase-3-language-model.md`](phase-3-language-model.md)
+
+---
+
+### Phase 4 — Scale & Advanced Features
 
 ---
 
@@ -465,8 +548,13 @@ docs/experiments/
 ├── 006-cnn-cifar10-multilayer.md
 ├── 007-float-hebbian-baseline.md
 ├── 008-softhebb-reproduction.md
-├── 009-100m-lm-tinystories.md
-├── 010-1b-lm-pretrain.md
+├── 009-ngram-hebbian-prediction.md
+├── 010-reber-grammar-hebbian.md
+├── 011-toy-language-hebbian.md
+├── 012-predictive-vs-basic-hebbian.md
+├── 013-echo-state-memory-ablation.md
+├── 014-100m-lm-tinystories.md
+├── 015-1b-lm-pretrain.md
 └── ...
 ```
 
@@ -528,11 +616,15 @@ docs/experiments/
 6. **Layer-wise information bottleneck**: Each layer can only pass ternary activations to the next. How much information is lost per layer?
 7. **Coordinated learning**: Can hidden layers receive a useful signal without backprop? Is greedy layer-wise inherently limited?
 
-### Language
-8. **Hebbian attention**: Does the Hebbian rule make sense for attention? Q, K, V projections learn based on co-occurrence — does this produce useful attention patterns?
-9. **Softmax with ternary activations**: Attention scores are integer-valued (ternary Q · ternary K). Is softmax appropriate? Would a hard winner-take-all work better?
-10. **Next-token prediction without loss**: Hebbian learning maximizes correlation, not minimizes perplexity. Is next-token prediction fundamentally a supervised task that needs a loss?
-11. **Sequence-level Hebbian**: Should Hebbian updates happen per-token or per-sequence? Per-token is more local but noisier.
+### Language & Sequence Learning
+8. **Predictive coding vs basic Hebbian**: Does prediction error as a teaching signal outperform simple co-occurrence Hebbian for sequential tasks? By how much?
+9. **Working memory architecture**: What decay rate(s) work best? Single rate vs hierarchical? Does echo state memory capture enough context for language?
+10. **Hierarchical timescales**: Do different layers naturally learn different temporal patterns when given different decay rates? Does this create a meaningful hierarchy?
+11. **Modular vs monolithic**: Does a brain-inspired modular architecture (encoder + memory + decoder) outperform a monolithic Hebbian Transformer? Is functional specialization emergent or designed?
+12. **Softmax with ternary activations**: Attention scores are integer-valued (ternary Q · ternary K). Is softmax appropriate? Would a hard winner-take-all work better?
+13. **Next-token prediction without cross-entropy**: Predictive Hebbian minimizes prediction error, not perplexity. Is next-token prediction fundamentally compatible with Hebbian learning?
+14. **Sequence-level Hebbian**: Should Hebbian updates happen per-token or per-sequence? Per-token is more local but noisier.
+15. **Toy language transfer**: Do insights from the toy language (100 words, 5 rules) transfer to natural language? Or is there a qualitative gap?
 
 ### Continual Learning
 12. **Capacity limits**: How many tasks can a ternary Hebbian network learn before saturating? Is there a theoretical limit based on number of synapses?
@@ -580,13 +672,27 @@ docs/experiments/
 |-----------------|-----------|
 | **Forward-Forward** (Hinton, 2022) | Layer-wise contrastive learning without backprop. Goodness function per layer. |
 | **PEPITA** (Dellaferrera et al., 2022) | Forward-only learning with random feedback — competitive with backprop on small tasks |
-| **Predictive Coding** (Whittington & Bogacz, 2017) | Learning by minimizing prediction errors layer by layer |
 | **Feedback Alignment** (Lillicrap et al., 2016) | Random feedback weights work for learning — challenges backprop's necessity |
 | **Direct Feedback Alignment** (Nøkland, 2016) | Error signal goes directly to each layer, bypassing chain rule |
 | **Difference Target Propagation** (Lee et al., 2015) | Targets instead of gradients propagated backward |
 | **Equilibrium Propagation** (Scellier & Bengio, 2017) | Energy-based learning with two phases (free and clamped) |
 | **Local Representation Alignment** (Ororbia & Mali, 2023) | Local learning rules that approximate backprop |
 | **Signal Propagation** (Kohan et al., 2023) | Forward-only learning via signal propagation, not gradients |
+
+### Predictive Coding & Brain-Inspired Architecture
+| Paper / Project | Relevance |
+|-----------------|-----------|
+| **Predictive Coding in the Visual Cortex** (Rao & Ballard, 1999) | Original predictive coding formulation — cortex minimizes prediction error hierarchically |
+| **The Free-Energy Principle** (Friston, 2010) | Unified brain theory — perception and learning as prediction error minimization |
+| **Predictive Coding for Deep Learning** (Whittington & Bogacz, 2017) | Shows predictive coding approximates backprop on MNIST/CIFAR |
+| **Predictive Coding Networks for Video** (Lotter et al., 2017) | Predictive coding for temporal sequences — video prediction without backprop |
+| **Echo State Networks** (Jaeger, 2001) | Reservoir computing — fixed recurrent network with learned readout, temporal memory without BPTT |
+| **Liquid State Machines** (Maass et al., 2002) | Continuous-time reservoir computing — biologically realistic temporal processing |
+| **Reservoir Computing Survey** (Lukoševičius & Jaeger, 2009) | Comprehensive survey of echo state networks for temporal pattern recognition |
+| **Synfire Chains** (Abeles, 1991) | Sequences of synchronously firing neuron groups — biological mechanism for sequence memory |
+| **The Brain's Language System** (Friederici, 2011) | Broca, Wernicke, arcuate fasciculus — modular language architecture in the brain |
+| **Hierarchical Processing in Cortex** (Felleman & Van Essen, 1991) | Distributed hierarchical processing — inspiration for layered Hebbian learning |
+| **Theta-Gamma Neural Code** (Lisman & Jensen, 2013) | Cross-frequency coupling for sequence encoding — biological timing mechanism for language |
 
 ### Continual Learning
 | Paper / Project | Relevance |
