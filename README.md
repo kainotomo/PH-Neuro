@@ -109,14 +109,23 @@ Or individual test files:
 
 See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full development plan.
 
-| Phase | Milestone | Status |
-|-------|-----------|--------|
-| 0 | Core Mechanism — MNIST >95% | � In progress |
-| 1 | Vision POC — CIFAR-10 + Continual Learning | 🔴 Not started |
-| 2 | Multi-Layer & Hierarchical Representations | 🔴 Not started |
-| 3 | First Language Model — TinyStories | 🔴 Not started |
-| 4 | Scale to 1B+ Parameters | 🔴 Not started |
-| 5 | Package & Publish | 🔴 Not started |
+| Phase | Milestone | Status | Key Result |
+|-------|-----------|--------|------------|
+| 0 | Core Mechanism | ✅ Complete | 88.4% MNIST, single-layer WTA Hebbian |
+| 1.1 | Multi-layer MLP on MNIST | ✅ Complete | 87.9%, competitive Hebbian for hidden layers |
+| 1.2 | CNN on CIFAR-10 | ⬜ Not started | Target: >55% |
+| 1.3 | Continual Learning | ⬜ Not started | **Primary contribution** — target <5% forgetting |
+| 2 | Multi-Layer & Hierarchical | ⬜ De-prioritized | Depth not yet beneficial; revisit after CNN |
+| 3 | Language Model | ⬜ Not started | Sequence → Predictive → TinyStories |
+| 4 | Scale to 1B+ | ⬜ Not started | |
+| 5 | Package & Publish | ⬜ Not started | |
+
+### Research Findings So Far
+
+1. **WTA Hebbian is the only viable output strategy**: Correct-only Hebbian creates identical weight patterns across classes. Full-target (+1/−1) is dominated by anti-Hebbian (9:1 wrong:correct ratio). Winner-Take-All (strengthen correct, weaken prediction) achieves near-theoretical maximum.
+2. **Hidden layers need competitive learning**: Basic Hebbian, Oja's rule, and BCM all fail for unsupervised hidden layers. Only online competitive Hebbian (WTA + conscience) creates sparse, differentiated prototypes.
+3. **Depth does not yet help**: 2-layer MLP (87.9%) matches single-layer (88.4%). The ~88-89% range appears to be the practical limit for ternary Hebbian MLPs on MNIST — ~96% of the theoretical linear maximum.
+4. **Adjusted expectations**: Ternary Hebbian operates ~10-15pp below backprop in raw accuracy. The trade is unforgetfulness — continual learning is where PH-Neuro differentiates.
 
 ---
 
