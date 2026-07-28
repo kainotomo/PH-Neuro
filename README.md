@@ -42,6 +42,19 @@ Both share the ternary weight philosophy. PH-Net uses proven methods (gradient d
 
 ---
 
+## Current Status
+
+| Phase | Title | Status | Key Result |
+|:------|:------|:------:|:-----------|
+| 0 | Core Mechanism | ✅ **Complete** | 88.4% MNIST, single-layer WTA Hebbian |
+| 1.1 | Multi-layer MLP on MNIST | ✅ **Complete** | 87.9% with online competitive Hebbian |
+| 1.2 | CNN on CIFAR-10 | ⬜ Not started | |
+| 1.3 | Continual learning | ⬜ Not started | |
+
+**Key discovery:** Unsupervised Hebbian for hidden layers requires **competitive learning** (winner-take-all + conscience), not basic correlation Hebbian. See `docs/experiments/E002-mnist-multilayer-mlp.md` for details.
+
+---
+
 ## Quick Start
 
 ```python

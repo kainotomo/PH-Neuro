@@ -29,6 +29,25 @@ Build a **deep learning framework that learns without backpropagation** — usin
 
 1. **H1 — Ternary Hebbian works at all**: Ternary weights {-1, 0, +1} combined with Hebbian learning can solve non-trivial classification tasks (MNIST >95%, CIFAR-10 competitive with float Hebbian).
 
+---
+
+## Phase Status
+
+| Phase | Title | Status |
+|:------|:------|:------:|
+| 0 | Core Mechanism | ✅ Complete (88.4% MNIST) |
+| 1 | Vision POC — Multi-layer MLP | ✅ Complete (87.9% MNIST, 7 variants tested) |
+| 1 | Vision POC — CNN on CIFAR-10 | ⬜ Not started |
+| 1 | Vision POC — Continual learning | ⬜ Not started |
+| 2 | Multi-Layer Theory | ⬜ Not started |
+| 3 | Language Model | ⬜ Not started |
+| 4 | Scale | ⬜ Not started |
+| 5 | Package & Publish | ⬜ Not started |
+
+## Phase 1 Key Finding
+
+The correct unsupervised Hebbian rule for ternary hidden layers is **online competitive Hebbian with conscience** (winner-take-all + fairness bias). Basic Hebbian, Oja, BCM, and other variants all fail to create useful representations. This is now documented in `docs/experiments/E002-mnist-multilayer-mlp.md`.
+
 2. **H2 — No catastrophic forgetting**: Because weights are discrete and Hebbian updates are local, learning new tasks does not overwrite old knowledge. Target: <5% forgetting across 10 sequential tasks, vs >60% for backprop.
 
 3. **H3 — Hysteresis creates stability**: A dual-threshold mechanism (high threshold to activate a synapse, low threshold to deactivate) prevents oscillatory "flipping" and creates stable representations.

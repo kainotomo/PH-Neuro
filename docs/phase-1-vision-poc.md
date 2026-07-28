@@ -1,4 +1,4 @@
-# Phase 1 — Vision Proof-of-Concept
+# Phase 1 — Vision Proof-of-Concept (Status: In Progress)
 
 > **Goal:** Show ternary Hebbian learning works on real vision tasks. Demonstrate continual learning.  
 > **Duration:** ~2-3 weeks  
@@ -10,44 +10,96 @@
 ## Overview
 
 Phase 1 takes the core mechanism from Phase 0 and applies it to:
-1. Multi-layer MLP on MNIST (>95%)
-2. CNN on CIFAR-10 (>60%)
-3. **Continual learning** — the core differentiator (<5% forgetting)
-
-This phase produces the key results for the first paper.
+1. Multi-layer MLP on MNIST (>95%) — **Section 1.1 complete**
+2. CNN on CIFAR-10 (>60%) — **not yet started**
+3. **Continual learning** — **not yet started**
 
 ---
 
-## 1.1 Multi-Layer MLP on MNIST
+## 1.1 Multi-Layer MLP on MNIST (COMPLETE)
+
+**Status:** Delivered. See `docs/experiments/E002-mnist-multilayer-mlp.md` for full results.
+
+**Key finding:** Basic Hebbian (`ΔW = lr × postᵀ @ pre`) does **not** work for unsupervised hidden layers — all weights collapse to the same sign. The correct rule is **online competitive Hebbian with conscience** (winner-take-all + fairness bias), which creates sparse prototypes (~10% active weights).
+
+**Best accuracy:** 87.9% (2-layer, 784→512→10) — matches the single-layer Phase 0 baseline, but depth does not provide significant improvement beyond it.
 
 ### Architecture
 ```
-Input (784) → TernaryHebbianLinear(784→256) → sign() 
-           → TernaryHebbianLinear(256→128) → sign() 
-           → TernaryHebbianLinear(128→10) → sign()
+Input (784) → TernaryHebbianLinear(784→512) → sign() 
+           → TernaryHebbianLinear(512→10) → sign()
 ```
 
-### Training Strategy: Greedy Layer-Wise
+### Training Strategy: Greedy Layer-Wise with Online Competitive Hebbian
 
 ```python
-# Step 1: Train Layer 1 (unsupervised, self-organizing)
-for epoch in range(epochs):
+# Step 1: Train Layer 1 (unsupervised, online competitive)
+# Each hidden neuron acts as a prototype (representative pattern)
+# Conscience mechanism prevents any one neuron from dominating
+layer1.requires_hebbian_(True)
+for epoch in range(3):
     for x, _ in train_loader:
         x_ternary = ternary_sign(x.view(-1, 784))
-        h1 = model.layer1(x_ternary)  # ternary output
+        h = x_ternary.float()
         
-        # Layer 1 learns from its own output (self-organizing)
-        # This captures statistical structure in the input
-        model.layer1.hebbian_update(x_ternary, h1, lr=0.01)
-        model.layer1.refresh_weights()
+        # Process each sample one at a time (online / brain-like)
+        for s in range(h.shape[0]):
+            out = layer1(h[s:s+1])
+            
+            # Conscience bias: penalize over-frequent winners
+            if total_steps > 0:
+                freq = win_counts / total_steps
+                conscience = 0.1 * (freq - 1/n_neurons)
+            winner = (out - conscience).argmax()
+            
+            # Move winner's weights toward input
+            layer1._latent_scores.scores[winner] += lr * h[s]
+            win_counts[winner] += 1
+            total_steps += 1
+            
+            layer1.refresh_weights()
 
-# Step 2: Train Layer 2 on Layer 1's frozen output
-model.layer1.requires_hebbian_(False)  # Freeze
+# Step 2: Freeze Layer 1, Train Layer 2 (supervised WTA)
+layer1.requires_hebbian_(False)
 for epoch in range(epochs):
-    for x, _ in train_loader:
-        x_ternary = ternary_sign(x.view(-1, 784))
+    for x, y in train_loader:
         with torch.no_grad():
-            h1 = model.layer1(x_ternary)
+            h1 = layer1(ternary_sign(x.view(-1, 784)).float())
+        out = layer2(h1.float())
+        pred = out.argmax(dim=1)
+        
+        # WTA: strengthen correct class, weaken wrong prediction
+        if (pred != y).any():
+            correct_hot = one_hot(y[wrong], 10)
+            pred_hot = one_hot(pred[wrong], 10)
+            scores += lr * (correct_hot.T @ h1[wrong] - pred_hot.T @ h1[wrong])
+        
+        layer2.refresh_weights()
+```
+
+### Results
+
+| Depth | Architecture | Accuracy |
+|:------|:-------------|:--------:|
+| 1-layer | 784 → 10 | 87.5% |
+| 2-layer | 784 → 512 → 10 | **87.9%** |
+| 3-layer | 784 → 512 → 256 → 10 | *pending* |
+
+### Key Lessons
+
+1. **Basic Hebbian fails**: `ΔW = lr × postᵀ @ pre` makes all hidden neurons identical.
+2. **Oja's rule**: Creates balanced 50/50 weights but random projections (~60% max).
+3. **Online competitive + conscience**: The only approach that works. Creates sparse, differentiated prototypes.
+4. **Depth doesn't improve** beyond the ~88% single-layer bound for MNIST with linear layers.
+5. **The entire pipeline** (no `.backward()`, no optimizer, no loss function, ternary weights) is verified.
+
+### Ablations
+
+See `docs/experiments/E002-mnist-multilayer-mlp.md` for the complete ablation study across 7 Hebbian variants.
+
+---
+
+## 1.2 CNN on CIFAR-10 (NOT YET STARTED)
         h2 = model.layer2(h1)
         
         model.layer2.hebbian_update(h1, h2, lr=0.01)
