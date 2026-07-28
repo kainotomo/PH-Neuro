@@ -62,7 +62,8 @@ Build a **deep learning framework that learns without backpropagation** — usin
 | Framework | PyTorch (no autograd for learning) | PyTorch for tensor ops, data loading, infrastructure; Hebbian updates are manual (no `.backward()`); future: pure C++/WASM |
 | Inference compute | Popcount (XOR + bitcount) | Ternary MatMul reduces to bitwise operations; ~6.5× fewer FLOPs than float MatMul |
 | Training compute | Popcount forward + O(n) Hebbian update | No backward pass; no gradient computation; no optimizer step; training FLOPs ≈ inference FLOPs + trivial update |
-| Training memory | ~1× model size | No optimizer states, no gradient buffers, no activation checkpointing needed; a 7B ternary model fits in 8 GB VRAM for training |
+| Weight storage | Naive int8 (dev) → Packed 2-bit (prod) | PyTorch has no native int2 — use 1 byte/weight for debugging in Phases 0-2, then pack 4 weights/byte in Phases 3-4 for 4× memory reduction |
+| Training memory | ~1× model size (naive) / ~0.25× (packed) | No optimizer states, no gradient buffers, no activation checkpointing; even with naive int8, 1B model fits in 8 GB VRAM |
 | Architecture | Agnostic (MLP, CNN, Transformer, MoE) | Not locked to any single architecture; Hebbian rule is architecture-agnostic |
 | Evaluation philosophy | Accuracy vs backprop + forgetting vs backprop | Two-dimensional evaluation: static accuracy (expected loss) and continual learning (expected win) |
 
@@ -72,30 +73,38 @@ Build a **deep learning framework that learns without backpropagation** — usin
 
 **Current machine:** RTX 4060 8 GB VRAM, i7-14700K (20 cores), 16 GB RAM, 1 TB SSD.
 
-Unlike PH-Net where 8 GB VRAM is a severe bottleneck (AdamW states alone are 2× model size), PH-Neuro's memory footprint is dramatically smaller:
+Unlike PH-Net where 8 GB VRAM is a severe bottleneck (AdamW states alone are 2× model size), PH-Neuro's memory footprint is dramatically smaller.
 
-| Phase | Model size | Ternary weights | Latent scores (fp16) | Activations | Total (training) | Fits 8 GB? |
-|-------|-----------|----------------|---------------------|-------------|------------------|-------------|
-| 1 | <100K params | <0.4 MB | <0.2 MB | <10 MB | <50 MB | ✅ Trivial |
-| 2 | <1M params | <4 MB | <2 MB | <50 MB | <200 MB | ✅ Trivial |
-| 3 | ~100M params | ~400 MB | ~200 MB | ~200 MB | ~1 GB | ✅ Easy |
-| 4-A | ~1B params | ~4 GB | ~2 GB | ~1 GB | ~7 GB | ✅ Fits |
-| 4-B | ~7B params | ~28 GB | ~14 GB | ~5 GB | ~47 GB | ❌ Needs cloud |
+**Weight storage strategy — two phases:**
+- **Phases 0-2 (development)**: Naive int8 — 1 byte per ternary weight. Simple, debuggable, fast.
+- **Phases 3-4 (production)**: Packed 2-bit — 4 weights per int8 byte. 4× memory reduction when scaling matters.
+
+Both strategies use the same tensor operations; packing/unpacking is transparent to the Hebbian update logic.
+
+| Phase | Model size | Ternary weights (int8) | Ternary weights (packed 2-bit) | Latent scores (fp16) | Activations | Total (int8) | Total (packed) | Fits 8 GB? |
+|-------|-----------|----------------------|-------------------------------|---------------------|-------------|-------------|---------------|-------------|
+| 1 | <100K params | <0.1 MB | <0.03 MB | <0.2 MB | <10 MB | <50 MB | <50 MB | ✅ Trivial |
+| 2 | <1M params | <1 MB | <0.25 MB | <2 MB | <50 MB | <100 MB | <100 MB | ✅ Trivial |
+| 3 | ~100M params | ~100 MB | ~25 MB | ~200 MB | ~200 MB | ~500 MB | ~425 MB | ✅ Easy |
+| 4-A | ~1B params | ~1 GB | ~250 MB | ~2 GB | ~1 GB | ~4 GB | ~3.25 GB | ✅ Fits |
+| 4-B | ~7B params | ~7 GB | ~1.75 GB | ~14 GB | ~5 GB | ~26 GB | ~21 GB | ❌ Needs cloud |
 
 > **Key insight:** PH-Neuro training on RTX 4060 can handle models ~4× larger than PH-Net because there's no optimizer, no gradient buffers, and no activation checkpointing. A 1B ternary model trains comfortably where PH-Net struggles.
 
 ### Memory Breakdown Comparison (1B model)
 
-| Component | PH-Net (STE + AdamW) | PH-Neuro (Hebbian) | Savings |
-|-----------|---------------------|-------------------|---------|
-| Weights (fp32 latent / ternary) | 4 GB | ~0.4 GB (ternary) | 10× |
-| Latent scores (fp16) | — | 2 GB | — |
-| Optimizer states (AdamW) | 8 GB | 0 | ∞ |
-| Gradients | 4 GB | 0 | ∞ |
-| Activations (stored for backward) | ~2 GB | ~1 GB (forward only) | 2× |
-| **Total** | **~18 GB** | **~3.4 GB** | **~5×** |
+| Component | PH-Net (STE + AdamW) | PH-Neuro naive int8 | PH-Neuro packed 2-bit | Savings vs PH-Net (packed) |
+|-----------|---------------------|--------------------|--------------------|----------------------------|
+| Weights (fp32 / ternary) | 4 GB | 1 GB | 0.25 GB | 16× |
+| Latent scores (fp16) | — | 2 GB | 2 GB | — |
+| Optimizer states (AdamW) | 8 GB | 0 | 0 | ∞ |
+| Gradients | 4 GB | 0 | 0 | ∞ |
+| Activations (for backward) | ~2 GB | ~1 GB | ~1 GB | 2× |
+| **Total** | **~18 GB** | **~4 GB** | **~3.25 GB** | **~5.5×** |
 
-> A 7B ternary model (~28 GB weights + ~14 GB latent scores = ~42 GB total) requires cloud GPU. But a 3B model (~12 GB + ~6 GB = ~18 GB) could fit with CPU offload of latent scores.
+> **Weight packing**: 4 ternary weights per int8 byte (2 bits each: 00=0, 01=+1, 10=-1). Packing is transparent — `unpack()` converts to {-1,0,+1} int8 for MatMul, `pack()` stores compactly. Use naive int8 during development (Phases 0-2), switch to packed for scale (Phases 3-4).
+
+> A 7B ternary model with packed weights (~1.75 GB weights + ~14 GB latent scores + ~5 GB activations ≈ ~21 GB) fits on a cloud RTX 4090 24 GB. With naive int8 it would need ~26 GB — only possible on A100.
 
 ---
 
@@ -149,7 +158,9 @@ All phases run on RTX 4060 8 GB except Phase 4-B (7B → cloud).
 
 #### 0.1 Ternary Weight Representation
 
-- [ ] `TernaryTensor`: efficient storage of {-1, 0, +1} using 2-bit packing (int8 → 4 weights per byte)
+- [ ] `TernaryTensor`: storage of {-1, 0, +1} weights
+  - **Phase 0-2 (dev)**: Naive int8 — 1 byte per weight, simple and debuggable
+  - **Phase 3+ (prod)**: Packed 2-bit — 4 weights per int8 byte (00=0, 01=+1, 10=-1); pack/unpack transparent to Hebbian logic
 - [ ] `LatentScoreTensor`: fp16 scores paired with each weight, tracking cumulative Hebbian evidence
 - [ ] Conversion functions: `latent_to_ternary(scores, theta_upper, theta_lower)` with hysteresis
 - [ ] Weight initialization: all weights start at 0, latent scores at small random values near 0

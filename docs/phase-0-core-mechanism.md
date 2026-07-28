@@ -26,9 +26,18 @@ If this doesn't work on MNIST in a single layer, nothing else matters. This is t
 
 ```python
 class TernaryTensor:
-    """Efficient {-1, 0, +1} storage using 2-bit packing."""
-    def __init__(self, shape):
-        self.data: torch.Tensor  # int8, packed (4 weights/byte)
+    """{-1, 0, +1} weight storage — two modes:
+    
+    Naive (Phases 0-2): 1 byte per weight (int8). Simple, debuggable.
+    Packed (Phases 3+):  4 weights per byte (2-bit encoding). Memory efficient.
+    
+    The API is identical — only internal storage changes.
+    """
+    def __init__(self, shape, packed=False):
+        if packed:
+            self.data: torch.Tensor  # int8, 4 weights/byte
+        else:
+            self.data: torch.Tensor  # int8, 1 weight/byte (naive)
     
     @staticmethod
     def pack(weights: torch.Tensor) -> 'TernaryTensor': ...
@@ -41,10 +50,11 @@ class TernaryTensor:
 ```
 
 **Implementation notes:**
-- 2-bit encoding: 00 = 0, 01 = +1, 10 = -1, 11 = unused
-- PyTorch doesn't have native int2 — store as int8 with 4 elements per byte
-- For initial implementation, just use int8 tensor (1 byte per element) — optimize later
-- Packing is for memory efficiency, not compute speed (yet)
+- **2-bit encoding**: 00 = 0, 01 = +1, 10 = -1, 11 = unused
+- **Start naive (int8)**: 1 byte/weight for Phases 0-2 — correctness first
+- **Pack later**: 4 weights/byte for Phases 3-4 — efficiency when scaling
+- PyTorch doesn't have native int2 — we implement packing/unpacking ourselves
+- The Hebbian update logic doesn't care about packing — it always works with unpacked {-1, 0, +1} tensors
 
 ### 0.2 Latent Score Storage
 
@@ -228,6 +238,13 @@ def test_mnist_minimal():
 - Single threshold → weights oscillate at the boundary
 - Hysteresis gap → once activated, weights are "sticky"
 - Biological analogy: LTP requires strong stimulation, LTD is gradual
+
+### Why naive int8 first (not packed 2-bit)?
+- Packing 4 weights/byte adds complexity — bit shifts, masking
+- Naive int8 is trivial to debug (each byte is one weight, visible in a hex dump)
+- Memory difference is negligible for Phases 0-2 models (<1M params: ~1 MB vs ~0.25 MB)
+- Packed storage is a pure optimization — same API, same logic, just denser bytes
+- Switch to packed in Phase 3 when 100M+ models make the 4× savings worthwhile
 
 ### Why start with float MatMul (not popcount)?
 - PyTorch doesn't have native popcount MatMul
