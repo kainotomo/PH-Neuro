@@ -44,21 +44,46 @@ class LatentScoreTensor:
     def scores(self, value: torch.Tensor) -> None:
         self._scores = value
 
-    def get_ternary(self, theta_upper: float, theta_lower: float) -> torch.Tensor:
+    def get_ternary(
+        self,
+        theta_upper: float,
+        theta_lower: float,
+        current: torch.Tensor | None = None,
+    ) -> torch.Tensor:
         """Convert scores to ternary weights using hysteresis.
+
+        When ``current`` is provided, full hysteresis logic applies:
+        - If current weight is 0 and ``|score| > theta_upper`` → activate to ``sign(score)``
+        - If current weight is ±1 and ``|score| < theta_lower`` → deactivate to 0
+        - Otherwise → keep current weight
+
+        When ``current`` is ``None``, simple thresholding is used:
+        ``|score| > theta_upper → sign(score)``, everything else 0.
 
         Args:
             theta_upper: Threshold to activate a synapse (0 → ±1).
             theta_lower: Threshold to deactivate a synapse (±1 → 0).
+            current: Optional current ternary weights to use for hysteresis.
 
         Returns:
             int8 tensor with values in {-1, 0, +1}.
         """
-        ternary = torch.zeros_like(self._scores, dtype=torch.int8)
-        # Activate: |score| > theta_upper → sign(score)
-        active_mask = self._scores.abs() > theta_upper
-        ternary[active_mask] = self._scores[active_mask].sign().to(torch.int8)
-        return ternary
+        if current is not None:
+            # Full hysteresis: use current weights as starting point
+            ternary = current.clone().to(dtype=torch.int8)
+            # Activate: current == 0 and |score| > theta_upper
+            activate = (current == 0) & (self._scores.abs() > theta_upper)
+            ternary[activate] = self._scores[activate].sign().to(torch.int8)
+            # Deactivate: current != 0 and |score| < theta_lower
+            deactivate = (current != 0) & (self._scores.abs() < theta_lower)
+            ternary[deactivate] = 0
+            return ternary
+        else:
+            # Simple thresholding (backward-compatible)
+            ternary = torch.zeros_like(self._scores, dtype=torch.int8)
+            active_mask = self._scores.abs() > theta_upper
+            ternary[active_mask] = self._scores[active_mask].sign().to(torch.int8)
+            return ternary
 
     def apply_hebbian(
         self,

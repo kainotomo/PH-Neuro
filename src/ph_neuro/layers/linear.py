@@ -58,7 +58,7 @@ class TernaryHebbianLinear(nn.Module):
         self._theta_upper = theta_upper
         self._theta_lower = theta_lower
         self._hebbian_rule = hebbian_rule
-        self._device = device
+        self._hebbian_enabled = True
 
         # Ternary weight storage (starts all zeros)
         self._ternary_weight = TernaryTensor(
@@ -135,6 +135,9 @@ class TernaryHebbianLinear(nn.Module):
                 Should be in {-1, 0, +1} (ternary).
             lr: Learning rate for the Hebbian update.
         """
+        if not self._hebbian_enabled:
+            return
+
         pre = pre_activation.to(torch.int8)
         post = post_activation.to(torch.int8)
         # Ensure latent scores are on the same device
@@ -144,8 +147,11 @@ class TernaryHebbianLinear(nn.Module):
         if self._hebbian_rule == "basic":
             self._latent_scores.apply_hebbian(pre, post, lr)
         elif self._hebbian_rule == "anti":
-            delta = -lr * (pre.T.float() @ post.float()) / pre.shape[0]
-            self._latent_scores.scores += delta
+            import ph_neuro.core.hebbian_rules as rules
+
+            self._latent_scores.scores = rules.anti_hebbian_update(
+                self._latent_scores.scores, pre, post, lr
+            )
         elif self._hebbian_rule == "oja":
             import ph_neuro.core.hebbian_rules as rules
 
@@ -163,6 +169,8 @@ class TernaryHebbianLinear(nn.Module):
         Args:
             decay_rate: Decay factor.
         """
+        if not self._hebbian_enabled:
+            return
         self._latent_scores.apply_decay(decay_rate)
 
     def refresh_weights(self) -> None:
@@ -191,16 +199,27 @@ class TernaryHebbianLinear(nn.Module):
         deactivate_mask = (current_weights != 0) & (scores.abs() < self._theta_lower)
         new_weights[deactivate_mask] = 0
 
-        self._ternary_weight = TernaryTensor(
-            (self._out_features, self._in_features),
-            packed=self._ternary_weight.packed,
-            device=self._device,
-        )
-        # Rebuild the ternary tensor with new weights
+        # Write back new weights — device is already consistent
         if self._ternary_weight.packed:
             self._ternary_weight = TernaryTensor.pack(new_weights)
         else:
             self._ternary_weight._data = new_weights
+
+    def requires_hebbian_(self, enabled: bool) -> TernaryHebbianLinear:
+        """Enable or disable Hebbian learning for this layer.
+
+        When disabled, ``hebbian_update`` and ``apply_decay`` are no-ops.
+        This is useful for freezing layers during inference or layer-wise training.
+
+        Args:
+            enabled: If ``True`` (default), Hebbian learning is active.
+                If ``False``, all plasticity is frozen.
+
+        Returns:
+            ``self`` for chaining (in-place operation).
+        """
+        self._hebbian_enabled = enabled
+        return self
 
     def extra_repr(self) -> str:
         return (
