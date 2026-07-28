@@ -47,11 +47,11 @@ Both share the ternary weight philosophy. PH-Net uses proven methods (gradient d
 | Phase | Title | Status | Key Result |
 |:------|:------|:------:|:-----------|
 | 0 | Core Mechanism | ✅ **Complete** | 88.4% MNIST, single-layer WTA Hebbian |
-| 1.1 | Multi-layer MLP on MNIST | ✅ **Complete** | 87.9% with online competitive Hebbian |
-| 1.2 | CNN on CIFAR-10 | ⬜ Not started | |
-| 1.3 | Continual learning | ⬜ Not started | |
+| 1.1 | Multi-layer MLP on MNIST | ✅ **Complete** | 87.9% — depth does not improve over single-layer |
+| 1.2 | CNN on CIFAR-10 | ✅ **Complete** | 32.6% — conv Hebbian matches random, no benefit |
+| 1.3 | Continual learning | ⬜ **NEXT** | **Primary contribution** — target <5% forgetting |
 
-**Key discovery:** Unsupervised Hebbian for hidden layers requires **competitive learning** (winner-take-all + conscience), not basic correlation Hebbian. See `docs/experiments/E002-mnist-multilayer-mlp.md` for details.
+**Critical finding:** Unsupervised Hebbian does NOT create discriminative features in hidden layers. H4 (layer-wise independence) is **falsified**. Single-layer WTA Hebbian works (88.4% MNIST) but stacking layers provides zero benefit — both MLP and CNN confirm this across 3 experiments. The project's value proposition shifts to **continual learning** where ternary Hebbian's local updates and discrete weights should inherently resist catastrophic forgetting.
 
 ---
 
@@ -112,20 +112,20 @@ See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full development plan.
 | Phase | Milestone | Status | Key Result |
 |-------|-----------|--------|------------|
 | 0 | Core Mechanism | ✅ Complete | 88.4% MNIST, single-layer WTA Hebbian |
-| 1.1 | Multi-layer MLP on MNIST | ✅ Complete | 87.9%, competitive Hebbian for hidden layers |
-| 1.2 | CNN on CIFAR-10 | ⬜ Not started | Target: >55% |
-| 1.3 | Continual Learning | ⬜ Not started | **Primary contribution** — target <5% forgetting |
-| 2 | Multi-Layer & Hierarchical | ⬜ De-prioritized | Depth not yet beneficial; revisit after CNN |
-| 3 | Language Model | ⬜ Not started | Sequence → Predictive → TinyStories |
+| 1.1 | Multi-layer MLP on MNIST | ✅ Complete | 87.9%, depth doesn't help |
+| 1.2 | CNN on CIFAR-10 | ✅ Complete | 32.6%, conv Hebbian = random |
+| 1.3 | Continual Learning | ⬜ **NEXT** | **Primary contribution** — target <5% forgetting |
+| 2 | Multi-Layer & Hierarchical | ⬜ **SKIP** | H4 falsified — depth not beneficial |
+| 3 | Language Model | ⬜ Not started | Predictive coding may provide needed error signal |
 | 4 | Scale to 1B+ | ⬜ Not started | |
 | 5 | Package & Publish | ⬜ Not started | |
 
 ### Research Findings So Far
 
-1. **WTA Hebbian is the only viable output strategy**: Correct-only Hebbian creates identical weight patterns across classes. Full-target (+1/−1) is dominated by anti-Hebbian (9:1 wrong:correct ratio). Winner-Take-All (strengthen correct, weaken prediction) achieves near-theoretical maximum.
-2. **Hidden layers need competitive learning**: Basic Hebbian, Oja's rule, and BCM all fail for unsupervised hidden layers. Only online competitive Hebbian (WTA + conscience) creates sparse, differentiated prototypes.
-3. **Depth does not yet help**: 2-layer MLP (87.9%) matches single-layer (88.4%). The ~88-89% range appears to be the practical limit for ternary Hebbian MLPs on MNIST — ~96% of the theoretical linear maximum.
-4. **Adjusted expectations**: Ternary Hebbian operates ~10-15pp below backprop in raw accuracy. The trade is unforgetfulness — continual learning is where PH-Neuro differentiates.
+1. **WTA Hebbian is the only viable output strategy**: Correct-only Hebbian creates identical weight patterns across classes. Full-target (+1/−1) is dominated by anti-Hebbian (9:1 wrong:correct ratio). Winner-Take-All achieves near-theoretical maximum for single-layer classification.
+2. **Unsupervised Hebbian does NOT create discriminative features**: Across 3 experiments (E001-E003), hidden layers trained with competitive Hebbian, Oja's rule, BCM, or class-guided Hebbian never outperform random ternary projections. Hebbian learning captures statistical structure (principal components), not class boundaries. H4 (layer-wise independence) is **falsified**.
+3. **Depth provides zero benefit**: 2-layer MLP (87.9%) matches 1-layer (88.4%). CNN conv layers (32.6%) match random (33.0%). Stacking Hebbian layers with current rules is not useful.
+4. **The project pivots to continual learning**: Single-layer WTA Hebbian classification works. The question is now whether ternary Hebbian's local updates and discrete weights resist catastrophic forgetting — this is the publishable contribution, not raw accuracy.
 
 ---
 

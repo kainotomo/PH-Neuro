@@ -27,7 +27,7 @@ Build a **deep learning framework that learns without backpropagation** — usin
 
 ### The Core Hypotheses
 
-1. **H1 — Ternary Hebbian works at all**: Ternary weights {-1, 0, +1} combined with Hebbian learning can solve non-trivial classification tasks (MNIST >85%, CIFAR-10 >55%). **Verified:** 88.4% MNIST single-layer, 87.9% MNIST 2-layer (competitive Hebbian). The ternary constraint costs ~4pp vs theoretical linear maximum (~92%).
+1. **H1 — Ternary Hebbian works at all**: Ternary weights {-1, 0, +1} combined with Hebbian learning can solve non-trivial classification tasks. **Partially verified:** 88.4% MNIST single-layer (✅ >85%), but CIFAR-10 CNN failed (32.6%, ❌ <55%). Hebbian learning works for direct supervised classification but NOT for unsupervised feature learning in hidden layers.
 
 ---
 
@@ -54,11 +54,31 @@ The `TernaryHebbianConv2d` layer and `HebbianCNN` architecture are fully impleme
 
 **The real value of PH-Neuro is in Phase 1.3 — continual learning**, where Hebbian's local updates and ternary weights should provide inherent resistance to catastrophic forgetting.
 
+### Strategic Assessment (2026-07-28)
+
+After Phases 0, 1.1, and 1.2, a clear pattern has emerged:
+
+**What works:**
+- Single-layer supervised WTA Hebbian classification (88.4% MNIST)
+- Ternary weight storage, hysteresis, flip rate stabilization
+- The entire infrastructure (no `.backward()`, ternary invariant, popcount-ready)
+
+**What doesn't work:**
+- Unsupervised Hebbian for hidden layers — creates statistical features, not discriminative ones
+- Depth — provides zero improvement over single-layer (both MLP and CNN)
+- Greedy layer-wise training — H4 is falsified
+
+**Implications for the roadmap:**
+1. **Phase 1.3 (Continual Learning) is now THE critical experiment.** Single-layer WTA Hebbian may still achieve <5% forgetting. If it does, the project has a publishable contribution despite the depth limitation.
+2. **Phase 2 (Multi-Layer Theory) should be SKIPPED** — depth has been thoroughly tested and doesn't help with current Hebbian rules.
+3. **Phase 3 (Language) remains viable** — language has natural error signals (prediction error) that classification lacks. Predictive coding may provide the supervision that unsupervised Hebbian needs.
+4. **Future work**: To make depth useful, hidden layers need a teaching signal — either contrastive (Forward-Forward), supervised (class-guided without killing sparsity), or predictive (next-token/timestep error).
+
 2. **H2 — No catastrophic forgetting**: Because weights are discrete and Hebbian updates are local, learning new tasks does not overwrite old knowledge. Target: <5% forgetting across 10 sequential tasks, vs >60% for backprop.
 
 3. **H3 — Hysteresis creates stability**: A dual-threshold mechanism (high threshold to activate a synapse, low threshold to deactivate) prevents oscillatory "flipping" and creates stable representations.
 
-4. **H4 — Layer-wise independence is sufficient**: Greedy layer-wise Hebbian learning (each layer trained independently, bottom-up) can build useful hierarchical representations without any backward signal.
+4. **H4 — Layer-wise independence is sufficient**: ❌ **FALSIFIED.** Greedy layer-wise Hebbian learning (each layer trained independently, bottom-up) does NOT build useful hierarchical representations. Three experiments confirm: 2-layer MLP (87.9%) matches 1-layer (88.4%), CNN conv layers match random projections (32.6% vs 33.0%). Unsupervised Hebbian captures statistical structure (principal components), not class-discriminative structure. Some form of supervision or error signal is required for hidden layers.
 
 5. **H5 — Language is learnable without backprop**: Hebbian learning combined with predictive coding can capture the sequential statistical structure of language sufficient for coherent generation. The brain does it; the mechanism is prediction error minimization, not next-token classification.
 
