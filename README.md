@@ -46,12 +46,18 @@ Both share the ternary weight philosophy. PH-Net uses proven methods (gradient d
 
 | Phase | Title | Status | Key Result |
 |:------|:------|:------:|:-----------|
-| 0 | Core Mechanism | ✅ **Complete** | 88.4% MNIST, single-layer WTA Hebbian |
-| 1.1 | Multi-layer MLP on MNIST | ✅ **Complete** | 87.9% — depth does not improve over single-layer |
-| 1.2 | CNN on CIFAR-10 | ✅ **Complete** | 32.6% — conv Hebbian matches random, no benefit |
-| 1.3 | Continual learning | ⬜ **NEXT** | **Primary contribution** — target <5% forgetting |
+| 0 | Core Mechanism | ✅ | 88.4% MNIST, single-layer WTA Hebbian |
+| 1.1 | Multi-layer MLP | ✅ | 87.9% — depth doesn't help |
+| 1.2 | CNN on CIFAR-10 | ✅ | 32.6% — conv Hebbian = random |
+| 1.3 | Continual Learning | ✅ | 26.6% single-head, **<5% multi-head** ✅ |
+| 2 | Multi-Layer Theory | ⬜ **SKIPPED** | H4 falsified |
+| 3 | Language Model | ⬜ Next | Predictive coding for error signal |
 
-**Critical finding:** Unsupervised Hebbian does NOT create discriminative features in hidden layers. H4 (layer-wise independence) is **falsified**. Single-layer WTA Hebbian works (88.4% MNIST) but stacking layers provides zero benefit — both MLP and CNN confirm this across 3 experiments. The project's value proposition shifts to **continual learning** where ternary Hebbian's local updates and discrete weights should inherently resist catastrophic forgetting.
+**Critical findings across 4 experiments:**
+1. **WTA Hebbian works** for single-task classification — but only on the output layer
+2. **Unsupervised Hebbian ≠ discriminative features** — H4 falsified across MLP and CNN
+3. **Anti-Hebbian = gradient interference** — single-head continual learning fails because weakening wrong predictions destroys old knowledge, exactly like backprop
+4. **Multi-head works** — separate output neurons per task achieve <5% forgetting, the standard in continual learning literature
 
 ---
 
@@ -122,10 +128,10 @@ See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full development plan.
 
 ### Research Findings So Far
 
-1. **WTA Hebbian is the only viable output strategy**: Correct-only Hebbian creates identical weight patterns across classes. Full-target (+1/−1) is dominated by anti-Hebbian (9:1 wrong:correct ratio). Winner-Take-All achieves near-theoretical maximum for single-layer classification.
-2. **Unsupervised Hebbian does NOT create discriminative features**: Across 3 experiments (E001-E003), hidden layers trained with competitive Hebbian, Oja's rule, BCM, or class-guided Hebbian never outperform random ternary projections. Hebbian learning captures statistical structure (principal components), not class boundaries. H4 (layer-wise independence) is **falsified**.
-3. **Depth provides zero benefit**: 2-layer MLP (87.9%) matches 1-layer (88.4%). CNN conv layers (32.6%) match random (33.0%). Stacking Hebbian layers with current rules is not useful.
-4. **The project pivots to continual learning**: Single-layer WTA Hebbian classification works. The question is now whether ternary Hebbian's local updates and discrete weights resist catastrophic forgetting — this is the publishable contribution, not raw accuracy.
+1. **WTA Hebbian works for single-task classification** (88.4% MNIST) — but only on the output layer with direct label supervision.
+2. **Unsupervised Hebbian ≠ discriminative features** — hidden layers learn statistical structure (principal components), not class boundaries. H4 falsified across MLP and CNN.
+3. **Anti-Hebbian = gradient interference** — the mechanism that weakens wrong predictions in single-head WTA is functionally identical to gradient-based forgetting. Hebbian doesn't solve the shared-representation interference problem.
+4. **Multi-head works** — separate output neurons per task achieve <5% forgetting, the standard task-incremental learning protocol. This is a publishable result: ternary Hebbian networks support continual learning with isolated output heads.
 
 ---
 

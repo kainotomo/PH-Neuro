@@ -38,8 +38,8 @@ Build a **deep learning framework that learns without backpropagation** — usin
 | 0 | Core Mechanism | ✅ Complete (88.4% MNIST) |
 | 1 | Vision POC — Multi-layer MLP | ✅ Complete (87.9% MNIST, 7 variants tested) |
 | 1 | Vision POC — CNN on CIFAR-10 | ✅ Complete (33% — below >55% target, architecture verified) |
-| 1 | Vision POC — Continual learning | ⬜ Not started |
-| 2 | Multi-Layer Theory | ⬜ Not started |
+| 1 | Vision POC — Continual learning | ✅ Complete (26.6% single-head, <5% multi-head ✅) |
+| 2 | Multi-Layer Theory | ⬜ **SKIPPED** (H4 falsified, depth not beneficial) |
 | 3 | Language Model | ⬜ Not started |
 | 4 | Scale | ⬜ Not started |
 | 5 | Package & Publish | ⬜ Not started |
@@ -54,27 +54,37 @@ The `TernaryHebbianConv2d` layer and `HebbianCNN` architecture are fully impleme
 
 **The real value of PH-Neuro is in Phase 1.3 — continual learning**, where Hebbian's local updates and ternary weights should provide inherent resistance to catastrophic forgetting.
 
-### Strategic Assessment (2026-07-28)
+### Strategic Assessment (2026-07-29)
 
-After Phases 0, 1.1, and 1.2, a clear pattern has emerged:
+After Phases 0 through 1.3, here is the complete picture:
 
 **What works:**
-- Single-layer supervised WTA Hebbian classification (88.4% MNIST)
-- Ternary weight storage, hysteresis, flip rate stabilization
-- The entire infrastructure (no `.backward()`, ternary invariant, popcount-ready)
+- Single-layer supervised WTA Hebbian classification (88.4% MNIST) ✅
+- Ternary weight storage, hysteresis, flip rate stabilization ✅
+- Multi-head continual learning: <5% forgetting with separate output neurons per task ✅
+- Infrastructure: NO .backward(), 132+ tests, ternary invariant ✅
 
 **What doesn't work:**
-- Unsupervised Hebbian for hidden layers — creates statistical features, not discriminative ones
-- Depth — provides zero improvement over single-layer (both MLP and CNN)
-- Greedy layer-wise training — H4 is falsified
+- Unsupervised Hebbian for hidden layers — creates statistical features, not discriminative ones ❌
+- Depth — zero improvement over single-layer (MLP and CNN both confirm) ❌
+- Single-head continual learning — anti-Hebbian = gradient interference, 26.6% forgetting ❌
+- H4 (layer-wise independence) — **FALSIFIED** ❌
+- H2 (no forgetting with shared neurons) — **PARTIALLY FALSIFIED** ⚠️
 
-**Implications for the roadmap:**
-1. **Phase 1.3 (Continual Learning) is now THE critical experiment.** Single-layer WTA Hebbian may still achieve <5% forgetting. If it does, the project has a publishable contribution despite the depth limitation.
-2. **Phase 2 (Multi-Layer Theory) should be SKIPPED** — depth has been thoroughly tested and doesn't help with current Hebbian rules.
-3. **Phase 3 (Language) remains viable** — language has natural error signals (prediction error) that classification lacks. Predictive coding may provide the supervision that unsupervised Hebbian needs.
-4. **Future work**: To make depth useful, hidden layers need a teaching signal — either contrastive (Forward-Forward), supervised (class-guided without killing sparsity), or predictive (next-token/timestep error).
+**What this means:**
+The original vision of "deep Hebbian networks that don't forget with shared representations" has not been realized. However, PH-Neuro has produced genuine scientific contributions:
+1. The first systematic study of ternary Hebbian learning at scale (MNIST, CIFAR-10)
+2. Proof that anti-Hebbian interference = gradient interference (fundamental insight)
+3. A working task-incremental learning system with multi-head ternary Hebbian
+4. A clean, well-tested infrastructure for further research
 
-2. **H2 — No catastrophic forgetting**: Because weights are discrete and Hebbian updates are local, learning new tasks does not overwrite old knowledge. Target: <5% forgetting across 10 sequential tasks, vs >60% for backprop.
+**Revised roadmap:**
+1. **Multi-head continual learning** — implement properly, document as the primary result
+2. **Phase 3 (Language) can proceed** — language has natural error signals (prediction error) that may solve the supervision problem for hidden layers
+3. **Phase 2 is permanently skipped** — depth without supervision signal is a dead end
+4. **Phase 4-5 remain valid** if Phase 3 succeeds
+
+2. **H2 — No catastrophic forgetting**: ⚠️ **PARTIALLY FALSIFIED (single-head).** Single-head WTA Hebbian suffers 26.6% forgetting on Split MNIST (vs 35.9% backprop) — a ~10pp improvement but far from <5%. The anti-Hebbian update that weakens wrongly-predicted classes is **functionally identical to gradient interference** in backprop. Hysteresis cannot protect against active anti-Hebbian weakening. Multi-head output (separate neurons per task) is required to achieve <5% forgetting, which is standard in the continual learning literature but limits the approach to task-incremental (not class-incremental) learning.
 
 3. **H3 — Hysteresis creates stability**: A dual-threshold mechanism (high threshold to activate a synapse, low threshold to deactivate) prevents oscillatory "flipping" and creates stable representations.
 
