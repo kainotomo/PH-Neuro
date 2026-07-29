@@ -35,7 +35,7 @@ Build a **deep learning framework that learns without backpropagation** — usin
 
 4. **H4 — Layer-wise independence is sufficient**: ❌ **FALSIFIED.** Unsupervised Hebbian captures statistical structure (PCA), not class-discriminative structure. Depth provides zero improvement (2-layer 87.9% = 1-layer 88.4%). Some form of error signal is required for hidden layers.
 
-5. **H5 — Forward-Forward solves the hidden-layer problem**: ⬜ **Untested.** The Forward-Forward algorithm (Hinton, 2022) gives each layer its own local objective ("goodness") without backprop. Ternary weights are naturally suited — goodness can be computed via popcount. This is the NEW Phase 2.
+5. **H5 — Forward-Forward solves the hidden-layer problem**: ❌ **FALSIFIED for ternary weights.** TFF-2 (2-layer FF on MNIST) achieves 86.81% — essentially identical to Phase 0 (88.4%), Phase 1.1 (87.9%), and TFF-1 (87.9%). The FF contrastive objective (popcount goodness) trivially saturates without competition. With top-1 competition added, the FF negative pass provides no benefit beyond random bootstrapped prototypes. The ~88% bound represents the linear separability limit of 512 random sparse features for 10-class MNIST — neither unsupervised Hebbian nor Forward-Forward breaks it. Documented in `docs/experiments/E006-forward-forward-multilayer-mnist.md`. **Pivot to NTH-only for hidden layers.**
 
 6. **H6 — Language is learnable without backprop**: ⬜ **Untested.** Predictive coding + ternary Hebbian can capture sequential structure. Moved to Phase 3 (after Forward-Forward is validated).
 
@@ -51,7 +51,7 @@ Build a **deep learning framework that learns without backpropagation** — usin
 | 1.1 | Multi-layer MLP | ✅ | 87.9% — depth doesn't help |
 | 1.2 | CNN on CIFAR-10 | ✅ | 32.6% — conv Hebbian ≈ random |
 | 1.3 | Continual Learning | ✅ | <5% multi-head ✅, single-head ❌ |
-| 2 | **Forward Signals & Three-Factor Learning** | 🟡 **Phase 2 active** | FF-inspired WTA ✅ 87.9% MNIST (TFF-1), NTH ✅ **88.15%** (NTH-1), TFF-2 in progress |
+| 2 | **Forward Signals & Three-Factor Learning** | 🟡 **Phase 2 active** | FF-inspired WTA ✅ 87.9% MNIST (TFF-1), NTH ✅ **88.15%** (NTH-1), TFF-2 ❌ **86.81%** — FF+ternary incompatible for hidden layers. Pivot to NTH multi-layer. |
 | 3 | Language Model | ⬜ After Phase 2 | Predictive coding for sequential data |
 | 4 | Scale | ⬜ | 1B+ ternary Hebbian models |
 | 5 | Package & Publish | ⬜ | pip install ph-neuro |

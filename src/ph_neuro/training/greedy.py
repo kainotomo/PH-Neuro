@@ -27,6 +27,7 @@ from ph_neuro.core.activation import ternary_sign
 from ph_neuro.layers.conv import TernaryHebbianConv2d
 from ph_neuro.layers.linear import TernaryHebbianLinear
 from ph_neuro.models.mlp import HebbianMLP
+from ph_neuro.training.forward_forward import generate_negative_data
 
 
 # ── Layer configuration ──────────────────────────────────────────
@@ -53,6 +54,9 @@ class LayerConfig:
             the layer's current value.
         anti_hebbian: If ``True``, apply anti-Hebbian weakening to
             all non-target output classes (output layer only).
+        lr_neg: Anti-Hebbian learning rate for negative pass
+            (Forward-Forward hidden layers only). If 0, negative pass
+            is disabled. For FF hidden layers, this MUST be > 0.
     """
 
     def __init__(
@@ -64,6 +68,7 @@ class LayerConfig:
         theta_upper: float | None = None,
         theta_lower: float | None = None,
         anti_hebbian: bool = False,
+        lr_neg: float = 0.005,
     ):
         self.lr = lr
         self.epochs = epochs
@@ -72,11 +77,17 @@ class LayerConfig:
         self.theta_upper = theta_upper
         self.theta_lower = theta_lower
         self.anti_hebbian = anti_hebbian
+        self.lr_neg = lr_neg
 
     @classmethod
     def default_hidden(cls) -> LayerConfig:
         """Default config for a hidden layer (unsupervised)."""
         return cls(lr=0.01, epochs=5, hebbian_rule="basic", decay=0.0)
+
+    @classmethod
+    def default_ff_hidden(cls) -> LayerConfig:
+        """Default config for a Forward-Forward hidden layer."""
+        return cls(lr=0.01, epochs=10, hebbian_rule="forward_forward", decay=0.0, lr_neg=0.002)
 
     @classmethod
     def default_output(cls) -> LayerConfig:
@@ -481,6 +492,212 @@ def train_online_competitive_epoch(
     }
 
 
+# ── Forward-Forward hidden layer training ───────────────────────
+
+
+def train_ff_hidden_epoch(
+    layer: TernaryHebbianLinear,
+    loader: DataLoader,
+    frozen_encoder: nn.Module | None,
+    device: torch.device,
+    lr_pos: float = 0.01,
+    lr_neg: float = 0.01,
+    decay: float = 0.0,
+    epsilon: float = 0.1,
+    mask_ratio: float = 0.5,
+    top_k: int = 1,
+) -> dict[str, float]:
+    """Train one hidden layer with FF contrastive + top-1 competitive Hebbian.
+
+    **Top-1 per sample** (batch-efficient): For each sample, only the single
+    most-active neuron gets a Hebbian update. This creates differentiated
+    prototypes (each neuron learns a distinct input pattern), exactly as
+    in the proven ``online_competitive`` rule (Phase 1.1, 87.9% MNIST).
+
+    **FF negative pass** adds the Forward-Forward contrast: the winner on
+    corrupted/junk data gets an anti-Hebbian update, teaching neurons to
+    suppress responses to non-realistic inputs.
+
+    The batch update uses ``F.one_hot(winners, n_out)`` to create a
+    per-sample winner mask, then ``mask.T @ h`` for the batch update.
+    This is mathematically equivalent to per-sample top-1 but MUCH faster.
+
+    Goodness = sum of top-1 raw (pre-ternary) activations.
+
+    Args:
+        layer: The ``TernaryHebbianLinear`` layer to train.
+        loader: DataLoader yielding ``(inputs, targets)``.
+        frozen_encoder: Optional module running before ``layer``.
+        device: Torch device.
+        lr_pos: Hebbian learning rate (positive pass, real data).
+        lr_neg: Anti-Hebbian learning rate (negative pass, junk data).
+        decay: Homeostatic decay rate.
+        epsilon: Dead-zone for ``ternary_sign``.
+        mask_ratio: Fraction of pixels to mask in negative data.
+        top_k: Number of winners per sample. Default 1 (WTA). For
+            competitive learning, 1 is optimal.
+
+    Returns:
+        Dict with ``flip_rate``, ``n_flips``, ``g_pos``, ``g_neg``,
+        and ``separation``.
+    """
+    total_flips = 0
+    total_weights = 0
+    n_batches = 0
+    g_pos_sum = 0.0
+    g_neg_sum = 0.0
+
+    for batch in loader:
+        x = batch[0] if isinstance(batch, (list, tuple)) else batch
+        x = x.to(device)
+        x_flat = x.view(x.size(0), -1)
+
+        # Quantize input to ternary {-1, 0, +1}
+        h = ternary_sign(x_flat, epsilon=epsilon)
+
+        # Forward pass through frozen encoder (if any)
+        if frozen_encoder is not None:
+            with torch.no_grad():
+                for enc_layer in frozen_encoder:
+                    h_float = enc_layer(h.float())
+                    h = ternary_sign(h_float, epsilon=epsilon)
+
+        bs = h.size(0)
+
+        # ── Positive pass: real data ─────────────────────────────
+        out_pos = layer(h.float())  # (batch, out_features)
+
+        # Top-1 winner per sample: (batch,)
+        winners = out_pos.argmax(dim=1)
+        # One-hot winner mask: (batch, out_features)
+        winner_mask = F.one_hot(winners, layer._out_features).float()
+
+        # Goodness: raw activation of each sample's winner
+        winner_vals = out_pos.gather(1, winners.unsqueeze(1)).squeeze(1)
+        g_pos = winner_vals.abs().mean().item()
+        g_pos_sum += g_pos
+
+        # Snapshot weights
+        old_w = layer.weight.unpack().clone()
+        if old_w.device != device:
+            old_w = old_w.to(device)
+
+        # Batch Hebbian: strengthen each sample's winner
+        scores = layer._latent_scores.scores
+        delta_pos = lr_pos * (winner_mask.T @ h.float())
+        scores += delta_pos.to(scores.dtype)
+
+        # ── Negative pass: junk data ─────────────────────────────
+        h_neg_in = generate_negative_data(h, mask_ratio=mask_ratio)
+        out_neg = layer(h_neg_in.float())  # (batch, out_features)
+
+        # Top-1 winner on junk data
+        neg_winners = out_neg.argmax(dim=1)
+        neg_winner_mask = F.one_hot(neg_winners, layer._out_features).float()
+
+        # Goodness on junk
+        neg_winner_vals = out_neg.gather(1, neg_winners.unsqueeze(1)).squeeze(1)
+        g_neg = neg_winner_vals.abs().mean().item()
+        g_neg_sum += g_neg
+
+        if lr_neg > 0:
+            # Anti-Hebbian: weaken each sample's winner on junk
+            delta_neg = lr_neg * (neg_winner_mask.T @ h_neg_in.float())
+            scores -= delta_neg.to(scores.dtype)
+
+        if decay > 0:
+            layer.apply_decay(decay)
+
+        layer.refresh_weights()
+
+        # Track flips
+        new_w = layer.weight.unpack()
+        if new_w.device != device:
+            new_w = new_w.to(device)
+        total_flips += (old_w != new_w).sum().item()
+        total_weights += new_w.numel()
+        n_batches += 1
+
+    n = max(n_batches, 1)
+    g_pos_avg = g_pos_sum / n
+    g_neg_avg = g_neg_sum / n
+    return {
+        "flip_rate": total_flips / max(total_weights, 1),
+        "n_flips": total_flips,
+        "g_pos": g_pos_avg,
+        "g_neg": g_neg_avg,
+        "separation": g_pos_avg - g_neg_avg,
+    }
+
+
+def evaluate_goodness_separation(
+    layer: TernaryHebbianLinear,
+    loader: DataLoader,
+    frozen_encoder: nn.Module | None,
+    device: torch.device,
+    epsilon: float = 0.0,
+    mask_ratio: float = 0.5,
+) -> dict[str, float]:
+    """Measure goodness separation for a competitive FF hidden layer.
+
+    Computes the raw (pre-ternary) activation of the top-1 winner on
+    real data vs negative data. A positive separation (g_pos - g_neg)
+    indicates the layer's winner responds more strongly to real inputs
+    than to corrupted inputs.
+
+    Args:
+        layer: The ``TernaryHebbianLinear`` layer to evaluate.
+        loader: DataLoader yielding ``(inputs, targets)``.
+        frozen_encoder: Optional module running before ``layer``.
+        device: Torch device.
+        epsilon: Dead-zone for ``ternary_sign``.
+        mask_ratio: Fraction of pixels to mask for negative data.
+
+    Returns:
+        Dict with ``g_pos``, ``g_neg``, ``separation`` (g_pos - g_neg),
+        ``g_pos_std``, and ``g_neg_std``.
+    """
+    g_pos_list: list[float] = []
+    g_neg_list: list[float] = []
+
+    with torch.no_grad():
+        for batch in loader:
+            x = batch[0] if isinstance(batch, (list, tuple)) else batch
+            x = x.to(device)
+            x_flat = x.view(x.size(0), -1)
+
+            # Input ternary
+            h = ternary_sign(x_flat, epsilon=epsilon)
+
+            # Frozen encoder
+            if frozen_encoder is not None:
+                for enc_layer in frozen_encoder:
+                    h_float = enc_layer(h.float())
+                    h = ternary_sign(h_float, epsilon=epsilon)
+
+            # Goodness on real data: top-1 raw activation per sample
+            out_pos = layer(h.float())
+            g_pos_batch = out_pos.abs().max(dim=1).values.float()
+            g_pos_list.extend(g_pos_batch.cpu().tolist())
+
+            # Goodness on negative data
+            h_neg_in = generate_negative_data(h, mask_ratio=mask_ratio)
+            out_neg = layer(h_neg_in.float())
+            g_neg_batch = out_neg.abs().max(dim=1).values.float()
+            g_neg_list.extend(g_neg_batch.cpu().tolist())
+
+    g_pos_t = torch.tensor(g_pos_list)
+    g_neg_t = torch.tensor(g_neg_list)
+
+    return {
+        "g_pos": g_pos_t.mean().item(),
+        "g_neg": g_neg_t.mean().item(),
+        "separation": (g_pos_t - g_neg_t).mean().item(),
+        "g_pos_std": g_pos_t.std().item(),
+        "g_neg_std": g_neg_t.std().item(),
+    }
+
+
 # ── Training helpers (self-organizing Hebbian) ──────────────────
 
 
@@ -813,8 +1030,11 @@ class MultiLayerHebbianClassifier:
                     label = {
                         "class_guided": "class-guided",
                         "online_competitive": "online competitive (WTA + conscience)",
+                        "forward_forward": "Forward-Forward (positive + negative pass)",
                     }.get(cfg.hebbian_rule, "self-organizing")
                     print(f"    Mode: {label}")
+                    if cfg.hebbian_rule == "forward_forward":
+                        print(f"    lr_pos={cfg.lr}, lr_neg={cfg.lr_neg}")
                 else:
                     print(f"    Mode: supervised WTA (anti-Hebbian={cfg.anti_hebbian})")
 
@@ -838,6 +1058,17 @@ class MultiLayerHebbianClassifier:
                             frozen_encoder=frozen_encoder,
                             device=self._device,
                             lr=cfg.lr,
+                            decay=cfg.decay,
+                            epsilon=epsilon,
+                        )
+                    elif cfg.hebbian_rule == "forward_forward":
+                        metrics = train_ff_hidden_epoch(
+                            layer=layer,
+                            loader=train_loader,
+                            frozen_encoder=frozen_encoder,
+                            device=self._device,
+                            lr_pos=cfg.lr,
+                            lr_neg=cfg.lr_neg,
                             decay=cfg.decay,
                             epsilon=epsilon,
                         )

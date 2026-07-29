@@ -99,16 +99,28 @@ Where $M$ is a **third factor** (neuromodulator) that says "this correlation is 
 
 | Experiment | Architecture | Target | Time | Meaning |
 |-----------|-------------|--------|------|---------|
-| TFF-2: 2-layer FF | 784→512→10 | **>95% MNIST** | ~1 hr | 🟢 Great: FF+ternary works in depth |
-| | | ~90-95% | | 🟡 OK: depth helps but ternary limits |
-| | | ~88-90% | | 🔴 Fail: no improvement over 1-layer |
+| TFF-2: 2-layer FF | 784→512→10 | **86.81%** — 🔴 Fail | ~1 hr | 🔴 Fail: FF+ternary incompatible for hidden layers |
+| | | ≈ Phase 1.1 (87.9%) | | FF negative pass adds no benefit |
+| | | No improvement from depth | | Pivot to NTH-4 |
 | TFF-3: 3-layer FF | 784→512→256→10 | >96% MNIST | ~2 hrs | Confirms depth scaling |
 | NTH-4: Multi-layer NTH | 784→512→10 | >90% MNIST | ~1 hr | NTH alternative validation |
 | TFF-4: FF vs WTA | Same arch | — | — | Direct comparison table |
 
-**Decision:** If TFF-2 >95% → **major success**, proceed to CIFAR-10. If TFF-2 90-95% → moderate success, investigate ternary bottleneck. If TFF-2 <90% → FF+ternary may be incompatible, pivot to NTH-only or rethink.
+**Decision:** TFF-2 → **🔴 Fail (86.81%).** No improvement over 1-layer (87.9%). FF+ternary is incompatible for hidden layers — the FF contrastive objective (popcount/goodness) trivially saturates without competition, and with top-1 competition the FF negative pass adds no benefit beyond random bootstrapped prototypes. **Proceed to NTH-4 (multi-layer NTH) as the remaining pathway.** TFF-3 (3-layer) and TFF-5 (CNN CIFAR-10) are cancelled.
 
-### Stage 3: CIFAR-10 (Week 3) — ONLY IF STAGE 2 SUCCEEDS
+Documented in `docs/experiments/E006-forward-forward-multilayer-mnist.md`.
+
+### Stage 3: CIFAR-10 (Week 3) — **CANCELLED** (Stage 2 failed)
+
+The CIFAR-10 experiments (TFF-5, TFF-6) are cancelled because the fundamental mechanism (FF hidden layers) does not work on MNIST. There is no reason to expect it to work on the harder CIFAR-10 benchmark.
+
+### Remaining Pathway: NTH-4 (Multi-layer NTH on MNIST)
+
+With FF proving incompatible for hidden layers, the remaining approach is neuromodulated Hebbian (NTH). The label modulator M ∈ {-1, 0, +1} provides a per-neuron error signal that could propagate through layers:
+
+- **NTH-4**: 784→512→10 with layer-wise NTH (label modulator for output, propagated modulator for hidden)
+- Target: >90% MNIST
+- Key question: Can the label modulator signal propagate through a hidden layer to drive useful feature learning?
 
 **Goal:** Test whether Forward-Forward generalizes beyond MNIST to real vision tasks.
 
