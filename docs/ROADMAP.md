@@ -39,7 +39,7 @@ Build a **deep learning framework that learns without backpropagation** — usin
 
 6. **H6 — Language is learnable without backprop**: ⬜ **Untested.** Predictive coding + ternary Hebbian can capture sequential structure. Moved to Phase 3 (after Forward-Forward is validated).
 
-7. **H7 — Three-factor Hebbian = local error signal**: ✅ **VERIFIED.** NTH-1 achieves 88.15% MNIST with label modulator (M_c=+1, M_w=-1), matching the WTA baseline (88.4%). The unified update ΔW = η · M · pre is mathematically identical to WTA but expressed as a single matrix multiply instead of separate Hebbian+anti-Hebbian operations. The three-factor framework generalizes naturally to arbitrary modulator sources (error signals, prediction errors, novelty, reward).
+7. **H7 — Three-factor Hebbian = local error signal**: ⚠️ **PARTIALLY FALSIFIED (multi-layer case).** NTH-1 achieves 88.15% MNIST with label modulator (M_c=+1, M_w=-1) for the single-layer output case ✅. However, NTH-4 conclusively shows that the modulator CANNOT propagate through hidden layers with ternary weights — all three modulator propagation approaches fail to beat the ~88% single-layer bound. The three-factor framework provides a local error signal for the output layer but not for hidden layers in ternary networks. Documented in `docs/experiments/E007-nth-multilayer-mnist.md`.
 
 ---
 
@@ -51,7 +51,7 @@ Build a **deep learning framework that learns without backpropagation** — usin
 | 1.1 | Multi-layer MLP | ✅ | 87.9% — depth doesn't help |
 | 1.2 | CNN on CIFAR-10 | ✅ | 32.6% — conv Hebbian ≈ random |
 | 1.3 | Continual Learning | ✅ | <5% multi-head ✅, single-head ❌ |
-| 2 | **Forward Signals & Three-Factor Learning** | 🟡 **Phase 2 active** | FF-inspired WTA ✅ 87.9% MNIST (TFF-1), NTH ✅ **88.15%** (NTH-1), TFF-2 ❌ **86.81%** — FF+ternary incompatible for hidden layers. Pivot to NTH multi-layer. |
+| 2 | **Forward Signals & Three-Factor Learning** | � **Phase 2 complete — ALL approaches exhausted** | TFF-1 ✅ 87.9%, NTH-1 ✅ **88.15%**, TFF-2 ❌ **86.81%**, NTH-4 ❌ **85.79%**. No method trains ternary Hebbian hidden layers. |
 | 3 | Language Model | ⬜ After Phase 2 | Predictive coding for sequential data |
 | 4 | Scale | ⬜ | 1B+ ternary Hebbian models |
 | 5 | Package & Publish | ⬜ | pip install ph-neuro |
@@ -82,6 +82,8 @@ After Phases 0 through 1.3, here is the complete picture:
 - Single-head continual learning — anti-Hebbian = gradient interference, ~37% forgetting ❌
 - H4 (layer-wise independence) — **FALSIFIED** ❌
 - H2 (no forgetting with shared neurons) — **PARTIALLY FALSIFIED** ⚠️
+- H5 (Forward-Forward solves hidden layers) — **FALSIFIED for ternary weights** ❌
+- H7 (Three-factor Hebbian propagates to hidden layers) — **PARTIALLY FALSIFIED** ⚠️ (output layer ✅, hidden layers ❌)
 
 **What this means:**
 The original vision of "deep Hebbian networks that don't forget with shared representations" has not been realized. The root cause is fundamental: **unsupervised Hebbian optimizes for statistical correlation, not discriminative utility.** Each hidden layer compounds this problem — correlations of correlations diverge from class-relevant features.
@@ -93,9 +95,10 @@ The original vision of "deep Hebbian networks that don't forget with shared repr
 4. **Neuro-Modulated Hebbian Learning (Tang et al., CVPR 2023):** Combines unsupervised Hebbian with a learned modulator — proves the concept but still uses backprop for the modulator.
 
 **Revised roadmap (2026-07-29):**
-1. **Phase 2: Forward Signals & Three-Factor Learning** — Implement Forward-Forward with ternary and neuromodulated Hebbian. This is the NEW priority.
-2. **Phase 3: Language & Predictive Coding** — Proceeds after Phase 2 validates the error-signal mechanism.
-3. **Phase 4-5: Scale & Ship** — Remain valid if Phase 2-3 succeed.
+1. **Phase 2: Forward Signals & Three-Factor Learning** — 🔴 COMPLETE. ALL approaches exhausted. No method trains ternary Hebbian hidden layers.
+2. **Phase 3: Language & Predictive Coding** — ⚠️ ON HOLD. Predictive coding requires continuous error propagation through hidden layers, which faces the same fundamental limitation shown in Phase 2.
+3. **Phase 4-5: Scale & Ship** — ⬜ On hold pending Phase 3 outcome.
+4. **Recommendation**: Publish the negative Phase 2 results and consider pivoting to PH-Net (STE + backprop for ternary weights) for deep networks. PH-Neuro remains viable for single-layer classification and multi-head continual learning.
 
 ### What This Is NOT
 

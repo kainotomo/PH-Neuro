@@ -102,9 +102,9 @@ Where $M$ is a **third factor** (neuromodulator) that says "this correlation is 
 | TFF-2: 2-layer FF | 784→512→10 | **86.81%** — 🔴 Fail | ~1 hr | 🔴 Fail: FF+ternary incompatible for hidden layers |
 | | | ≈ Phase 1.1 (87.9%) | | FF negative pass adds no benefit |
 | | | No improvement from depth | | Pivot to NTH-4 |
-| TFF-3: 3-layer FF | 784→512→256→10 | >96% MNIST | ~2 hrs | Confirms depth scaling |
-| NTH-4: Multi-layer NTH | 784→512→10 | >90% MNIST | ~1 hr | NTH alternative validation |
-| TFF-4: FF vs WTA | Same arch | — | — | Direct comparison table |
+| TFF-3: 3-layer FF | 784→512→256→10 | >96% MNIST | ~2 hrs | Cancelled — mechanism fails |
+| NTH-4: Multi-layer NTH | 784→512→10 | **85.79%** — 🔴 Fail | ~1 hr | 🔴 Fail: NTH cannot propagate to hidden layers, 3 approaches all <88% |
+| TFF-4: FF vs WTA | Same arch | — | — | Omnibus comparison table |
 
 **Decision:** TFF-2 → **🔴 Fail (86.81%).** No improvement over 1-layer (87.9%). FF+ternary is incompatible for hidden layers — the FF contrastive objective (popcount/goodness) trivially saturates without competition, and with top-1 competition the FF negative pass adds no benefit beyond random bootstrapped prototypes. **Proceed to NTH-4 (multi-layer NTH) as the remaining pathway.** TFF-3 (3-layer) and TFF-5 (CNN CIFAR-10) are cancelled.
 
@@ -114,22 +114,23 @@ Documented in `docs/experiments/E006-forward-forward-multilayer-mnist.md`.
 
 The CIFAR-10 experiments (TFF-5, TFF-6) are cancelled because the fundamental mechanism (FF hidden layers) does not work on MNIST. There is no reason to expect it to work on the harder CIFAR-10 benchmark.
 
-### Remaining Pathway: NTH-4 (Multi-layer NTH on MNIST)
+### NTH-4: Multi-layer NTH on MNIST
 
-With FF proving incompatible for hidden layers, the remaining approach is neuromodulated Hebbian (NTH). The label modulator M ∈ {-1, 0, +1} provides a per-neuron error signal that could propagate through layers:
+**Result: 🔴 Fail (85.79%).** All three modulator propagation approaches fail to improve over the single-layer 88% bound.
 
-- **NTH-4**: 784→512→10 with layer-wise NTH (label modulator for output, propagated modulator for hidden)
-- Target: >90% MNIST
-- Key question: Can the label modulator signal propagate through a hidden layer to drive useful feature learning?
+| Approach | Accuracy | Hidden Learns? | Failure Mode |
+|:--------:|:--------:|:--------------:|-------------|
+| A: Label broadcast | **9.80%** | ❌ | Global anti-Hebbian kills all hidden representations |
+| B: Weight feedback | **85.79%** | ❌ (~0% flips) | W_out is 92% zero — feedback passes through sparse near-zero weights |
+| C: Random feedback | **85.02%** | ✅ (52% dense) | Random projection drives non-discriminative changes |
 
-**Goal:** Test whether Forward-Forward generalizes beyond MNIST to real vision tasks.
+**Root cause:** The hidden-to-output weights are ternary and mostly zero (92% after training in the best case). The feedback signal `M_hidden = M_output @ W_out` passes through sparse near-zero weights, producing negligible hidden update. Even with a fixed dense random feedback matrix (Approach C), the signal drives non-discriminative weight changes that make hidden representations denser (52%) without improving class separability.
 
-| Experiment | Architecture | Target | Time | Meaning |
-|-----------|-------------|--------|------|---------|
-| TFF-5: CNN FF | Conv(3→64,3×3)→Conv(64→128,3×3)→FC(128→10) | **>45% CIFAR-10** | ~2 hrs | 🟢 10+pp over random/Phase 1.2 (32.6%) |
-| TFF-6: CNN FF+NTH | Same arch, combined | >45% | ~2 hrs | Integration test |
+**Decision:** NTH-4 **🔴 Fail.** No remaining approach for ternary Hebbian hidden layers. Phase 2 is complete — all approaches exhausted.
 
-**Note on expectations:** Hinton's original FF paper does NOT achieve strong standalone CIFAR-10 results with pure FF — it was used primarily as unsupervised pre-training. With ternary weights, even a 10pp improvement over the Phase 1.2 random baseline (32.6%) would be a significant result. Target is deliberately modest. If TFF-5 fails (<35%), accept that CIFAR-10 is beyond ternary FF's current capabilities and proceed to Phase 3 (Language) where the natural prediction error signal is stronger.
+**Phase 3 (Language/Predictive Coding) assessment:** Unlikely to succeed. The same fundamental limitation applies: ternary Hebbian updates cannot propagate discriminative signals through hidden layers, regardless of the training objective. Predictive coding requires continuous error signals at each layer, which face the same hysteresis threshold problem.
+
+Documented in `docs/experiments/E007-nth-multilayer-mnist.md`.
 
 ### Why This Staging Matters
 
@@ -298,10 +299,10 @@ class NeuromodulatedHebbianLinear(TernaryHebbianLinear):
 | Experiment | Modulator Type | Target | Notes |
 |-----------|:-------------:|--------|-------|
 | NTH-1: Label modulator | M_c = +1 for correct class | >85% MNIST | ✅ **88.15%** | Equivalent to WTA — confirmed |
-| NTH-2: Error modulator | M = target − output | >85% MNIST | Continuous M |
-| NTH-3: Ternary modulator | M ∈ {-1, 0, +1} | >85% MNIST | Simplest form |
-| NTH-4: Multi-layer NTH | Label→propagated modulator | >90% MNIST | Can M propagate through layers? |
-| NTH-5: NTH vs WTA vs FF | Same arch | — | Three-way comparison |
+| NTH-2: Error modulator | M = target − output | >85% MNIST | ⬜ Not run | Deprioritized — NTH-4 validates multi-layer |
+| NTH-3: Ternary modulator | M ∈ {-1, 0, +1} | >85% MNIST | ⬜ Not run | Deprioritized — NTH-4 covers this |
+| NTH-4: Multi-layer NTH | Label→propagated modulator | >90% MNIST | 🔴 **85.79%** | Fail: all 3 approaches <88% single-layer bound |
+| NTH-5: CIFAR-10 | NTH CNN | >45% | ⬜ Cancelled | Mechanism fails on MNIST — no reason to proceed |
 
 ---
 
@@ -359,14 +360,14 @@ This is essentially Forward-Forward expressed as neuromodulated Hebbian.
 | FF single-layer MNIST | >88% (match WTA baseline) | ✅ **87.9%** — `docs/experiments/E004-forward-forward-mnist.md` |
 | NTH single-layer MNIST | >85% | ⬜ Not yet run |
 
-### Stage 2 Gates (the critical test)
+### Stage 2 Gates (the critical test) — COMPLETE
 
-| Milestone | Target | Verification |
-|-----------|--------|-------------|
-| FF 2-layer MNIST | >95% (beat 1-layer by >6pp) | Experiment log |
-| FF 3-layer MNIST | >96% (depth scaling confirmed) | Experiment log |
-| NTH multi-layer MNIST | >90% | Experiment log |
-| Continual learning with FF | <10% forgetting single-head | Split MNIST |
+| Milestone | Target | Result | Verification |
+|-----------|--------|:------:|-------------|
+| FF 2-layer MNIST | >95% (beat 1-layer by >6pp) | 🔴 86.81% | `docs/experiments/E006-forward-forward-multilayer-mnist.md` |
+| FF 3-layer MNIST | >96% | ❌ Cancelled | Mechanism fails on 2-layer |
+| NTH multi-layer MNIST | >90% | 🔴 85.79% | `docs/experiments/E007-nth-multilayer-mnist.md` |
+| Continual learning with FF | <10% forgetting single-head | ❌ Cancelled | Mechanism fails for hidden layers |
 
 ### Stage 3 (only if Stage 2 passes)
 

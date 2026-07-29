@@ -50,17 +50,18 @@ Both share the ternary weight philosophy. PH-Net uses proven methods (gradient d
 | 1.1 | Multi-layer MLP | ✅ | 87.9% — depth doesn't help |
 | 1.2 | CNN on CIFAR-10 | ✅ | 32.6% — conv Hebbian ≈ random |
 | 1.3 | Continual Learning | ✅ | <5% multi-head ✅, single-head ❌ |
-| 2 | **Forward Signals & Three-Factor** | 🟡 **ACTIVE** | TFF-1 ✅ 87.9%, NTH-1 ✅ 88.15%, TFF-2 ❌ **86.81%** — FF+ternary incompatible for hidden layers. Pivot to NTH multi-layer. |
+| 2 | **Forward Signals & Three-Factor** | � **COMPLETE** | TFF-1 ✅ 87.9%, NTH-1 ✅ 88.15%, TFF-2 ❌ **86.81%**, NTH-4 ❌ **85.79%** — ALL approaches exhausted. No method trains ternary Hebbian hidden layers. |
 | 3 | Language Model | ⬜ | Predictive coding for error signal |
 | 4-5 | Scale & Ship | ⬜ | 1B+ models, pip install |
 
-**Critical findings across 6 experiments:**
+**Critical findings across 7 experiments:**
 1. **WTA Hebbian works** for single-task classification — but only on the output layer (88.4% MNIST)
 2. **Unsupervised Hebbian ≠ discriminative features** — H4 falsified: depth provides zero improvement (MLP 87.9% = 1-layer 88.4%, CNN 32.6% = random 33.0%)
 3. **Anti-Hebbian = gradient interference** — single-head continual learning fails (37% forgetting) because weakening wrong predictions destroys old knowledge
 4. **Multi-head works** — separate output neurons per task achieve <5% forgetting ✅
 5. **Forward-Forward + ternary ≠ hidden layer learning** — H5 falsified: TFF-2 achieves 86.81% (same as 1-layer). FF's popcount goodness trivially saturates; the contrastive signal doesn't create class-discriminative features.
-6. **Three-factor Hebbian works** — H7 verified: NTH-1 achieves 88.15% MNIST with label modulator M∈{-1,0,+1}. Remaining viable approach for hidden layers.
+6. **Three-factor Hebbian works for output layer** — H7 verified (output): NTH-1 achieves 88.15% MNIST with label modulator M∈{-1,0,+1}.
+7. **Three-factor Hebbian fails for hidden layers** — H7 falsified (hidden): NTH-4 achieves 85.79% across all modulator propagation approaches. The feedback signal through sparse ternary weights is too weak. **All 7 experiments confirm: ternary Hebbian hidden layers cannot learn class-discriminative features without backprop.**
 
 ---
 
@@ -124,8 +125,8 @@ See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full development plan.
 | 1.1 | Multi-layer MLP on MNIST | ✅ Complete | 87.9%, depth doesn't help |
 | 1.2 | CNN on CIFAR-10 | ✅ Complete | 32.6%, conv Hebbian = random |
 | 1.3 | Continual Learning | ⬜ **NEXT** | **Primary contribution** — target <5% forgetting |
-| 2 | Multi-Layer & Hierarchical | ⬜ **SKIP** | H4 falsified — depth not beneficial |
-| 3 | Language Model | ⬜ Not started | Predictive coding may provide needed error signal |
+| 2 | Forward Signals & Three-Factor | 🔴 **Complete — all approaches exhausted** | No method trains ternary Hebbian hidden layers |
+| 3 | Language Model | ⬜ On hold | Predictive coding faces same fundamental limitation |
 | 4 | Scale to 1B+ | ⬜ Not started | |
 | 5 | Package & Publish | ⬜ Not started | |
 
