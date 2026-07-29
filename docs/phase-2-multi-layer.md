@@ -103,7 +103,8 @@ Where $M$ is a **third factor** (neuromodulator) that says "this correlation is 
 | | | ≈ Phase 1.1 (87.9%) | | FF negative pass adds no benefit |
 | | | No improvement from depth | | Pivot to NTH-4 |
 | TFF-3: 3-layer FF | 784→512→256→10 | >96% MNIST | ~2 hrs | Cancelled — mechanism fails |
-| NTH-4: Multi-layer NTH | 784→512→10 | **85.79%** — 🔴 Fail | ~1 hr | 🔴 Fail: NTH cannot propagate to hidden layers, 3 approaches all <88% |
+| NTH-4: Multi-layer NTH | 784→512→10 | **86.68%** — 🔴 Fail | ~1 hr | 🔴 Fail: NTH cannot propagate to hidden layers, 4 approaches all <88% |
+| NTH-4b: Latent score feedback | 784→512→10 | **86.68%** — 🔴 Fail | ~1 min | 🔴 Fail: even dense continuous feedback can't train hidden layers |
 | TFF-4: FF vs WTA | Same arch | — | — | Omnibus comparison table |
 
 **Decision:** TFF-2 → **🔴 Fail (86.81%).** No improvement over 1-layer (87.9%). FF+ternary is incompatible for hidden layers — the FF contrastive objective (popcount/goodness) trivially saturates without competition, and with top-1 competition the FF negative pass adds no benefit beyond random bootstrapped prototypes. **Proceed to NTH-4 (multi-layer NTH) as the remaining pathway.** TFF-3 (3-layer) and TFF-5 (CNN CIFAR-10) are cancelled.
@@ -116,17 +117,18 @@ The CIFAR-10 experiments (TFF-5, TFF-6) are cancelled because the fundamental me
 
 ### NTH-4: Multi-layer NTH on MNIST
 
-**Result: 🔴 Fail (85.79%).** All three modulator propagation approaches fail to improve over the single-layer 88% bound.
+**Result: 🔴 Fail (86.68%).** All four modulator propagation approaches fail to improve over the single-layer 88% bound.
 
 | Approach | Accuracy | Hidden Learns? | Failure Mode |
 |:--------:|:--------:|:--------------:|-------------|
 | A: Label broadcast | **9.80%** | ❌ | Global anti-Hebbian kills all hidden representations |
 | B: Weight feedback | **85.79%** | ❌ (~0% flips) | W_out is 92% zero — feedback passes through sparse near-zero weights |
 | C: Random feedback | **85.02%** | ✅ (52% dense) | Random projection drives non-discriminative changes |
+| D: Latent score (NTH-4b) | **86.68%** | ❌ (~0% flips) | Dense continuous feedback through S_out fails too — sparsity not the bottleneck |
 
-**Root cause:** The hidden-to-output weights are ternary and mostly zero (92% after training in the best case). The feedback signal `M_hidden = M_output @ W_out` passes through sparse near-zero weights, producing negligible hidden update. Even with a fixed dense random feedback matrix (Approach C), the signal drives non-discriminative weight changes that make hidden representations denser (52%) without improving class separability.
+**Root cause:** The hidden-to-output weights are ternary and mostly zero (92% after training in the best case). The feedback signal `M_hidden = M_output @ W_out` passes through sparse near-zero weights, producing negligible hidden update. **NTH-4b (latent score feedback)** bypasses this by using dense continuous latent scores $S_{\text{out}}$ instead of ternary weights $W_{\text{out}}$, but the hidden layer still does not learn (0.000% flips). This proves **sparsity was not the bottleneck** — the Hebbian correlation-based update fundamentally cannot create discriminative features even with a perfect feedback pathway.
 
-**Decision:** NTH-4 **🔴 Fail.** No remaining approach for ternary Hebbian hidden layers. Phase 2 is complete — all approaches exhausted.
+**Decision:** NTH-4 **🔴 Fail.** No remaining approach for ternary Hebbian hidden layers. Phase 2 is complete — all approaches exhausted including NTH-4b.
 
 **Phase 3 (Language/Predictive Coding) assessment:** Unlikely to succeed. The same fundamental limitation applies: ternary Hebbian updates cannot propagate discriminative signals through hidden layers, regardless of the training objective. Predictive coding requires continuous error signals at each layer, which face the same hysteresis threshold problem.
 
@@ -301,7 +303,7 @@ class NeuromodulatedHebbianLinear(TernaryHebbianLinear):
 | NTH-1: Label modulator | M_c = +1 for correct class | >85% MNIST | ✅ **88.15%** | Equivalent to WTA — confirmed |
 | NTH-2: Error modulator | M = target − output | >85% MNIST | ⬜ Not run | Deprioritized — NTH-4 validates multi-layer |
 | NTH-3: Ternary modulator | M ∈ {-1, 0, +1} | >85% MNIST | ⬜ Not run | Deprioritized — NTH-4 covers this |
-| NTH-4: Multi-layer NTH | Label→propagated modulator | >90% MNIST | 🔴 **85.79%** | Fail: all 3 approaches <88% single-layer bound |
+| NTH-4: Multi-layer NTH | Label→propagated modulator | >90% MNIST | 🔴 **86.68%** | Fail: all 4 approaches <88% single-layer bound (NTH-4b best) |
 | NTH-5: CIFAR-10 | NTH CNN | >45% | ⬜ Cancelled | Mechanism fails on MNIST — no reason to proceed |
 
 ---

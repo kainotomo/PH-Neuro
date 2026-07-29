@@ -24,6 +24,15 @@ Three approaches for the hidden-layer modulator (\u0394W = \u03b7 \u00b7 M_hidde
         Inspired by Feedback Alignment (Lillicrap et al., 2016).
         The network must learn to align its hidden representations with B.
 
+    **D: Latent score feedback (NTH-4b)**
+        M_hidden = M_output @ S_out  (where S_out is the output layer's LATENT SCORES)
+        Instead of using the sparse ternary weight matrix W_out (92% zeros), use
+        the dense continuous latent scores S_out (fp16). Every synapse carries
+        a latent score even when the ternary weight is 0, so the feedback signal
+        propagates through a dense pathway instead of a near-zero sparse one.
+        The latent scores encode confidence: a synapse with score +4.5 contributes
+        strongly to the feedback; one with +0.1 contributes weakly.
+
 Training is **joint** (both layers updated per batch, not greedy), because
 the hidden modulator requires the output layer's predictions and weights.
 
@@ -47,7 +56,7 @@ from ph_neuro.training.greedy import _init_hidden_layer_connectivity
 from ph_neuro.training.neuromodulated import build_label_modulator
 
 # Type alias for modulator modes
-ModulatorMode = Literal["label_broadcast", "weight_feedback", "random_feedback"]
+ModulatorMode = Literal["label_broadcast", "weight_feedback", "random_feedback", "latent_feedback"]
 
 
 # ── Hidden modulator builders ──────────────────────────────────────
@@ -161,6 +170,43 @@ def _build_hidden_modulator_random_feedback(
     return M_hidden
 
 
+def _build_hidden_modulator_latent_feedback(
+    M_output: torch.Tensor,
+    S_out: torch.Tensor,
+) -> torch.Tensor:
+    """Approach D: propagate modulator through output layer LATENT SCORES.
+
+    M_hidden = M_output @ S_out
+
+    where:
+        M_output: (batch, 10)  — +1 for correct class, -1 for wrong prediction
+        S_out:    (10, hidden_size) — output layer LATENT SCORES (fp16, DENSE)
+
+    Unlike Approach B (which uses ternary weights W_out that are 92% zero),
+    this uses the continuous fp16 latent scores. Every synapse has a latent
+    score, even when its ternary weight is 0. The scores encode confidence:
+    a score of +4.5 means "very confident this should be +1"; +0.2 means
+    "barely positive." This provides a dense feedback pathway.
+
+    The result is a continuous (not ternary) modulator — the
+    ``neuromodulated_update`` function handles this correctly when
+    ``post=None``.
+
+    Args:
+        M_output: Output-layer modulator, shape ``(batch, n_classes)``,
+            values in {-1, 0, +1}.
+        S_out: Output layer latent score matrix, shape
+            ``(n_classes, hidden_size)`` (fp16, dense).
+
+    Returns:
+        Modulator tensor, shape ``(batch, hidden_size)`` (CONTINUOUS float,
+        NOT restricted to {-1, 0, +1}).
+    """
+    # M_hidden = M_output @ S_out: (batch, 10) @ (10, hidden_size) = (batch, hidden_size)
+    M_hidden = M_output.float() @ S_out.float()
+    return M_hidden
+
+
 def _init_random_feedback_matrix(
     n_classes: int,
     hidden_size: int,
@@ -217,6 +263,8 @@ class NTHMultiLayerClassifier:
         - ``weight_feedback``: M_output @ W_out (Approach B)
         - ``random_feedback``: M_output @ B where B is a fixed random matrix
           (Approach C)
+        - ``latent_feedback``: M_output @ S_out where S_out is the output
+          layer's dense continuous latent scores (Approach D / NTH-4b)
 
     No ``.backward()``, no optimizers, no loss functions.
 
@@ -326,6 +374,9 @@ class NTHMultiLayerClassifier:
             M_hidden = _build_hidden_modulator_random_feedback(
                 M_output, self._feedback_matrix
             )
+        elif self._modulator_mode == "latent_feedback":
+            S_out = self.output_layer._latent_scores.scores  # (out_features, hidden_size)
+            M_hidden = _build_hidden_modulator_latent_feedback(M_output, S_out)
         else:
             raise ValueError(f"Unknown modulator mode: {self._modulator_mode}")
 

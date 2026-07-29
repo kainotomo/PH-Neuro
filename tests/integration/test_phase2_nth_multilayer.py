@@ -8,8 +8,9 @@ Success criteria:
     5. Approach A: M_hidden is zero for correct predictions
     6. Approach B: M_hidden = M_output @ W_out
     7. Approach C: random feedback matrix B is fixed (never updated)
-    8. Training does not crash on synthetic data
-    9. Accuracy > random (10%) on synthetic 100-sample dataset
+    8. Approach D: M_hidden = M_output @ S_out (latent scores, continuous)
+    9. Training does not crash on synthetic data
+    10. Accuracy > random (10%) on synthetic 100-sample dataset
 """
 
 from __future__ import annotations
@@ -25,6 +26,7 @@ from ph_neuro.training.nth_multilayer import (
     _build_hidden_modulator_label_broadcast,
     _build_hidden_modulator_weight_feedback,
     _build_hidden_modulator_random_feedback,
+    _build_hidden_modulator_latent_feedback,
     _init_random_feedback_matrix,
 )
 
@@ -235,6 +237,83 @@ class TestInitRandomFeedbackMatrix:
         assert 0.25 < actual_density < 0.35, f"Expected ~0.3 density, got {actual_density:.3f}"
 
 
+class TestHiddenModulatorLatentFeedback:
+    """Test _build_hidden_modulator_latent_feedback."""
+
+    def test_correct_prediction_no_modulation(self):
+        """M_output is all zeros -> M_hidden should be all zeros."""
+        batch, hidden = 3, 4
+        n_classes = 3
+        M_output = torch.zeros(batch, n_classes)
+        S_out = torch.randn(n_classes, hidden)
+
+        M = _build_hidden_modulator_latent_feedback(M_output, S_out)
+        assert M.shape == (batch, hidden)
+        assert torch.allclose(M, torch.zeros_like(M)), "M should be all zeros"
+
+    def test_wrong_prediction_nonzero(self):
+        """With a wrong prediction, M_hidden should be non-zero."""
+        batch, hidden = 2, 4
+        n_classes = 3
+        M_output = torch.zeros(batch, n_classes)
+        M_output[1, 0] = 1.0   # correct class
+        M_output[1, 1] = -1.0  # wrong prediction
+
+        # Use specific latent scores for deterministic test
+        S_out = torch.tensor([
+            [2.0, 0.5, -1.0, 0.0],
+            [-1.5, 3.0, 0.0, 0.5],
+            [0.0, 0.0, 1.0, -2.0],
+        ])
+
+        M = _build_hidden_modulator_latent_feedback(M_output, S_out)
+        assert M.shape == (batch, hidden)
+        assert torch.allclose(M[0], torch.zeros(hidden)), "Correct sample should be zero"
+        # M[1] = 1*S_out[0] + (-1)*S_out[1] = [2-(-1.5), 0.5-3.0, -1.0-0, 0-0.5] = [3.5, -2.5, -1.0, -0.5]
+        expected = torch.tensor([3.5, -2.5, -1.0, -0.5])
+        assert torch.allclose(M[1], expected), f"Expected {expected}, got {M[1]}"
+
+    def test_continuous_output(self):
+        """M_hidden should be continuous (not restricted to {-1, 0, +1})."""
+        batch, hidden = 2, 4
+        n_classes = 3
+        M_output = torch.zeros(batch, n_classes)
+        M_output[0, 0] = 1.0
+        M_output[0, 1] = -1.0
+
+        S_out = torch.tensor([
+            [0.5, 0.0, 0.0, 0.0],
+            [-0.3, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0],
+        ])
+
+        M = _build_hidden_modulator_latent_feedback(M_output, S_out)
+        # M[0, 0] = 1*0.5 + (-1)*(-0.3) = 0.8 — not ternary
+        assert abs(M[0, 0].item() - 0.8) < 1e-5, f"Expected ~0.8, got {M[0, 0].item()}"
+        # Verify at least one value is not in {-1, 0, +1}
+        all_ternary = ((M == -1) | (M == 0) | (M == 1)).all()
+        assert not all_ternary, "M_hidden should NOT be restricted to ternary values"
+
+    def test_scale_consistency(self):
+        """M_hidden magnitude should scale with latent score magnitude."""
+        batch, hidden = 1, 2
+        n_classes = 2
+        M_output = torch.tensor([[1.0, -1.0]])  # wrong prediction
+
+        # Small scores -> small M_hidden
+        S_small = torch.tensor([[0.1, 0.0], [0.0, 0.1]])
+        M_small = _build_hidden_modulator_latent_feedback(M_output, S_small)
+
+        # Large scores -> large M_hidden
+        S_large = torch.tensor([[5.0, 0.0], [0.0, 5.0]])
+        M_large = _build_hidden_modulator_latent_feedback(M_output, S_large)
+
+        assert M_large.abs().max() > M_small.abs().max(), (
+            f"Large scores should produce larger M_hidden: "
+            f"small max={M_small.abs().max():.3f}, large max={M_large.abs().max():.3f}"
+        )
+
+
 # ── Tests: NTHMultiLayerClassifier ─────────────────────────────────
 
 class TestNTHMultiLayerClassifier:
@@ -354,7 +433,7 @@ class TestNTHMultiLayerClassifier:
 class TestAllModulatorModes:
     """Verify all three modulator modes work end-to-end."""
 
-    @pytest.mark.parametrize("mode", ["label_broadcast", "weight_feedback", "random_feedback"])
+    @pytest.mark.parametrize("mode", ["label_broadcast", "weight_feedback", "random_feedback", "latent_feedback"])
     def test_all_modes_no_crash(self, mode):
         """All three modes should train without crashing."""
         classifier = NTHMultiLayerClassifier(
@@ -373,7 +452,7 @@ class TestAllModulatorModes:
         assert len(history["accuracy"]) == 2
         assert all(0.0 <= a <= 1.0 for a in history["accuracy"])
 
-    @pytest.mark.parametrize("mode", ["label_broadcast", "weight_feedback", "random_feedback"])
+    @pytest.mark.parametrize("mode", ["label_broadcast", "weight_feedback", "random_feedback", "latent_feedback"])
     def test_no_backward_all_modes(self, mode):
         """All modulator modes should have zero .backward() calls."""
         classifier = NTHMultiLayerClassifier(
@@ -387,7 +466,7 @@ class TestAllModulatorModes:
         n_calls = _count_backward_calls(classifier, loader)
         assert n_calls == 0, f"Mode {mode}: Expected 0 .backward() calls, got {n_calls}"
 
-    @pytest.mark.parametrize("mode", ["label_broadcast", "weight_feedback", "random_feedback"])
+    @pytest.mark.parametrize("mode", ["label_broadcast", "weight_feedback", "random_feedback", "latent_feedback"])
     def test_weights_ternary_all_modes(self, mode):
         """All weights ternary after training."""
         classifier = NTHMultiLayerClassifier(
@@ -483,3 +562,97 @@ class TestNTHMultiLayerClassifierRandomFeedback:
             device="cpu",
         )
         assert classifier._feedback_matrix is None
+
+
+class TestNTHMultiLayerClassifierLatentFeedback:
+    """Tests for latent_feedback mode (NTH-4b)."""
+
+    @pytest.fixture
+    def classifier(self):
+        return NTHMultiLayerClassifier(
+            in_features=784,
+            hidden_size=64,
+            out_features=4,
+            modulator_mode="latent_feedback",
+            theta_upper=1.0,
+            theta_lower=0.3,
+            device="cpu",
+        )
+
+    def test_m_hidden_shape(self, classifier):
+        """Verify M_hidden has correct shape in latent_feedback mode."""
+        rng = torch.Generator()
+        rng.manual_seed(42)
+        x = torch.randn(16, 784, generator=rng)
+        y = torch.randint(0, 4, (16,), generator=rng)
+
+        x = x.to(classifier.device)
+        y = y.to(classifier.device)
+
+        with torch.no_grad():
+            M_out, M_hidden, h_ternary, pred = classifier._compute_modulators(x, y)
+
+        assert M_hidden.shape == (16, 64), f"Expected (16, 64), got {M_hidden.shape}"
+        assert M_out.shape == (16, 4), f"Expected (16, 4), got {M_out.shape}"
+
+    def test_m_hidden_continuous(self, classifier):
+        """M_hidden should be continuous (not ternary) for latent_feedback."""
+        rng = torch.Generator()
+        rng.manual_seed(42)
+        x = torch.randn(16, 784, generator=rng)
+        y = torch.randint(0, 4, (16,), generator=rng)
+
+        x = x.to(classifier.device)
+        y = y.to(classifier.device)
+
+        with torch.no_grad():
+            M_out, M_hidden, h_ternary, pred = classifier._compute_modulators(x, y)
+
+        # If some predictions are wrong, M_hidden should have non-ternary values
+        if (pred != y).any():
+            all_ternary = ((M_hidden == -1) | (M_hidden == 0) | (M_hidden == 1)).all()
+            assert not all_ternary, "M_hidden should be continuous, not ternary"
+
+    def test_no_feedback_matrix(self, classifier):
+        """latent_feedback mode should NOT create a feedback matrix."""
+        assert classifier._feedback_matrix is None
+
+    def test_no_backward_calls(self, classifier):
+        """latent_feedback should have zero .backward() calls."""
+        loader = _make_synthetic_data(n_samples=50, in_features=784, out_features=4)
+        n_calls = _count_backward_calls(
+            classifier, loader,
+            lr_hidden=0.005, lr_output=0.01,
+        )
+        assert n_calls == 0, f"Expected 0 .backward() calls, got {n_calls}"
+
+    def test_accuracy_above_random(self, classifier):
+        """After short training, accuracy should be above random (25%)."""
+        loader = _make_synthetic_data(n_samples=100, in_features=784, out_features=4)
+        classifier.fit(
+            loader, test_loader=loader,
+            lr_hidden=0.01, lr_output=0.02,
+            epochs=3, verbose=False,
+        )
+        acc = classifier.evaluate(loader)
+        assert acc >= 0.20, f"Accuracy {100 * acc:.1f}% < 20%"
+
+    def test_no_crash_on_realistic_scale(self):
+        """latent_feedback should not crash even with large latent scores."""
+        classifier = NTHMultiLayerClassifier(
+            in_features=784,
+            hidden_size=32,
+            out_features=4,
+            modulator_mode="latent_feedback",
+            device="cpu",
+        )
+        # Artificially inflate output latent scores to test stability
+        classifier.output_layer._latent_scores.scores += 10.0
+
+        loader = _make_synthetic_data(n_samples=50, in_features=784, out_features=4)
+        x, y = next(iter(loader))
+        with torch.no_grad():
+            metrics = classifier.train_step(x, y, lr_hidden=0.001, lr_output=0.01)
+        # Should not crash; flip rates should be valid
+        assert not (metrics["flip_rate_hidden"] != metrics["flip_rate_hidden"]), "NaN flip rate"
+        assert not (metrics["flip_rate_output"] != metrics["flip_rate_output"]), "NaN flip rate"

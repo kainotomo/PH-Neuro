@@ -7,8 +7,7 @@ Trains a 2-layer ternary network (784 \u2192 512 \u2192 10) on MNIST using
    modulator propagation approaches:
    - ``label_broadcast`` (A): correctness signal broadcast to active hidden neurons
    - ``weight_feedback`` (B): M_hidden = M_output @ W_out
-   - ``random_feedback`` (C): M_hidden = M_output @ B (fixed random matrix)
-
+   - ``random_feedback`` (C): M_hidden = M_output @ B (fixed random matrix)   - ``latent_feedback`` (D / NTH-4b): M_hidden = M_output @ S_out (output latent scores)
 2. **Output layer** (512\u219210): Standard NTH label modulator (NTH-1 / WTA equivalent)
 
 Both layers are updated **jointly** (not greedy) because the hidden modulator
@@ -26,6 +25,7 @@ Usage:
     python -m ph_neuro.examples.nth_multilayer_mnist
     python -m ph_neuro.examples.nth_multilayer_mnist --modulator-mode weight_feedback
     python -m ph_neuro.examples.nth_multilayer_mnist --modulator-mode random_feedback
+    python -m ph_neuro.examples.nth_multilayer_mnist --modulator-mode latent_feedback
 """
 
 from __future__ import annotations
@@ -55,7 +55,7 @@ def parse_args() -> argparse.Namespace:
         "--modulator-mode",
         type=str,
         default="label_broadcast",
-        choices=["label_broadcast", "weight_feedback", "random_feedback"],
+        choices=["label_broadcast", "weight_feedback", "random_feedback", "latent_feedback"],
         help="Hidden-layer modulator approach",
     )
 
@@ -129,6 +129,7 @@ def main() -> None:
         "label_broadcast": "A: Label broadcast (correctness \u2192 hidden)",
         "weight_feedback": "B: Weight-feedback (M_output @ W_out)",
         "random_feedback": "C: Random feedback alignment (M_output @ B)",
+        "latent_feedback": "D: Latent score feedback (M_output @ S_out)",
     }
 
     print_header("PH-Neuro Phase 2 \u2014 NTH-4: Neuromodulated Hebbian 2-Layer MLP on MNIST")
