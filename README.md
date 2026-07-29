@@ -50,18 +50,20 @@ Both share the ternary weight philosophy. PH-Net uses proven methods (gradient d
 | 1.1 | Multi-layer MLP | ✅ | 87.9% — depth doesn't help |
 | 1.2 | CNN on CIFAR-10 | ✅ | 32.6% — conv Hebbian ≈ random |
 | 1.3 | Continual Learning | ✅ | <5% multi-head ✅, single-head ❌ |
-| 2 | **Forward Signals & Three-Factor** | 🔴 **COMPLETE** | TFF-1 ✅ 87.9%, NTH-1 ✅ 88.15%, TFF-2 ❌ 86.81%, NTH-4 ❌ 85.79%, NTH-4b ❌ **86.68%** — ALL approaches exhausted. No method trains ternary Hebbian hidden layers. |
-| 3 | Language Model | ⬜ | Predictive coding for error signal |
-| 4-5 | Scale & Ship | ⬜ | 1B+ models, pip install |
+| 2 | **Forward Signals & Three-Factor** | 🔴 **COMPLETE** | TFF-1 ✅ 87.9%, NTH-1 ✅ 88.15%, TFF-2 ❌ 86.81%, NTH-4 ❌ 85.79%, NTH-4b ❌ **86.68%**, TEP-1 ❌ **82.57%** — **ALL 9 approaches exhausted. No method trains ternary Hebbian hidden layers. Research phase closed.** |
+| 3-5 | Language Model & Scale | ⬜ | Closed — requires backprop or predictive coding |
 
-**Critical findings across 7 experiments:**
+**Critical findings across 9 experiments:**
 1. **WTA Hebbian works** for single-task classification — but only on the output layer (88.4% MNIST)
 2. **Unsupervised Hebbian ≠ discriminative features** — H4 falsified: depth provides zero improvement (MLP 87.9% = 1-layer 88.4%, CNN 32.6% = random 33.0%)
 3. **Anti-Hebbian = gradient interference** — single-head continual learning fails (37% forgetting) because weakening wrong predictions destroys old knowledge
 4. **Multi-head works** — separate output neurons per task achieve <5% forgetting ✅
 5. **Forward-Forward + ternary ≠ hidden layer learning** — H5 falsified: TFF-2 achieves 86.81% (same as 1-layer). FF's popcount goodness trivially saturates; the contrastive signal doesn't create class-discriminative features.
 6. **Three-factor Hebbian works for output layer** — H7 verified (output): NTH-1 achieves 88.15% MNIST with label modulator M∈{-1,0,+1}.
-7. **Three-factor Hebbian fails for hidden layers** — H7 falsified (hidden): NTH-4 achieves 85.79% across all modulator propagation approaches. NTH-4b reaches 86.68% with dense continuous latent score feedback, but hidden flip rate is still ~0.000%/step — **sparsity was not the bottleneck.** The Hebbian correlation-based update cannot create discriminative features even with a perfect dense feedback pathway. **All 8 experiments confirm: ternary Hebbian hidden layers cannot learn class-discriminative features without backprop.**
+7. **Three-factor Hebbian fails for hidden layers** — H7 falsified (hidden): NTH-4 achieves 85.79% across all modulator propagation approaches. NTH-4b reaches 86.68% with dense continuous latent score feedback, but hidden flip rate is still ~0.000%/step — **sparsity was not the bottleneck.** The Hebbian correlation-based update cannot create discriminative features even with a perfect dense feedback pathway.
+8. **Equilibrium Propagation moves hidden weights but reduces accuracy** — TEP-1 achieves 0.005%/step hidden flip rate (first non-backprop method to do so) but accuracy drops to 82.57% — the EP signal pushes hidden representations in non-discriminative directions.
+
+**Definitive conclusion: All 9 experiments confirm that ternary Hebbian hidden layers cannot learn class-discriminative features without backpropagation.** Research phase is closed. See [`docs/experiments/E008-equilibrium-propagation-mnist.md`](docs/experiments/E008-equilibrium-propagation-mnist.md) for the full report.
 
 ---
 
@@ -124,18 +126,26 @@ See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full development plan.
 | 0 | Core Mechanism | ✅ Complete | 88.4% MNIST, single-layer WTA Hebbian |
 | 1.1 | Multi-layer MLP on MNIST | ✅ Complete | 87.9%, depth doesn't help |
 | 1.2 | CNN on CIFAR-10 | ✅ Complete | 32.6%, conv Hebbian = random |
-| 1.3 | Continual Learning | ⬜ **NEXT** | **Primary contribution** — target <5% forgetting |
-| 2 | Forward Signals & Three-Factor | 🔴 **Complete — all approaches exhausted** | No method trains ternary Hebbian hidden layers (NTH-4b: 86.68%, dense S_out feedback ❌) |
-| 3 | Language Model | ⬜ On hold | Predictive coding faces same fundamental limitation |
-| 4 | Scale to 1B+ | ⬜ Not started | |
-| 5 | Package & Publish | ⬜ Not started | |
+| 1.3 | Continual Learning | ✅ Complete | **Primary contribution** — <5% multi-head forgetting |
+| 2 | Forward Signals & Three-Factor | 🔴 **DEFINITIVELY CLOSED** | TFF-1 (87.9%), NTH-1 (88.15%), TFF-2 (86.81%), NTH-4 (85.79%), NTH-4b (86.68%), **TEP-1 (82.57%)** — All 9 approaches exhausted. |
+| 3-5 | Language Model, Scale & Publish | ⬜ **On hold indefinitely** | Ternary Hebbian hidden layers cannot be trained without backprop. See research conclusion below. |
 
-### Research Findings So Far
+### Definitive Research Conclusion
 
-1. **WTA Hebbian works for single-task classification** (88.4% MNIST) — but only on the output layer with direct label supervision.
-2. **Unsupervised Hebbian ≠ discriminative features** — hidden layers learn statistical structure (principal components), not class boundaries. H4 falsified across MLP and CNN.
-3. **Anti-Hebbian = gradient interference** — the mechanism that weakens wrong predictions in single-head WTA is functionally identical to gradient-based forgetting. Hebbian doesn't solve the shared-representation interference problem.
-4. **Multi-head works** — separate output neurons per task achieve <5% forgetting, the standard task-incremental learning protocol. This is a publishable result: ternary Hebbian networks support continual learning with isolated output heads.
+After **9 experiments** across **4 fundamentally different approaches**, the evidence is conclusive:
+
+| Approach | Experiments | Best Accuracy | Verdict |
+|:---------|:-----------:|:------------:|:--------|
+| Unsupervised Hebbian | Phase 1.1, 1.2 | 87.9% | ❌ Learns PCA, not classes |
+| Forward-Forward | TFF-1, TFF-2 | 86.81% | ❌ Popcount goodness is trivial |
+| Three-factor Hebbian | NTH-1, NTH-4 (B/C/D) | 86.68% | ❌ Sparse weights kill feedback; dense feedback gives diffuse modulators |
+| Equilibrium Propagation | **TEP-1** | **82.57%** | ❌ Noisy targets; moving-target/stale-target instability |
+
+**Ternary Hebbian hidden layers cannot learn class-discriminative features without backpropagation.** The research phase of PH-Neuro is officially closed. All plausible methods have been tested and exhausted.
+
+**What remains:**
+- **Multi-head continual learning** (<5% forgetting) is a publishable result
+- **Predictive coding** is the only remaining non-backprop approach — but it requires floating-point error nodes and significant architectural changes
 
 ---
 

@@ -362,14 +362,15 @@ This is essentially Forward-Forward expressed as neuromodulated Hebbian.
 | FF single-layer MNIST | >88% (match WTA baseline) | ✅ **87.9%** — `docs/experiments/E004-forward-forward-mnist.md` |
 | NTH single-layer MNIST | >85% | ⬜ Not yet run |
 
-### Stage 2 Gates (the critical test) — COMPLETE
+### Stage 2 Gates (the critical test) — DEFINITIVELY CLOSED
 
 | Milestone | Target | Result | Verification |
 |-----------|--------|:------:|-------------|
 | FF 2-layer MNIST | >95% (beat 1-layer by >6pp) | 🔴 86.81% | `docs/experiments/E006-forward-forward-multilayer-mnist.md` |
 | FF 3-layer MNIST | >96% | ❌ Cancelled | Mechanism fails on 2-layer |
-| NTH multi-layer MNIST | >90% | 🔴 85.79% | `docs/experiments/E007-nth-multilayer-mnist.md` |
-| Continual learning with FF | <10% forgetting single-head | ❌ Cancelled | Mechanism fails for hidden layers |
+| NTH multi-layer MNIST | >90% | 🔴 85.79-86.68% | `docs/experiments/E007-nth-multilayer-mnist.md` |
+| EP multi-layer MNIST (TEP-1) | >92% | 🔴 **80-84%** | `docs/experiments/E008-equilibrium-propagation-mnist.md` |
+| Continual learning with FF | <10% forgetting single-head | ❌ Cancelled | All hidden-layer mechanisms fail |
 
 ### Stage 3 (only if Stage 2 passes)
 
@@ -395,3 +396,61 @@ This is essentially Forward-Forward expressed as neuromodulated Hebbian.
 ## What's Next
 
 After Phase 2 → **Phase 3: Language & Predictive Coding.** Once we've validated that local error signals (FF goodness / neuromodulator) can drive useful learning in hidden layers, we apply the same principle to sequential data using predictive coding.
+
+---
+
+## 2d. Equilibrium Propagation (TEP-1)
+
+**Status:** 🔴 Failed — Worst accuracy of any 2-layer method (82.57%)
+
+### Core Idea
+
+Equilibrium Propagation (Scellier & Bengio, 2017) contrasts two network states — free (unperturbed forward pass) and nudged (output weakly clamped toward target) — and updates weights by the difference of their Hebbian correlations:
+
+$$\Delta W_{ij} = \frac{\eta}{\beta} \cdot (h_i^{\text{nudged}} \cdot h_j^{\text{nudged}} - h_i^{\text{free}} \cdot h_j^{\text{free}})$$
+
+### Ternary Simplification
+
+Without recurrent dynamics, EP was approximated with 2 forward passes:
+
+1. **Free phase**: Standard forward pass → `h_free`, `y_free`
+2. **Nudged phase**: Compute `h_target = ternary_sign(S_out^T @ y_onehot)` — what the hidden layer SHOULD produce for the correct class, derived from output layer **latent scores** (dense fp16, not sparse ternary weights)
+3. **Hidden update**: `ΔS_hidden = η × (h_target^T @ x - h_free^T @ x)`
+4. **Output update**: Standard WTA (Phase 0)
+
+### Three Variants Tested
+
+| Variant | Accuracy | Hidden Flips | Key Finding |
+|:--------|:--------:|:------------:|-------------|
+| **Joint EP** (both layers) | **80.79%** | **0.006%** | Moving target: hidden chases evolving S_out |
+| **Greedy EP** (frozen output) | **82.57%** | **0.005%** | Stale target: S_out doesn't adapt to new hidden reps |
+| **Random prototypes** (fixed) | **81.11%** | **0.068%** | Random targets = random flips |
+
+### Why EP Failed
+
+EP successfully moves hidden weights (0.005%/step — **first non-backprop method to do so**). The h_target correlation reaches 0.78, confirming hidden-to-target alignment. However, this alignment DOES NOT improve classification accuracy because:
+
+1. **Moving target (joint):** h_target = sign(S_out^T @ y_onehot) depends on S_out, which changes as the hidden layer changes. Circular dependency creates unstable dynamics.
+
+2. **Stale target (greedy):** A frozen S_out encodes class structure for the ORIGINAL hidden features. When EP changes hidden weights, the new representations no longer match the old S_out — the frozen output layer loses accuracy.
+
+3. **No backward propagation:** EP requires recurrent dynamics with symmetric weights to propagate the nudge backward. Feedforward ternary networks lack both. The S_out^T projection is a local approximation that provides a noisy, directionally-inconsistent signal.
+
+### Documentation
+
+Full experiment report: `docs/experiments/E008-equilibrium-propagation-mnist.md`
+
+---
+
+## Definitive Phase 2 Conclusion
+
+After **9 experiments** across **4 fundamentally different approaches**, Phase 2 is **definitively closed**:
+
+| Approach | Experiments | Best 2-Layer Accuracy | Verdict |
+|:---------|:-----------:|:--------------------:|:--------|
+| Unsupervised Hebbian | Phase 1.1, 1.2 | 87.9% | ❌ PCA, not classes |
+| Forward-Forward | TFF-1, TFF-2 | 86.81% | ❌ Popcount is trivial |
+| Three-factor Hebbian | NTH-1, NTH-4 (A/B/C/D) | 86.68% | ❌ Sparse/diffuse feedback |
+| Equilibrium Propagation | **TEP-1** | **82.57%** | ❌ Noisy, unstable targets |
+
+**No method trains ternary Hebbian hidden layers without backpropagation.** The fundamental limitation is the Hebbian update rule itself: correlation maximization (pre × post) cannot create class-discriminative features, regardless of how the signal is modulated or contrasted.

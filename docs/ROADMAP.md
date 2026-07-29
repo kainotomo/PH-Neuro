@@ -41,6 +41,8 @@ Build a **deep learning framework that learns without backpropagation** — usin
 
 7. **H7 — Three-factor Hebbian = local error signal**: ⚠️ **PARTIALLY FALSIFIED (multi-layer case).** NTH-1 achieves 88.15% MNIST with label modulator (M_c=+1, M_w=-1) for the single-layer output case ✅. However, NTH-4 conclusively shows that the modulator CANNOT propagate through hidden layers with ternary weights — all three modulator propagation approaches fail to beat the ~88% single-layer bound. The three-factor framework provides a local error signal for the output layer but not for hidden layers in ternary networks. Documented in `docs/experiments/E007-nth-multilayer-mnist.md`.
 
+8. **H8 — Equilibrium Propagation solves the hidden-layer problem**: ❌ **FALSIFIED.** TEP-1 (2-layer EP on MNIST) achieves 80-84% — WORSE than the single-layer ~88% bound. EP does move hidden weights (0.005%/step — first non-backprop method to do so), but the EP signal pushes hidden representations in non-discriminative directions. Joint training exhibits a moving-target problem; greedy training exhibits a stale-target problem. All three variants (joint EP, frozen output greedy EP, random prototype EP) fail to improve classification accuracy. Documented in `docs/experiments/E008-equilibrium-propagation-mnist.md`.
+
 ---
 
 ## Phase Status
@@ -51,10 +53,8 @@ Build a **deep learning framework that learns without backpropagation** — usin
 | 1.1 | Multi-layer MLP | ✅ | 87.9% — depth doesn't help |
 | 1.2 | CNN on CIFAR-10 | ✅ | 32.6% — conv Hebbian ≈ random |
 | 1.3 | Continual Learning | ✅ | <5% multi-head ✅, single-head ❌ |
-| 2 | **Forward Signals & Three-Factor Learning** | � **Phase 2 complete — ALL approaches exhausted** | TFF-1 ✅ 87.9%, NTH-1 ✅ **88.15%**, TFF-2 ❌ **86.81%**, NTH-4 ❌ **85.79%**. No method trains ternary Hebbian hidden layers. |
-| 3 | Language Model | ⬜ After Phase 2 | Predictive coding for sequential data |
-| 4 | Scale | ⬜ | 1B+ ternary Hebbian models |
-| 5 | Package & Publish | ⬜ | pip install ph-neuro |
+| 2 | **Forward Signals & Three-Factor** | 🔴 **RESEARCH PHASE CLOSED** | **TFF-1 ✅ 87.9%, NTH-1 ✅ 88.15%, TFF-2 ❌ 86.81%, NTH-4 ❌ 85.79%, NTH-4b ❌ 86.68%, TEP-1 ❌ 82.57% — ALL 9 approaches exhausted. Ternary Hebbian hidden layers CANNOT be trained without backprop.** |
+| 3-5 | Language Model & Scale | ⬜ **On hold indefinitely** | Closed — requires backprop or predictive coding |
 
 ## Phase 1 Key Findings
 
@@ -84,9 +84,18 @@ After Phases 0 through 1.3, here is the complete picture:
 - H2 (no forgetting with shared neurons) — **PARTIALLY FALSIFIED** ⚠️
 - H5 (Forward-Forward solves hidden layers) — **FALSIFIED for ternary weights** ❌
 - H7 (Three-factor Hebbian propagates to hidden layers) — **PARTIALLY FALSIFIED** ⚠️ (output layer ✅, hidden layers ❌)
+- H8 (Equilibrium Propagation solves hidden layers) — **FALSIFIED** ❌
 
-**What this means:**
-The original vision of "deep Hebbian networks that don't forget with shared representations" has not been realized. The root cause is fundamental: **unsupervised Hebbian optimizes for statistical correlation, not discriminative utility.** Each hidden layer compounds this problem — correlations of correlations diverge from class-relevant features.
+**Definitive conclusion — RESEARCH PHASE CLOSED:**
+After 9 experiments across 4 fundamentally different approaches (unsupervised Hebbian, Forward-Forward, three-factor Hebbian, Equilibrium Propagation), the evidence is conclusive: **ternary Hebbian hidden layers cannot learn class-discriminative features without backpropagation.**
+
+The root cause is fundamental: all Hebbian update rules optimize for **statistical correlation** (pre × post), not for **classification error minimization**. Each attempt to create a local error signal fails because:
+- Unsupervised Hebbian → PCA, not class structure
+- Forward-Forward → popcount goodness is trivial, not class-specific
+- Three-factor Hebbian → sparse ternary weights kill the feedback signal; dense feedback provides a diffuse scalar modulator, not structured feature information
+- Equilibrium Propagation → noisy hidden targets from latent scores; the nudge cannot propagate backward without recurrent dynamics
+
+**The only viable path forward is predictive coding** (Whittington & Bogacz, 2017), which is fundamentally different: it computes prediction errors at each layer and uses those errors (not Hebbian correlations) to drive learning. This requires floating-point error nodes and is incompatible with the "no backward pass" philosophy.
 
 **Literature review confirms the path forward:**
 1. **Forward-Forward (Hinton, 2022):** Each layer has its own local "goodness" objective. Achieves 98.6% on MNIST without backprop. Perfect fit for ternary weights (popcount goodness).
