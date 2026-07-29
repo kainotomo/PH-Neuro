@@ -4,6 +4,11 @@
 > **Duration:** ~6-8 weeks (3a: 1-2 weeks, 3b: 2-3 weeks, 3c: 3-4 weeks)  
 > **Hardware:** RTX 4060 8 GB — all models fit easily  
 > **Success:** Coherent text generation from a brain-inspired architecture that never computes a gradient
+>
+> **⚠️ Prerequisite: Phase 2 (Forward Signals & Three-Factor Learning) must complete first.**
+> Phase 1 proved that unsupervised Hebbian cannot train hidden layers. Phase 2 validates
+> that local error signals (Forward-Forward goodness / neuromodulators) solve this problem.
+> Phase 3 applies the validated mechanism to sequential data via predictive coding.
 
 ---
 

@@ -48,16 +48,18 @@ Both share the ternary weight philosophy. PH-Net uses proven methods (gradient d
 |:------|:------|:------:|:-----------|
 | 0 | Core Mechanism | ✅ | 88.4% MNIST, single-layer WTA Hebbian |
 | 1.1 | Multi-layer MLP | ✅ | 87.9% — depth doesn't help |
-| 1.2 | CNN on CIFAR-10 | ✅ | 32.6% — conv Hebbian = random |
-| 1.3 | Continual Learning | ✅ | 26.6% single-head, **<5% multi-head** ✅ |
-| 2 | Multi-Layer Theory | ⬜ **SKIPPED** | H4 falsified |
-| 3 | Language Model | ⬜ Next | Predictive coding for error signal |
+| 1.2 | CNN on CIFAR-10 | ✅ | 32.6% — conv Hebbian ≈ random |
+| 1.3 | Continual Learning | ✅ | <5% multi-head ✅, single-head ❌ |
+| 2 | **Forward Signals & Three-Factor** | ⬜ **NEXT** | Forward-Forward + neuromodulated Hebbian |
+| 3 | Language Model | ⬜ | Predictive coding for error signal |
+| 4-5 | Scale & Ship | ⬜ | 1B+ models, pip install |
 
 **Critical findings across 4 experiments:**
-1. **WTA Hebbian works** for single-task classification — but only on the output layer
-2. **Unsupervised Hebbian ≠ discriminative features** — H4 falsified across MLP and CNN
-3. **Anti-Hebbian = gradient interference** — single-head continual learning fails because weakening wrong predictions destroys old knowledge, exactly like backprop
-4. **Multi-head works** — separate output neurons per task achieve <5% forgetting, the standard in continual learning literature
+1. **WTA Hebbian works** for single-task classification — but only on the output layer (88.4% MNIST)
+2. **Unsupervised Hebbian ≠ discriminative features** — H4 falsified: depth provides zero improvement (MLP 87.9% = 1-layer 88.4%, CNN 32.6% = random 33.0%)
+3. **Anti-Hebbian = gradient interference** — single-head continual learning fails (37% forgetting) because weakening wrong predictions destroys old knowledge
+4. **Multi-head works** — separate output neurons per task achieve <5% forgetting ✅
+5. **The path forward:** Forward-Forward (Hinton, 2022) gives each layer a local objective without backprop. Perfect fit for ternary weights. This is Phase 2.
 
 ---
 

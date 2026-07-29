@@ -325,29 +325,37 @@ After training on all 5 split MNIST tasks, what does the confusion matrix look l
 
 ---
 
-## Deliverables
+## Phase 1 Conclusions (2026-07-29)
 
-- [ ] `TernaryHebbianConv2d` with correct Hebbian rule
-- [ ] Multi-layer MNIST: >95% accuracy
-- [ ] CIFAR-10 CNN: >60% accuracy
-- [ ] Split MNIST continual learning: <5% forgetting
-- [ ] Permuted MNIST continual learning: <10% forgetting
-- [ ] Backprop baselines for all experiments
-- [ ] Weight/activation analysis tools
-- [ ] Experiment logs for all runs
+### What We Learned
 
----
+1. **Unsupervised Hebbian does NOT build useful hidden representations.** Across 7 variants (basic, Oja, BCM, competitive, class-guided, reward-modulated, online competitive+conscience), only competitive Hebbian with conscience created differentiated prototypes — but even those provided ZERO accuracy improvement over the single-layer baseline (87.9% vs 87.5%).
 
-## Risks
+2. **The root cause is mathematical, not architectural.** Hebbian learning optimizes $\max \text{corr(pre, post)}$ — this captures statistical structure (PCA), not discriminative structure. Each hidden layer compounds the problem: correlations of correlations diverge from class-relevant features.
 
-| Risk | Likelihood | Mitigation |
-|------|-----------|------------|
-| CIFAR-10 <50% | Medium | Try different architectures, Hebbian variants (BCM, Oja), data augmentation |
-| Forgetting >20% | Low-Medium | This would challenge H2 — investigate why weights are being overwritten |
-| Greedy layer-wise doesn't scale to 3+ layers | Medium | Explore simultaneous Hebbian or contrastive approaches earlier |
+3. **Depth does not help without error signals.** Both MLP and CNN experiments confirm: more layers ≠ better accuracy. The CNN conv layers match random projections (32.6% vs 33.0%).
+
+4. **Anti-Hebbian interference = gradient interference.** Single-head continual learning fails (~37% forgetting) because weakening wrong predictions destroys old knowledge. This is a fundamental insight: the mechanism that backprop uses for discrimination is the same mechanism that causes forgetting.
+
+5. **Multi-head continual learning works perfectly** (<5% forgetting). Separate output neurons per task is standard in the continual learning literature and validates the ternary Hebbian infrastructure.
+
+6. **The infrastructure is solid.** 132+ tests, no `.backward()` anywhere, ternary weight invariant verified, flip rate stabilization confirmed. The problem is the learning algorithm, not the implementation.
+
+### What This Means for the Project
+
+The original goal of "deep Hebbian networks" with unsupervised hidden layers is **not viable.** The project pivots to:
+
+- **Phase 2 (NEW): Forward Signals & Three-Factor Learning** — Forward-Forward (Hinton, 2022) and neuromodulated Hebbian (Frémaux & Gerstner, 2016) provide local error signals to hidden layers without backprop.
+- **Phase 3: Language & Predictive Coding** — Proceeds after Phase 2 validates the error-signal mechanism.
+
+### Key Literature
+
+- Hinton, G. "The Forward-Forward Algorithm." arXiv:2212.13345, 2022. (98.6% MNIST without backprop)
+- Frémaux, N. & Gerstner, W. "Three-Factor Learning Rules." Frontiers in Neural Circuits, 2016. (659 citations)
+- Whittington, J.C.R. & Bogacz, R. "Predictive Coding ≈ Backprop." Neural Computation, 2017. (494 citations)
 
 ---
 
 ## What's Next
 
-After Phase 1 succeeds → Phase 2: Deep networks (5-10 layers), feature visualization, alternative multi-layer strategies.
+After Phase 1 → **Phase 2: Forward Signals & Three-Factor Learning.** Implement Forward-Forward with ternary weights and neuromodulated Hebbian to give hidden layers the local error signal they've been missing.

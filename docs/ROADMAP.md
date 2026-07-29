@@ -1,7 +1,7 @@
 # PH-Neuro Roadmap
 
 > **Status:** Pre-alpha research — unexplored territory  
-> **Last updated:** 2026-07-28
+> **Last updated:** 2026-07-29
 
 ---
 
@@ -29,20 +29,32 @@ Build a **deep learning framework that learns without backpropagation** — usin
 
 1. **H1 — Ternary Hebbian works at all**: Ternary weights {-1, 0, +1} combined with Hebbian learning can solve non-trivial classification tasks. **Partially verified:** 88.4% MNIST single-layer (✅ >85%), but CIFAR-10 CNN failed (32.6%, ❌ <55%). Hebbian learning works for direct supervised classification but NOT for unsupervised feature learning in hidden layers.
 
+2. **H2 — No catastrophic forgetting**: ⚠️ **PARTIALLY FALSIFIED (single-head).** Single-head WTA Hebbian suffers ~37% forgetting on Split MNIST. The anti-Hebbian update that weakens wrongly-predicted classes is **functionally identical to gradient interference** in backprop. Multi-head output (separate neurons per task) achieves <5% forgetting ✅ — but this is task-incremental only.
+
+3. **H3 — Hysteresis creates stability**: ✅ Dual-threshold mechanism prevents oscillatory flipping and creates stable representations. Flip rates converge to <0.05%/step.
+
+4. **H4 — Layer-wise independence is sufficient**: ❌ **FALSIFIED.** Unsupervised Hebbian captures statistical structure (PCA), not class-discriminative structure. Depth provides zero improvement (2-layer 87.9% = 1-layer 88.4%). Some form of error signal is required for hidden layers.
+
+5. **H5 — Forward-Forward solves the hidden-layer problem**: ⬜ **Untested.** The Forward-Forward algorithm (Hinton, 2022) gives each layer its own local objective ("goodness") without backprop. Ternary weights are naturally suited — goodness can be computed via popcount. This is the NEW Phase 2.
+
+6. **H6 — Language is learnable without backprop**: ⬜ **Untested.** Predictive coding + ternary Hebbian can capture sequential structure. Moved to Phase 3 (after Forward-Forward is validated).
+
+7. **H7 — Three-factor Hebbian = local error signal**: ⬜ **Untested.** Adding a neuromodulator factor M ∈ {-1, 0, +1} to the Hebbian rule (ΔW = η · M · pre · post) provides a local error channel without backprop.
+
 ---
 
 ## Phase Status
 
-| Phase | Title | Status |
-|:------|:------|:------:|
-| 0 | Core Mechanism | ✅ Complete (88.4% MNIST) |
-| 1 | Vision POC — Multi-layer MLP | ✅ Complete (87.9% MNIST, 7 variants tested) |
-| 1 | Vision POC — CNN on CIFAR-10 | ✅ Complete (33% — below >55% target, architecture verified) |
-| 1 | Vision POC — Continual learning | ✅ Complete (26.6% single-head, <5% multi-head ✅) |
-| 2 | Multi-Layer Theory | ⬜ **SKIPPED** (H4 falsified, depth not beneficial) |
-| 3 | Language Model | ⬜ Not started |
-| 4 | Scale | ⬜ Not started |
-| 5 | Package & Publish | ⬜ Not started |
+| Phase | Title | Status | Key Result |
+|:------|:------|:------:|:-----------|
+| 0 | Core Mechanism | ✅ | 88.4% MNIST, single-layer WTA Hebbian |
+| 1.1 | Multi-layer MLP | ✅ | 87.9% — depth doesn't help |
+| 1.2 | CNN on CIFAR-10 | ✅ | 32.6% — conv Hebbian ≈ random |
+| 1.3 | Continual Learning | ✅ | <5% multi-head ✅, single-head ❌ |
+| 2 | **Forward Signals & Three-Factor Learning** | ⬜ **NEW PRIORITY** | Forward-Forward + Neuromodulated Hebbian |
+| 3 | Language Model | ⬜ After Phase 2 | Predictive coding for sequential data |
+| 4 | Scale | ⬜ | 1B+ ternary Hebbian models |
+| 5 | Package & Publish | ⬜ | pip install ph-neuro |
 
 ## Phase 1 Key Findings
 
@@ -67,32 +79,23 @@ After Phases 0 through 1.3, here is the complete picture:
 **What doesn't work:**
 - Unsupervised Hebbian for hidden layers — creates statistical features, not discriminative ones ❌
 - Depth — zero improvement over single-layer (MLP and CNN both confirm) ❌
-- Single-head continual learning — anti-Hebbian = gradient interference, 26.6% forgetting ❌
+- Single-head continual learning — anti-Hebbian = gradient interference, ~37% forgetting ❌
 - H4 (layer-wise independence) — **FALSIFIED** ❌
 - H2 (no forgetting with shared neurons) — **PARTIALLY FALSIFIED** ⚠️
 
 **What this means:**
-The original vision of "deep Hebbian networks that don't forget with shared representations" has not been realized. However, PH-Neuro has produced genuine scientific contributions:
-1. The first systematic study of ternary Hebbian learning at scale (MNIST, CIFAR-10)
-2. Proof that anti-Hebbian interference = gradient interference (fundamental insight)
-3. A working task-incremental learning system with multi-head ternary Hebbian
-4. A clean, well-tested infrastructure for further research
+The original vision of "deep Hebbian networks that don't forget with shared representations" has not been realized. The root cause is fundamental: **unsupervised Hebbian optimizes for statistical correlation, not discriminative utility.** Each hidden layer compounds this problem — correlations of correlations diverge from class-relevant features.
 
-**Revised roadmap:**
-1. **Multi-head continual learning** — implement properly, document as the primary result
-2. **Phase 3 (Language) can proceed** — language has natural error signals (prediction error) that may solve the supervision problem for hidden layers
-3. **Phase 2 is permanently skipped** — depth without supervision signal is a dead end
-4. **Phase 4-5 remain valid** if Phase 3 succeeds
+**Literature review confirms the path forward:**
+1. **Forward-Forward (Hinton, 2022):** Each layer has its own local "goodness" objective. Achieves 98.6% on MNIST without backprop. Perfect fit for ternary weights (popcount goodness).
+2. **Three-factor learning rules (Frémaux & Gerstner, 2016):** ΔW = η · M · pre · post where M is a neuromodulator. Well-established in computational neuroscience (659 citations).
+3. **Predictive coding (Whittington & Bogacz, 2017; Millidge et al., 2022):** Local Hebbian updates can approximate backprop through prediction error minimization. 494 citations.
+4. **Neuro-Modulated Hebbian Learning (Tang et al., CVPR 2023):** Combines unsupervised Hebbian with a learned modulator — proves the concept but still uses backprop for the modulator.
 
-2. **H2 — No catastrophic forgetting**: ⚠️ **PARTIALLY FALSIFIED (single-head).** Single-head WTA Hebbian suffers 26.6% forgetting on Split MNIST (vs 35.9% backprop) — a ~10pp improvement but far from <5%. The anti-Hebbian update that weakens wrongly-predicted classes is **functionally identical to gradient interference** in backprop. Hysteresis cannot protect against active anti-Hebbian weakening. Multi-head output (separate neurons per task) is required to achieve <5% forgetting, which is standard in the continual learning literature but limits the approach to task-incremental (not class-incremental) learning.
-
-3. **H3 — Hysteresis creates stability**: A dual-threshold mechanism (high threshold to activate a synapse, low threshold to deactivate) prevents oscillatory "flipping" and creates stable representations.
-
-4. **H4 — Layer-wise independence is sufficient**: ❌ **FALSIFIED.** Greedy layer-wise Hebbian learning (each layer trained independently, bottom-up) does NOT build useful hierarchical representations. Three experiments confirm: 2-layer MLP (87.9%) matches 1-layer (88.4%), CNN conv layers match random projections (32.6% vs 33.0%). Unsupervised Hebbian captures statistical structure (principal components), not class-discriminative structure. Some form of supervision or error signal is required for hidden layers.
-
-5. **H5 — Language is learnable without backprop**: Hebbian learning combined with predictive coding can capture the sequential statistical structure of language sufficient for coherent generation. The brain does it; the mechanism is prediction error minimization, not next-token classification.
-
-6. **H6 — Brain-inspired architecture matters**: The brain uses specialized modules (Broca, Wernicke, hippocampus), hierarchical timescales (phoneme → syllable → word → phrase), and working memory (echo state, synfire chains). Mimicking this modular, temporally-aware architecture is essential — a monolithic Hebbian Transformer is not enough.
+**Revised roadmap (2026-07-29):**
+1. **Phase 2: Forward Signals & Three-Factor Learning** — Implement Forward-Forward with ternary and neuromodulated Hebbian. This is the NEW priority.
+2. **Phase 3: Language & Predictive Coding** — Proceeds after Phase 2 validates the error-signal mechanism.
+3. **Phase 4-5: Scale & Ship** — Remain valid if Phase 2-3 succeed.
 
 ### What This Is NOT
 
@@ -170,7 +173,7 @@ Both strategies use the same tensor operations; packing/unpacking is transparent
 | **M0: Core Mechanism** | Ternary Hebbian MLP >85% MNIST (10 epochs) | `tests/`, experiment E001 | ✅ 88.4% achieved |
 | M1: CNN Vision | Ternary Hebbian CNN >55% CIFAR-10 | Experiment log | Adjusted from >60% based on MLP findings |
 | M1b: Continual Learning | <5% forgetting on split MNIST (5 tasks), backprop baseline >40% forgetting | Experiment log + comparison table | **Primary contribution** — accuracy is secondary to unforgetfulness |
-| **M2: Multi-Layer** | 3-layer Hebbian CNN >65% CIFAR-10 (improvement over 1-layer) | Experiment log |
+| **M2: Forward Signals** | Stage 1: FF/NTH >88% MNIST (match WTA). Stage 2: FF 2-layer >95% MNIST (prove depth works). Stage 3: FF CNN >45% CIFAR-10 (only if Stage 2 passes). | Experiment log | **NEW — staged gates, MNIST first** |
 | **M3a: Sequence Learning** | Hebbian network learns n-gram transitions, Reber grammar, toy language (100 words, 5 rules) | Experiment log |
 | **M3b: Predictive Hebbian** | Prediction error as teaching signal outperforms basic Hebbian on sequential tasks | Experiment log |
 | **M3c: First LM** | 100M ternary Hebbian Transformer generates coherent paragraphs on TinyStories | Perplexity + human eval |
