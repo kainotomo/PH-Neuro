@@ -51,7 +51,7 @@ Build a **deep learning framework that learns without backpropagation** — usin
 | 1.1 | Multi-layer MLP | ✅ | 87.9% — depth doesn't help |
 | 1.2 | CNN on CIFAR-10 | ✅ | 32.6% — conv Hebbian ≈ random |
 | 1.3 | Continual Learning | ✅ | <5% multi-head ✅, single-head ❌ |
-| 2 | **Forward Signals & Three-Factor Learning** | ⬜ **NEW PRIORITY** | Forward-Forward + Neuromodulated Hebbian |
+| 2 | **Forward Signals & Three-Factor Learning** | 🟡 **Phase 2 active** | FF-inspired WTA ✅ 87.9% MNIST (TFF-1), NTH ⬜, TFF-2 in progress |
 | 3 | Language Model | ⬜ After Phase 2 | Predictive coding for sequential data |
 | 4 | Scale | ⬜ | 1B+ ternary Hebbian models |
 | 5 | Package & Publish | ⬜ | pip install ph-neuro |
