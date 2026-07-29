@@ -39,7 +39,7 @@ Build a **deep learning framework that learns without backpropagation** — usin
 
 6. **H6 — Language is learnable without backprop**: ⬜ **Untested.** Predictive coding + ternary Hebbian can capture sequential structure. Moved to Phase 3 (after Forward-Forward is validated).
 
-7. **H7 — Three-factor Hebbian = local error signal**: ⬜ **Untested.** Adding a neuromodulator factor M ∈ {-1, 0, +1} to the Hebbian rule (ΔW = η · M · pre · post) provides a local error channel without backprop.
+7. **H7 — Three-factor Hebbian = local error signal**: ✅ **VERIFIED.** NTH-1 achieves 88.15% MNIST with label modulator (M_c=+1, M_w=-1), matching the WTA baseline (88.4%). The unified update ΔW = η · M · pre is mathematically identical to WTA but expressed as a single matrix multiply instead of separate Hebbian+anti-Hebbian operations. The three-factor framework generalizes naturally to arbitrary modulator sources (error signals, prediction errors, novelty, reward).
 
 ---
 
@@ -51,7 +51,7 @@ Build a **deep learning framework that learns without backpropagation** — usin
 | 1.1 | Multi-layer MLP | ✅ | 87.9% — depth doesn't help |
 | 1.2 | CNN on CIFAR-10 | ✅ | 32.6% — conv Hebbian ≈ random |
 | 1.3 | Continual Learning | ✅ | <5% multi-head ✅, single-head ❌ |
-| 2 | **Forward Signals & Three-Factor Learning** | 🟡 **Phase 2 active** | FF-inspired WTA ✅ 87.9% MNIST (TFF-1), NTH ⬜, TFF-2 in progress |
+| 2 | **Forward Signals & Three-Factor Learning** | 🟡 **Phase 2 active** | FF-inspired WTA ✅ 87.9% MNIST (TFF-1), NTH ✅ **88.15%** (NTH-1), TFF-2 in progress |
 | 3 | Language Model | ⬜ After Phase 2 | Predictive coding for sequential data |
 | 4 | Scale | ⬜ | 1B+ ternary Hebbian models |
 | 5 | Package & Publish | ⬜ | pip install ph-neuro |

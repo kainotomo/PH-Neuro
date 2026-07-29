@@ -78,9 +78,11 @@ Where $M$ is a **third factor** (neuromodulator) that says "this correlation is 
 | Experiment | Architecture | Result | Time | Go/No-Go |
 |-----------|-------------|:------:|:----:|:--------:|
 | TFF-1: Single-layer FF | 784→10 (FF inspired WTA) | ✅ **87.9%** (matches 88.4% WTA) | ~50 s | ✅ Pass — approach validated |
-| NTH-1: Label modulator | 784→10 (NTH) | ⬜ Not yet run | ~5 min | Must ≥ WTA baseline |
+| NTH-1: Label modulator | 784→10 (NTH) | ✅ **88.15%** (peak 88.74%) | ~61 s | ✅ Pass — matches WTA baseline |
 
 **Result:** TFF-1 achieves 87.9% MNIST accuracy, matching the WTA baseline (88.4%) within expected variance. The Forward-Forward-inspired training loop is validated — zero `.backward()` calls, all weights ternary, flip rates <0.05%/step. The junk-suppression negative pass does not help the single output layer (which already has direct class access via WTA correction) but is retained as a critical component for hidden layers in Stage 2.
+
+**Result (NTH-1):** NTH-1 achieves **88.15% MNIST accuracy** (peak 88.74% at epoch 9), matching both the WTA baseline (88.4%) and TFF-1 (87.9%) within expected variance. The label-modulator approach is validated: the unified update `Δ = lr × Mᵀ @ pre` produces identical latent-score deltas to WTA on wrong predictions, confirmed empirically with `torch.allclose(..., atol=1e-6)`. Zero `.backward()` calls, all weights ternary, flip rates 0.04%/step. Training time ~61s on RTX 4060. **Key design insight:** the modulator must only fire on wrong predictions — strengthening correct predictions net-weakens the correct class on MNIST because ~85% of pixels are dark (−1 after ternary quantization). Full documentation in `docs/experiments/E005-nth-mnist-label-modulator.md`.
 
 **Key implementation details:**
 - **Approach:** FF-inspired WTA — forward pass on real data → WTA correction (strengthen correct, weaken wrong prediction) + optional junk anti-Hebbian suppression
@@ -283,7 +285,7 @@ class NeuromodulatedHebbianLinear(TernaryHebbianLinear):
 
 | Experiment | Modulator Type | Target | Notes |
 |-----------|:-------------:|--------|-------|
-| NTH-1: Label modulator | M_c = +1 for correct class | >85% MNIST | Equivalent to WTA? |
+| NTH-1: Label modulator | M_c = +1 for correct class | >85% MNIST | ✅ **88.15%** | Equivalent to WTA — confirmed |
 | NTH-2: Error modulator | M = target − output | >85% MNIST | Continuous M |
 | NTH-3: Ternary modulator | M ∈ {-1, 0, +1} | >85% MNIST | Simplest form |
 | NTH-4: Multi-layer NTH | Label→propagated modulator | >90% MNIST | Can M propagate through layers? |

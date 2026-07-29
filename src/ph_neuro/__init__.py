@@ -7,6 +7,7 @@ from ph_neuro.core.hebbian_rules import (
     anti_hebbian_update,
     bcm_update,
     hebbian_update,
+    neuromodulated_update,
     oja_update,
 )
 from ph_neuro.core.latent_scores import LatentScoreTensor
@@ -33,6 +34,7 @@ __all__ = [
     "anti_hebbian_update",
     "oja_update",
     "bcm_update",
+    "neuromodulated_update",
     # Layers
     "TernaryHebbianLinear",
     "TernaryHebbianConv2d",

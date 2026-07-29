@@ -121,3 +121,61 @@ def bcm_update(
     modulated = post_f * (post_f - theta_m)  # shape (batch, out_features)
     delta = lr * (modulated.T @ pre.to(scores.dtype))
     return scores + delta / pre.shape[0]
+
+
+def neuromodulated_update(
+    scores: torch.Tensor,
+    pre: torch.Tensor,
+    modulator: torch.Tensor,
+    lr: float,
+    post: torch.Tensor | None = None,
+) -> torch.Tensor:
+    """Three-factor neuromodulated Hebbian update.
+
+    The core three-factor rule (Frémaux & Gerstner, 2016):
+
+        Δscore = η · M · pre · post
+
+    where M is a neuromodulator ∈ {-1, 0, +1} (or continuous) that
+    controls whether the pre×post correlation is strengthened,
+    ignored, or weakened.
+
+    When ``post`` is provided, the modulator is applied element-wise:
+    ``Δ = lr × (modulator ⊙ post)ᵀ @ pre / batch_size``.
+
+    When ``post`` is ``None``, the modulator directly replaces post:
+    ``Δ = lr × modulatorᵀ @ pre / batch_size``. This is the simpler
+    form used by ``NeuromodulatedHebbianClassifier`` where the
+    modulator already encodes both target activity and sign.
+
+    Args:
+        scores: Latent score tensor, shape ``(out_features, in_features)``.
+        pre: Pre-activations, shape ``(batch, in_features)``, values in {-1, 0, +1}.
+        modulator: Neuromodulator, shape ``(batch, out_features)`` or
+            ``(batch,)``. Values in {-1, 0, +1} or continuous.
+        lr: Learning rate.
+        post: Optional post-activations, shape ``(batch, out_features)``.
+            If provided, modulator is applied element-wise to post before
+            the matmul. If ``None``, modulator is used directly as the
+            left operand.
+
+    Returns:
+        Updated score tensor (same shape as ``scores``).
+    """
+    mod_f = modulator.to(scores.dtype)
+    pre_f = pre.to(scores.dtype)
+
+    if post is not None:
+        # Three-factor: Δ = lr × (M ⊙ post)ᵀ @ pre
+        post_f = post.to(scores.dtype)
+        combined = mod_f * post_f  # element-wise modulator × post
+        delta = lr * (combined.T @ pre_f)
+    else:
+        # Direct modulator: Δ = lr × Mᵀ @ pre (modulator encodes both
+        # "which neuron" and "strengthen/weaken")
+        if mod_f.dim() == 1:
+            # Per-sample modulator: unsqueeze to (batch, 1) for broadcast
+            mod_f = mod_f.unsqueeze(-1)
+        delta = lr * (mod_f.T @ pre_f)
+
+    return scores + delta / pre.shape[0]
