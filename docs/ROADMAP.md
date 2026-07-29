@@ -5,6 +5,18 @@
 
 ---
 
+## Research Synthesis Documents
+
+> **⚠️ Research phase closed after 9 experiments across 4 approaches.**
+>
+> For the definitive summary of all findings, see:
+> - **[`RESEARCH_SUMMARY.md`](RESEARCH_SUMMARY.md)** — Complete research document: abstract, hypotheses, methods, results, analysis, and references
+> - **[`PAPER_OUTLINE.md`](PAPER_OUTLINE.md)** — Actionable paper outline for submission (target: TMLR / arXiv)
+>
+> All experiment reports are in [`docs/experiments/`](experiments/).
+
+---
+
 ## Vision
 
 Build a **deep learning framework that learns without backpropagation** — using ternary weights {-1, 0, +1} and Hebbian plasticity. The weights are biologically inspired: excitatory (+1), inhibitory (-1), or absent (0). Learning is **local, continuous, and brain-like**: each synapse updates based solely on the activity of the two neurons it connects.

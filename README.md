@@ -10,6 +10,8 @@
 
 ## What is PH-Neuro?
 
+> 📚 **Research phase closed.** See [`docs/RESEARCH_SUMMARY.md`](docs/RESEARCH_SUMMARY.md) for the definitive summary of all 9 experiments and [`docs/PAPER_OUTLINE.md`](docs/PAPER_OUTLINE.md) for the paper outline.
+
 PH-Neuro is a **research framework** exploring a radical hypothesis: can we build useful neural networks that learn **without backpropagation**?
 
 Instead of gradient descent, PH-Neuro uses **Hebbian learning** — "neurons that fire together, wire together." Each synapse updates based only on the activity of the two neurons it connects. No global error signal. No chain rule. Just local correlation.
