@@ -112,9 +112,9 @@ Two fields that have NEVER been combined:
 
 | Phase | Title | Status | Key Result |
 |:------|:------|:------:|:-----------|
-| **3A** | **Track A: Low-Memory Supervised Baselines** | 🟢 **IN PROGRESS** | Ternary STE baseline suite (L1), Hysteresis-STE algorithm (L2), Forgetting baseline (L8) |
-| 3A.1 | STE TernaryLinear Implementation | ⬜ | Replace Hebbian update with STE backprop; reuse existing TernaryTensor + hysteresis |
-| 3A.2 | Baseline Suite: MNIST/Fashion-MNIST/KMNIST/CIFAR-10 | ⬜ | Systematic accuracy vs depth vs width for ternary vs FP16/INT8/INT4 |
+| **3A** | **Track A: Low-Memory Supervised Baselines** | 🟢 **IN PROGRESS** | L1: 5 variants × 5 datasets (E009); L2: Hysteresis-STE; L8: Forgetting baseline |
+| 3A.1 | STE TernaryLinear Implementation | 🟡 **PLANNED** | Replace Hebbian update with STE backprop; reuse existing TernaryTensor + hysteresis |
+| 3A.2 | Baseline Suite: MNIST/Fashion-MNIST/KMNIST/CIFAR-10/CIFAR-100 | 🟡 **PLANNED** | 5 variants (Ternary STE, FP16, INT8 QAT, INT4 QAT, Hebbian v1) × 5 datasets = 25 runs. See [`E009`](experiments/E009-ste-baseline-suite.md) |
 | 3A.3 | Hysteresis-STE Algorithm | ⬜ | Novel training method: dual-threshold hysteresis as STE regularizer |
 | 3A.4 | Forgetting Baseline (no CL mechanism) | ⬜ | Control experiment: how much does standard SGD forget with ternary weights? |
 | 3A.5 | Memory & Speed Benchmarks | ⬜ | Packed ternary inference speed vs FP16/INT8; training memory footprint |
@@ -131,15 +131,36 @@ Two fields that have NEVER been combined:
 ### L1: Ternary STE Baseline Suite
 **Goal:** Establish modern ternary STE baselines for small vision models (no one has done this systematically since ~2020).
 
-| Dataset | Architecture | Expected Ternary STE | Float Baseline | Ternary Gap |
-|:--------|:------------|:--------------------:|:--------------:|:----------:|
-| MNIST | 784→512→256→10 | 96-98% | ~98.5% | ~1-2pp |
-| Fashion-MNIST | 784→512→256→10 | 88-91% | ~92% | ~2-3pp |
-| KMNIST | 784→512→256→10 | 88-91% | ~93% | ~2-3pp |
-| CIFAR-10 | Conv(32→64→128)→Linear | 75-85% | ~90% | ~5-10pp |
-| CIFAR-100 | Conv(64→128→256)→Linear | 55-65% | ~72% | ~7-12pp |
+**Experiment document:** [`docs/experiments/E009-ste-baseline-suite.md`](experiments/E009-ste-baseline-suite.md)
 
-Compare against: FP16, INT8 (QAT), INT4 (QAT), and PH-Neuro v1 Hebbian baseline.
+**5 variants tested per dataset** for systematic comparison:
+
+| Variant ID | Weight Format | Training Method | Purpose |
+|:-----------|:-------------|:----------------|:--------|
+| **V1 — Ternary STE** | {-1, 0, +1} (2-bit packed) | STE backprop + AdamW on latent fp16 scores | **Our method** — primary benchmark |
+| **V2 — FP16** | float16 | Standard backprop + AdamW | Upper bound (best possible accuracy) |
+| **V3 — INT8 QAT** | int8 | Quantization-Aware Training + STE | Established quantized baseline |
+| **V4 — INT4 QAT** | int4 | Quantization-Aware Training + STE | Aggressive quantization baseline |
+| **V5 — Hebbian v1** | {-1, 0, +1} (2-bit packed) | WTA Hebbian (no backprop) | Legacy baseline — ~88% MNIST ceiling |
+
+**Expected results (pre-experiment):**
+
+| Dataset | Architecture | V1: Ternary STE | V2: FP16 | V3: INT8 QAT | V4: INT4 QAT | V5: Hebbian v1 | Ternary Gap |
+|:--------|:------------|:---------------:|:--------:|:------------:|:------------:|:--------------:|:----------:|
+| MNIST | 784→512→256→10 | 96-98% | ~98.5% | ~97% | ~95% | 88.4% | ~1-2pp |
+| Fashion-MNIST | 784→512→256→10 | 88-91% | ~92% | ~90% | ~87% | — | ~2-3pp |
+| KMNIST | 784→512→256→10 | 88-91% | ~93% | ~91% | ~88% | — | ~2-3pp |
+| CIFAR-10 | Conv(32→64→128)→FC | 75-85% | ~90% | ~88% | ~82% | 32.6% | ~5-10pp |
+| CIFAR-100 | Conv(64→128→256)→FC | 55-65% | ~72% | ~68% | ~60% | — | ~7-12pp |
+
+**Key comparisons at a glance:**
+
+| Analysis | What we learn |
+|:---------|:--------------|
+| V1 vs V2 | Ternary gap — how much accuracy does 2-bit cost? |
+| V1 vs V3/V4 | Is ternary more efficient than INT quantization (accuracy per bit)? |
+| V1 vs V5 | Does STE definitively beat the ~88% Hebbian ceiling? |
+| V2 vs V3 vs V4 vs V1 | Memory-vs-accuracy Pareto frontier for vision models |
 
 ### L2: Hysteresis-STE — Novel Training Algorithm
 **Core idea:** Apply PH-Neuro's dual-threshold hysteresis during STE training as a weight regularizer.
@@ -278,8 +299,8 @@ Both strategies use the same tensor operations; packing/unpacking is transparent
 | **M0: Hebbian Core** | Ternary Hebbian MLP >85% MNIST | E001 | ✅ 88.4% |
 | **M1: Multi-Head CL** | <5% forgetting on Split MNIST | continual.py | ✅ <5% (multi-head) |
 | **M2: Hebbian Phase 2** | FF/NTH 2-layer >88% MNIST | E004-E008 | ❌ All <88% |
-| **M3: STE TernaryLinear** | STE backward pass works, ternary invariant holds | Unit tests | ⬜ |
-| **M4: Track A Baseline** | Ternary STE 2-layer MLP >95% MNIST (beating 88% Hebbian ceiling) | Experiment log | ⬜ |
+| **M3: STE TernaryLinear** | STE backward pass works, ternary invariant holds | Unit tests + E009 (V1) | ⬜ |
+| **M4: Track A Baseline** | Ternary STE >95% MNIST, systematic comparison of 5 variants × 5 datasets | [`E009`](experiments/E009-ste-baseline-suite.md) | ⬜ |
 | **M5: Hysteresis-STE** | Hysteresis-STE ≥ standard STE accuracy + improved sparsity | Ablation study | ⬜ |
 | **M6: Track B EWC** | Ternary STE + EWC <10% forgetting on Split MNIST, >90% avg accuracy | Experiment log | ⬜ |
 | **M7: Track B QLoRA** | Frozen ternary + LoRA achieves <1% forgetting with >85% accuracy | Experiment log | ⬜ |
