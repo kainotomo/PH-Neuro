@@ -14,6 +14,7 @@ from collections.abc import Sequence
 import torch.nn as nn
 
 from ph_neuro.layers.ste_conv import TernarySTEConv2d
+from ph_neuro.layers.ste_hysteresis import HysteresisSTEConv2d, HysteresisSTELinear
 from ph_neuro.layers.ste_linear import TernarySTELinear
 
 
@@ -101,6 +102,144 @@ def ste_cnn(
         nn.BatchNorm1d(512),
         # Output layer (no activation — raw logits)
         TernarySTELinear(512, n_classes),
+    ]
+
+    model = nn.Sequential(*layers)
+    if device is not None:
+        model = model.to(device)
+    return model
+
+
+# ── Hysteresis-STE Model Factories ──────────────────────────────────
+
+
+def hyst_ste_mlp(
+    layer_sizes: Sequence[int],
+    theta_upper: float = 1.0,
+    theta_lower: float = 0.3,
+    batch_norm: bool = True,
+    flatten: bool = True,
+    device: torch.device | str | None = None,
+) -> nn.Sequential:
+    """Build an MLP with Hysteresis-STE layers and ReLU activations.
+
+    Uses :class:`HysteresisSTELinear` layers instead of the standard
+    :class:`TernarySTELinear`, providing dual-threshold hysteresis as
+    a weight regularizer during STE backpropagation.
+
+    Args:
+        layer_sizes: Sequence of layer sizes, e.g. ``[784, 512, 256, 10]``.
+        theta_upper: Hysteresis upper threshold (applied to all layers).
+        theta_lower: Hysteresis lower threshold (applied to all layers).
+        batch_norm: Whether to insert ``BatchNorm1d`` after each hidden layer.
+        flatten: If ``True``, prepend ``nn.Flatten()`` for image inputs.
+        device: Torch device.
+
+    Returns:
+        ``nn.Sequential`` with hysteresis-STE layers.
+    """
+    layers: list[nn.Module] = []
+    sizes = list(layer_sizes)
+
+    if flatten:
+        layers.append(nn.Flatten())
+
+    for i in range(len(sizes) - 1):
+        layers.append(
+            HysteresisSTELinear(
+                sizes[i],
+                sizes[i + 1],
+                theta_upper=theta_upper,
+                theta_lower=theta_lower,
+                bias=not batch_norm,
+            )
+        )
+        if i < len(sizes) - 2:
+            layers.append(nn.ReLU(inplace=True))
+            if batch_norm:
+                layers.append(nn.BatchNorm1d(sizes[i + 1]))
+
+    model = nn.Sequential(*layers)
+    if device is not None:
+        model = model.to(device)
+    return model
+
+
+def hyst_ste_cnn(
+    in_channels: int = 3,
+    img_size: int = 32,
+    hidden_channels: int = 64,
+    n_classes: int = 10,
+    theta_upper: float = 1.0,
+    theta_lower: float = 0.3,
+    device: torch.device | str | None = None,
+) -> nn.Sequential:
+    """Build a small CNN with Hysteresis-STE layers for CIFAR-style images.
+
+    Uses :class:`HysteresisSTEConv2d` and :class:`HysteresisSTELinear`
+    layers for all weight-bearing modules.
+
+    Architecture:
+        ``Conv → ReLU → BN → MaxPool → Conv → ReLU → BN → MaxPool →
+         Flatten → Linear → ReLU → BN → Linear``
+
+    Args:
+        in_channels: Input image channels (default 3 for CIFAR).
+        img_size: Input image size (assumed square, default 32).
+        hidden_channels: Number of channels for the first conv layer.
+        n_classes: Number of output classes.
+        theta_upper: Hysteresis upper threshold (applied to all layers).
+        theta_lower: Hysteresis lower threshold (applied to all layers).
+        device: Torch device.
+
+    Returns:
+        ``nn.Sequential`` with hysteresis-STE conv and linear layers.
+    """
+    flat_features = (2 * hidden_channels) * (img_size // 4) * (img_size // 4)
+
+    layers: list[nn.Module] = [
+        # Conv block 1
+        HysteresisSTEConv2d(
+            in_channels,
+            hidden_channels,
+            kernel_size=3,
+            padding=1,
+            theta_upper=theta_upper,
+            theta_lower=theta_lower,
+        ),
+        nn.ReLU(inplace=True),
+        nn.BatchNorm2d(hidden_channels),
+        nn.MaxPool2d(2),
+        # Conv block 2
+        HysteresisSTEConv2d(
+            hidden_channels,
+            2 * hidden_channels,
+            kernel_size=3,
+            padding=1,
+            theta_upper=theta_upper,
+            theta_lower=theta_lower,
+        ),
+        nn.ReLU(inplace=True),
+        nn.BatchNorm2d(2 * hidden_channels),
+        nn.MaxPool2d(2),
+        # Flatten
+        nn.Flatten(),
+        # Linear block
+        HysteresisSTELinear(
+            flat_features,
+            512,
+            theta_upper=theta_upper,
+            theta_lower=theta_lower,
+        ),
+        nn.ReLU(inplace=True),
+        nn.BatchNorm1d(512),
+        # Output layer
+        HysteresisSTELinear(
+            512,
+            n_classes,
+            theta_upper=theta_upper,
+            theta_lower=theta_lower,
+        ),
     ]
 
     model = nn.Sequential(*layers)

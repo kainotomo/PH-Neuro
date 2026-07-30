@@ -307,8 +307,32 @@ Pareto frontier shows optimal trade-offs
 
 ---
 
+## L2: Hysteresis-STE Ablation
+
+**Status:** ✅ CODE COMPLETE (2026-07-30) — awaiting full run
+
+**Core idea:** Apply PH-Neuro's dual-threshold hysteresis during STE training as a weight regularizer.
+
+**Files:**
+- `src/ph_neuro/layers/ste_hysteresis.py` — `HysteresisSTELinear`, `HysteresisSTEConv2d`, `ste_sign_hysteresis()`
+- `src/ph_neuro/examples/run_l2_hysteresis_ste.py` — experiment runner with sparsity/flip/zone tracking
+- `scripts/run_l2_ablation.sh` — sweep script (4× θ_upper × 3× θ_lower)
+- `src/ph_neuro/examples/aggregate_l2_results.py` — results aggregator
+- `tests/layers/test_ste_hysteresis.py` — 35 unit + integration tests ✅
+
+**Key design:**
+- Standard STE: `W_tern = sign(W_latent)`
+- Hysteresis-STE: `W_tern = tern_hyst(W_latent, θ_upper, θ_lower, prev_ternary)`
+  - `|W_latent| < θ_lower` → 0
+  - `|W_latent| > θ_upper` → sign(W_latent)
+  - otherwise → unchanged from previous step
+- `prev_ternary` stored as `nn.Buffer` (persistent, not a Parameter)
+- Backward: STE identity pass-through
+
+**Smoke test (MNIST, 2 epochs, θ_u=0.3, θ_l=0.1):** 91.93% accuracy, 99% sparsity ✅
+
 ## Next Steps
 
-- After L1 completes → **L2 (Hysteresis-STE)**: Apply dual-threshold hysteresis as STE regularizer
-- After L1 completes → **L8 (Forgetting Baseline)**: Measure forgetting with standard SGD on Split MNIST
+- After L2 code complete → **Run full ablation sweep**: `bash scripts/run_l2_ablation.sh`
+- After L2 → **L8 (Forgetting Baseline)**: Measure forgetting with standard SGD on Split MNIST
 - Use L1 baselines as reference for all Track B (continual learning) experiments
