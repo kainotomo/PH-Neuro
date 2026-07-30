@@ -15,6 +15,12 @@ from ph_neuro.layers.ste_hysteresis import (
     HysteresisSTELinear,
     ste_sign_hysteresis,
 )
+from ph_neuro.layers.fused_bn import (
+    ElementWiseAffine1d,
+    ElementWiseAffine2d,
+    FusedTernaryConv2d,
+    FusedTernaryLinear,
+)
 
 __all__ = [
     "TernaryHebbianLinear",
@@ -27,4 +33,8 @@ __all__ = [
     "ste_sign_hysteresis",
     "HysteresisSTELinear",
     "HysteresisSTEConv2d",
+    "ElementWiseAffine1d",
+    "ElementWiseAffine2d",
+    "FusedTernaryLinear",
+    "FusedTernaryConv2d",
 ]

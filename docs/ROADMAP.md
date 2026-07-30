@@ -1,7 +1,7 @@
 # PH-Neuro Roadmap
 
 > **Status:** Strategic pivot — transitioning from Hebbian to STE-based ternary learning  
-> **Last updated:** 2026-07-30
+> **Last updated:** 2026-07-30 (L5 BN Fusion ✅)
 
 ---
 
@@ -123,7 +123,7 @@ Two fields that have NEVER been combined:
 | 3B.2 | QLoRA + Frozen Ternary Backbone | ⬜ | Freeze ternary weights, train only low-rank float adapters per task — zero forgetting by design |
 | 3B.3 | Multi-Head Ternary EWC (5 tasks) | ⬜ | Combine multi-head architecture with EWC for maximal protection |
 | 3B.4 | Comparison: Ternary vs INT8 vs INT4 vs FP16 CL | ⬜ | Replicate "When Less is More" but extend to ternary |
-| **4** | **Advanced Experiments** | ⬜ | Ternary distillation (L4), BN fusion (L5), depth scaling with fixed budget (L7) |
+| **4** | **Advanced Experiments** | 🟡 **L5 DONE** | Ternary distillation (L4), BN fusion (L5) ✅, depth scaling with fixed budget (L7) |
 | **5** | **Papers & Publication** | ⬜ | Paper 1: Low-Memory Vision (TinyML/ECCV), Paper 2: Continual Learning (NeurIPS/ICML) |
 
 ## Phase 3 — Track A: Low-Memory Supervised Experiments
