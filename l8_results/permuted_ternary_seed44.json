@@ -1,0 +1,328 @@
+{
+  "accuracy_matrix": [
+    [
+      0.9619
+    ],
+    [
+      0.6363,
+      0.9653
+    ],
+    [
+      0.3345,
+      0.7247,
+      0.97
+    ],
+    [
+      0.302,
+      0.4857,
+      0.799,
+      0.9647
+    ],
+    [
+      0.2264,
+      0.3017,
+      0.5271,
+      0.8404,
+      0.9675
+    ],
+    [
+      0.1406,
+      0.217,
+      0.3272,
+      0.5572,
+      0.8074,
+      0.966
+    ],
+    [
+      0.1347,
+      0.204,
+      0.1952,
+      0.282,
+      0.5164,
+      0.7654,
+      0.9646
+    ],
+    [
+      0.1126,
+      0.1542,
+      0.1629,
+      0.1982,
+      0.3847,
+      0.5039,
+      0.8654,
+      0.9693
+    ],
+    [
+      0.1216,
+      0.1418,
+      0.1699,
+      0.1851,
+      0.2476,
+      0.3935,
+      0.5943,
+      0.8729,
+      0.9702
+    ],
+    [
+      0.107,
+      0.2087,
+      0.1751,
+      0.1447,
+      0.2597,
+      0.3215,
+      0.4456,
+      0.6331,
+      0.8274,
+      0.9701
+    ]
+  ],
+  "batch_size": 128,
+  "device": "cuda",
+  "epochs_per_task": 10,
+  "experiment": "L8 Forgetting Baseline",
+  "global_accuracies": [],
+  "learning_rate": 0.001,
+  "metrics": {
+    "average_accuracy": 0.40929000000000004,
+    "average_forgetting": 0.55767,
+    "per_task_accuracy": [
+      0.107,
+      0.2087,
+      0.1751,
+      0.1447,
+      0.2597,
+      0.3215,
+      0.4456,
+      0.6331,
+      0.8274,
+      0.9701
+    ],
+    "per_task_forgetting": [
+      0.8549,
+      0.7566,
+      0.7948999999999999,
+      0.8200000000000001,
+      0.7078,
+      0.6445,
+      0.519,
+      0.33620000000000005,
+      0.14279999999999993,
+      0.0
+    ]
+  },
+  "n_parameters": 536576,
+  "n_tasks": 10,
+  "per_task_accuracies": {
+    "after_task_0": [
+      0.9619
+    ],
+    "after_task_1": [
+      0.6363,
+      0.9653
+    ],
+    "after_task_2": [
+      0.3345,
+      0.7247,
+      0.97
+    ],
+    "after_task_3": [
+      0.302,
+      0.4857,
+      0.799,
+      0.9647
+    ],
+    "after_task_4": [
+      0.2264,
+      0.3017,
+      0.5271,
+      0.8404,
+      0.9675
+    ],
+    "after_task_5": [
+      0.1406,
+      0.217,
+      0.3272,
+      0.5572,
+      0.8074,
+      0.966
+    ],
+    "after_task_6": [
+      0.1347,
+      0.204,
+      0.1952,
+      0.282,
+      0.5164,
+      0.7654,
+      0.9646
+    ],
+    "after_task_7": [
+      0.1126,
+      0.1542,
+      0.1629,
+      0.1982,
+      0.3847,
+      0.5039,
+      0.8654,
+      0.9693
+    ],
+    "after_task_8": [
+      0.1216,
+      0.1418,
+      0.1699,
+      0.1851,
+      0.2476,
+      0.3935,
+      0.5943,
+      0.8729,
+      0.9702
+    ],
+    "after_task_9": [
+      0.107,
+      0.2087,
+      0.1751,
+      0.1447,
+      0.2597,
+      0.3215,
+      0.4456,
+      0.6331,
+      0.8274,
+      0.9701
+    ]
+  },
+  "protocol": "permuted",
+  "seed": 44,
+  "total_training_time_seconds": 407.0518534183502,
+  "training_metrics": [
+    {
+      "final_loss": 0.1250012903154944,
+      "final_train_acc": 0.97745,
+      "training_time": 33.63677620887756
+    },
+    {
+      "final_loss": 0.05607448022340735,
+      "final_train_acc": 0.9827333333333333,
+      "training_time": 42.362420082092285
+    },
+    {
+      "final_loss": 0.045418342473109566,
+      "final_train_acc": 0.98525,
+      "training_time": 40.894105195999146
+    },
+    {
+      "final_loss": 0.04467079850162069,
+      "final_train_acc": 0.9859666666666667,
+      "training_time": 32.81012463569641
+    },
+    {
+      "final_loss": 0.04117052275836468,
+      "final_train_acc": 0.9858333333333333,
+      "training_time": 34.52464985847473
+    },
+    {
+      "final_loss": 0.07447878085374832,
+      "final_train_acc": 0.9756166666666667,
+      "training_time": 32.952064752578735
+    },
+    {
+      "final_loss": 0.05856655660569668,
+      "final_train_acc": 0.98035,
+      "training_time": 38.143890619277954
+    },
+    {
+      "final_loss": 0.03528133755748471,
+      "final_train_acc": 0.9883166666666666,
+      "training_time": 42.22922658920288
+    },
+    {
+      "final_loss": 0.03471791957765818,
+      "final_train_acc": 0.98835,
+      "training_time": 41.54346013069153
+    },
+    {
+      "final_loss": 0.033454260106384755,
+      "final_train_acc": 0.9889333333333333,
+      "training_time": 40.34011459350586
+    }
+  ],
+  "weight_decay": 0.0001,
+  "weight_format": "ternary",
+  "weight_snapshots": {
+    "-1": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 50.05233253588517,
+      "weight_pos_pct": 49.94766746411483,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "0": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.68002392344498,
+      "weight_pos_pct": 50.31997607655502,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "1": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 48.98811303827751,
+      "weight_pos_pct": 51.01188696172249,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "2": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 48.847002093301434,
+      "weight_pos_pct": 51.152997906698566,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "3": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 48.91783791866029,
+      "weight_pos_pct": 51.08216208133971,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "4": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 48.698415071770334,
+      "weight_pos_pct": 51.301584928229666,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "5": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 48.91821172248804,
+      "weight_pos_pct": 51.08178827751196,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "6": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 48.96568480861244,
+      "weight_pos_pct": 51.03431519138756,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "7": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 48.91989383971292,
+      "weight_pos_pct": 51.08010616028708,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "8": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.5250822368421,
+      "weight_pos_pct": 50.4749177631579,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "9": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.80655651913876,
+      "weight_pos_pct": 50.19344348086124,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    }
+  }
+}

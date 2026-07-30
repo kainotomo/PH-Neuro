@@ -116,7 +116,7 @@ Two fields that have NEVER been combined:
 | 3A.1 | STE TernaryLinear Implementation | ✅ **COMPLETED** | `TernarySTELinear`, `TernarySTEConv2d` + `_STESign` autograd. 22/22 tests pass |
 | 3A.2 | Baseline Suite: MNIST/Fashion-MNIST/KMNIST/CIFAR-10/CIFAR-100 | ✅ **COMPLETED** | All 5 variants × 5 datasets = 25 runs done. See [`E009`](experiments/E009-ste-baseline-suite.md) |
 | 3A.3 | Hysteresis-STE Algorithm | ✅ **CODE COMPLETE** | Layers, runner, sweep script, aggregator, 35 tests — awaiting full run |
-| 3A.4 | Forgetting Baseline (no CL mechanism) | ⬜ | Control experiment: how much does standard SGD forget with ternary weights? |
+| 3A.4 | Forgetting Baseline (no CL mechanism) | ✅ **COMPLETED** | 12/12 runs done. Ternary ≈ FP16 forgetting (gap <1 pp). See [`E010`](experiments/E010-l8-forgetting-baseline.md) |
 | 3A.5 | Memory & Speed Benchmarks | ⬜ | Packed ternary inference speed vs FP16/INT8; training memory footprint |
 | **3B** | **Track B: Continual Learning with Ternary STE** | 🟡 **PLANNED** | EWC + ternary STE (B1), QLoRA + frozen ternary (B2) |
 | 3B.1 | EWC + Ternary STE on Split MNIST | ⬜ | Elastic Weight Consolidation with ternary weights — test quantization noise hypothesis |
@@ -202,6 +202,11 @@ Hysteresis-STE:
 | Split MNIST, sequential SGD, no EWC, no replay | Forgetting after 5 tasks |
 | Permuted MNIST, 10 tasks | Average accuracy, forgetting |
 | Comparison: FP16 vs Ternary STE | Does ternary naturally forget less? |
+
+**Status:** ✅ **COMPLETED** — 12/12 runs (2 protocols × 2 weight formats × 3 seeds).
+**Key result:** Forgetting gap (FP16 − Ternary) = **+0.22 pp** (Split) and **+0.66 pp** (Permuted) — **essentially identical**. See [`E010`](experiments/E010-l8-forgetting-baseline.md).
+
+**Implication:** Ternary weights do NOT provide natural forgetting resistance with standard STE. Hysteresis-STE (L2) or explicit CL methods (EWC, QLoRA) are needed for Track B.
 
 ---
 

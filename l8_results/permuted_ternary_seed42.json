@@ -1,0 +1,328 @@
+{
+  "accuracy_matrix": [
+    [
+      0.9639
+    ],
+    [
+      0.7079,
+      0.969
+    ],
+    [
+      0.3524,
+      0.7268,
+      0.9696
+    ],
+    [
+      0.2512,
+      0.3779,
+      0.855,
+      0.968
+    ],
+    [
+      0.2289,
+      0.315,
+      0.6368,
+      0.8449,
+      0.9705
+    ],
+    [
+      0.0964,
+      0.1867,
+      0.2426,
+      0.582,
+      0.8263,
+      0.9719
+    ],
+    [
+      0.1269,
+      0.131,
+      0.1513,
+      0.3262,
+      0.5054,
+      0.8379,
+      0.9677
+    ],
+    [
+      0.1432,
+      0.1224,
+      0.1312,
+      0.2572,
+      0.401,
+      0.5462,
+      0.8648,
+      0.9677
+    ],
+    [
+      0.172,
+      0.1504,
+      0.1503,
+      0.1996,
+      0.2388,
+      0.3358,
+      0.6298,
+      0.8488,
+      0.9687
+    ],
+    [
+      0.1374,
+      0.1931,
+      0.1274,
+      0.123,
+      0.2279,
+      0.325,
+      0.3806,
+      0.5853,
+      0.8644,
+      0.9677
+    ]
+  ],
+  "batch_size": 128,
+  "device": "cuda",
+  "epochs_per_task": 10,
+  "experiment": "L8 Forgetting Baseline",
+  "global_accuracies": [],
+  "learning_rate": 0.001,
+  "metrics": {
+    "average_accuracy": 0.39318,
+    "average_forgetting": 0.5752900000000001,
+    "per_task_accuracy": [
+      0.1374,
+      0.1931,
+      0.1274,
+      0.123,
+      0.2279,
+      0.325,
+      0.3806,
+      0.5853,
+      0.8644,
+      0.9677
+    ],
+    "per_task_forgetting": [
+      0.8265,
+      0.7759,
+      0.8422000000000001,
+      0.845,
+      0.7426,
+      0.6469,
+      0.5871,
+      0.38239999999999996,
+      0.10430000000000006,
+      0.0
+    ]
+  },
+  "n_parameters": 536576,
+  "n_tasks": 10,
+  "per_task_accuracies": {
+    "after_task_0": [
+      0.9639
+    ],
+    "after_task_1": [
+      0.7079,
+      0.969
+    ],
+    "after_task_2": [
+      0.3524,
+      0.7268,
+      0.9696
+    ],
+    "after_task_3": [
+      0.2512,
+      0.3779,
+      0.855,
+      0.968
+    ],
+    "after_task_4": [
+      0.2289,
+      0.315,
+      0.6368,
+      0.8449,
+      0.9705
+    ],
+    "after_task_5": [
+      0.0964,
+      0.1867,
+      0.2426,
+      0.582,
+      0.8263,
+      0.9719
+    ],
+    "after_task_6": [
+      0.1269,
+      0.131,
+      0.1513,
+      0.3262,
+      0.5054,
+      0.8379,
+      0.9677
+    ],
+    "after_task_7": [
+      0.1432,
+      0.1224,
+      0.1312,
+      0.2572,
+      0.401,
+      0.5462,
+      0.8648,
+      0.9677
+    ],
+    "after_task_8": [
+      0.172,
+      0.1504,
+      0.1503,
+      0.1996,
+      0.2388,
+      0.3358,
+      0.6298,
+      0.8488,
+      0.9687
+    ],
+    "after_task_9": [
+      0.1374,
+      0.1931,
+      0.1274,
+      0.123,
+      0.2279,
+      0.325,
+      0.3806,
+      0.5853,
+      0.8644,
+      0.9677
+    ]
+  },
+  "protocol": "permuted",
+  "seed": 42,
+  "total_training_time_seconds": 376.06563329696655,
+  "training_metrics": [
+    {
+      "final_loss": 0.1213725570723104,
+      "final_train_acc": 0.9774666666666667,
+      "training_time": 40.09443521499634
+    },
+    {
+      "final_loss": 0.051137622726957,
+      "final_train_acc": 0.9840666666666666,
+      "training_time": 42.54061532020569
+    },
+    {
+      "final_loss": 0.04274285803114374,
+      "final_train_acc": 0.98615,
+      "training_time": 38.999043464660645
+    },
+    {
+      "final_loss": 0.04454881952876846,
+      "final_train_acc": 0.9852666666666666,
+      "training_time": 38.33537530899048
+    },
+    {
+      "final_loss": 0.034338388780504464,
+      "final_train_acc": 0.98845,
+      "training_time": 28.884552240371704
+    },
+    {
+      "final_loss": 0.03491816693097353,
+      "final_train_acc": 0.9884833333333334,
+      "training_time": 29.74739170074463
+    },
+    {
+      "final_loss": 0.036340860730409624,
+      "final_train_acc": 0.988,
+      "training_time": 31.78371810913086
+    },
+    {
+      "final_loss": 0.036927746332685155,
+      "final_train_acc": 0.9873,
+      "training_time": 33.34286832809448
+    },
+    {
+      "final_loss": 0.034791662397483984,
+      "final_train_acc": 0.98865,
+      "training_time": 33.73556303977966
+    },
+    {
+      "final_loss": 0.03343294839585821,
+      "final_train_acc": 0.9888333333333333,
+      "training_time": 32.61255240440369
+    }
+  ],
+  "weight_decay": 0.0001,
+  "weight_format": "ternary",
+  "weight_snapshots": {
+    "-1": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 50.01214862440192,
+      "weight_pos_pct": 49.98785137559808,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "0": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.82468600478469,
+      "weight_pos_pct": 50.17531399521531,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "1": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.04380980861244,
+      "weight_pos_pct": 50.95619019138756,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "2": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 48.74813098086124,
+      "weight_pos_pct": 51.25186901913876,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "3": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 48.91839862440192,
+      "weight_pos_pct": 51.08160137559808,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "4": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 48.9935331937799,
+      "weight_pos_pct": 51.0064668062201,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "5": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.31668660287081,
+      "weight_pos_pct": 50.68331339712919,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "6": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.61329994019139,
+      "weight_pos_pct": 50.38670005980861,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "7": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.794220992822964,
+      "weight_pos_pct": 50.205779007177036,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "8": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.86767344497608,
+      "weight_pos_pct": 50.13232655502392,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "9": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 50.043548145933016,
+      "weight_pos_pct": 49.956451854066984,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    }
+  }
+}

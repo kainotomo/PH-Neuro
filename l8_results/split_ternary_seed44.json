@@ -1,0 +1,164 @@
+{
+  "accuracy_matrix": [
+    [
+      0.9981087470449173
+    ],
+    [
+      0.7096926713947991,
+      0.9921645445641528
+    ],
+    [
+      0.11725768321513003,
+      0.8143976493633692,
+      0.9983991462113126
+    ],
+    [
+      0.798581560283688,
+      0.6993143976493633,
+      0.4658484525080043,
+      0.9979859013091642
+    ],
+    [
+      0.5371158392434988,
+      0.683643486777669,
+      0.1344717182497332,
+      0.7482376636455186,
+      0.9863842662632375
+    ]
+  ],
+  "batch_size": 128,
+  "device": "cuda",
+  "epochs_per_task": 10,
+  "experiment": "L8 Forgetting Baseline",
+  "global_accuracies": [
+    0.223,
+    0.1532,
+    0.0286,
+    0.1693,
+    0.113
+  ],
+  "learning_rate": 0.001,
+  "metrics": {
+    "average_accuracy": 0.6179705948359314,
+    "average_forgetting": 0.3766379262426255,
+    "per_task_accuracy": [
+      0.5371158392434988,
+      0.683643486777669,
+      0.1344717182497332,
+      0.7482376636455186,
+      0.9863842662632375
+    ],
+    "per_task_forgetting": [
+      0.46099290780141844,
+      0.30852105778648387,
+      0.8639274279615794,
+      0.24974823766364562,
+      0.0
+    ]
+  },
+  "n_parameters": 536576,
+  "n_tasks": 5,
+  "per_task_accuracies": {
+    "after_task_0": [
+      0.9981087470449173
+    ],
+    "after_task_1": [
+      0.7096926713947991,
+      0.9921645445641528
+    ],
+    "after_task_2": [
+      0.11725768321513003,
+      0.8143976493633692,
+      0.9983991462113126
+    ],
+    "after_task_3": [
+      0.798581560283688,
+      0.6993143976493633,
+      0.4658484525080043,
+      0.9979859013091642
+    ],
+    "after_task_4": [
+      0.5371158392434988,
+      0.683643486777669,
+      0.1344717182497332,
+      0.7482376636455186,
+      0.9863842662632375
+    ]
+  },
+  "protocol": "split",
+  "seed": 44,
+  "total_training_time_seconds": 36.530996561050415,
+  "training_metrics": [
+    {
+      "final_loss": 0.009920436793928783,
+      "final_train_acc": 0.9992104224240032,
+      "training_time": 6.466470956802368
+    },
+    {
+      "final_loss": 0.009832418282774723,
+      "final_train_acc": 0.99760112498966,
+      "training_time": 5.924091815948486
+    },
+    {
+      "final_loss": 0.0021734296772063,
+      "final_train_acc": 0.9993784959602238,
+      "training_time": 5.861469984054565
+    },
+    {
+      "final_loss": 0.001776325037662433,
+      "final_train_acc": 0.9997537552327013,
+      "training_time": 5.560631513595581
+    },
+    {
+      "final_loss": 0.011399133481605008,
+      "final_train_acc": 0.9976271186440678,
+      "training_time": 8.692148208618164
+    }
+  ],
+  "weight_decay": 0.0001,
+  "weight_format": "ternary",
+  "weight_snapshots": {
+    "-1": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 50.05233253588517,
+      "weight_pos_pct": 49.94766746411483,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "0": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 50.31960227272727,
+      "weight_pos_pct": 49.68039772727273,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "1": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.959442284689,
+      "weight_pos_pct": 50.040557715311,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "2": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.83627392344498,
+      "weight_pos_pct": 50.16372607655502,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "3": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.86879485645933,
+      "weight_pos_pct": 50.13120514354067,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "4": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.731421949760765,
+      "weight_pos_pct": 50.268578050239235,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    }
+  }
+}

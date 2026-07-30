@@ -1,0 +1,328 @@
+{
+  "accuracy_matrix": [
+    [
+      0.9621
+    ],
+    [
+      0.6899,
+      0.9691
+    ],
+    [
+      0.3361,
+      0.7928,
+      0.9686
+    ],
+    [
+      0.2532,
+      0.476,
+      0.7911,
+      0.9703
+    ],
+    [
+      0.2089,
+      0.2937,
+      0.5531,
+      0.8396,
+      0.9713
+    ],
+    [
+      0.1743,
+      0.1889,
+      0.3312,
+      0.57,
+      0.812,
+      0.9671
+    ],
+    [
+      0.1629,
+      0.1328,
+      0.2029,
+      0.3378,
+      0.5261,
+      0.8249,
+      0.9686
+    ],
+    [
+      0.1723,
+      0.1401,
+      0.2084,
+      0.3526,
+      0.4349,
+      0.5726,
+      0.8849,
+      0.9676
+    ],
+    [
+      0.1259,
+      0.1275,
+      0.2063,
+      0.2081,
+      0.2911,
+      0.4284,
+      0.6788,
+      0.872,
+      0.9679
+    ],
+    [
+      0.1413,
+      0.2462,
+      0.2676,
+      0.1712,
+      0.2979,
+      0.407,
+      0.4809,
+      0.7106,
+      0.8613,
+      0.9681
+    ]
+  ],
+  "batch_size": 128,
+  "device": "cuda",
+  "epochs_per_task": 10,
+  "experiment": "L8 Forgetting Baseline",
+  "global_accuracies": [],
+  "learning_rate": 0.001,
+  "metrics": {
+    "average_accuracy": 0.45521,
+    "average_forgetting": 0.5128600000000001,
+    "per_task_accuracy": [
+      0.1413,
+      0.2462,
+      0.2676,
+      0.1712,
+      0.2979,
+      0.407,
+      0.4809,
+      0.7106,
+      0.8613,
+      0.9681
+    ],
+    "per_task_forgetting": [
+      0.8208,
+      0.7229,
+      0.7010000000000001,
+      0.7991,
+      0.6734,
+      0.5601,
+      0.4877,
+      0.257,
+      0.10660000000000003,
+      0.0
+    ]
+  },
+  "n_parameters": 536576,
+  "n_tasks": 10,
+  "per_task_accuracies": {
+    "after_task_0": [
+      0.9621
+    ],
+    "after_task_1": [
+      0.6899,
+      0.9691
+    ],
+    "after_task_2": [
+      0.3361,
+      0.7928,
+      0.9686
+    ],
+    "after_task_3": [
+      0.2532,
+      0.476,
+      0.7911,
+      0.9703
+    ],
+    "after_task_4": [
+      0.2089,
+      0.2937,
+      0.5531,
+      0.8396,
+      0.9713
+    ],
+    "after_task_5": [
+      0.1743,
+      0.1889,
+      0.3312,
+      0.57,
+      0.812,
+      0.9671
+    ],
+    "after_task_6": [
+      0.1629,
+      0.1328,
+      0.2029,
+      0.3378,
+      0.5261,
+      0.8249,
+      0.9686
+    ],
+    "after_task_7": [
+      0.1723,
+      0.1401,
+      0.2084,
+      0.3526,
+      0.4349,
+      0.5726,
+      0.8849,
+      0.9676
+    ],
+    "after_task_8": [
+      0.1259,
+      0.1275,
+      0.2063,
+      0.2081,
+      0.2911,
+      0.4284,
+      0.6788,
+      0.872,
+      0.9679
+    ],
+    "after_task_9": [
+      0.1413,
+      0.2462,
+      0.2676,
+      0.1712,
+      0.2979,
+      0.407,
+      0.4809,
+      0.7106,
+      0.8613,
+      0.9681
+    ]
+  },
+  "protocol": "permuted",
+  "seed": 43,
+  "total_training_time_seconds": 403.25150299072266,
+  "training_metrics": [
+    {
+      "final_loss": 0.12142701805637529,
+      "final_train_acc": 0.97785,
+      "training_time": 34.071500301361084
+    },
+    {
+      "final_loss": 0.05719647638686001,
+      "final_train_acc": 0.9832166666666666,
+      "training_time": 36.6271653175354
+    },
+    {
+      "final_loss": 0.04437682769646247,
+      "final_train_acc": 0.9857833333333333,
+      "training_time": 33.51972675323486
+    },
+    {
+      "final_loss": 0.049878672151267525,
+      "final_train_acc": 0.9852166666666666,
+      "training_time": 37.69595122337341
+    },
+    {
+      "final_loss": 0.03893508280863364,
+      "final_train_acc": 0.9873166666666666,
+      "training_time": 35.86802577972412
+    },
+    {
+      "final_loss": 0.04254334079772234,
+      "final_train_acc": 0.9855666666666667,
+      "training_time": 34.53254532814026
+    },
+    {
+      "final_loss": 0.03380919934287667,
+      "final_train_acc": 0.9891166666666666,
+      "training_time": 46.41679644584656
+    },
+    {
+      "final_loss": 0.03843215287824472,
+      "final_train_acc": 0.98725,
+      "training_time": 38.37436485290527
+    },
+    {
+      "final_loss": 0.042092354193826516,
+      "final_train_acc": 0.9859,
+      "training_time": 41.985259771347046
+    },
+    {
+      "final_loss": 0.02983069449365139,
+      "final_train_acc": 0.9900333333333333,
+      "training_time": 36.54843783378601
+    }
+  ],
+  "weight_decay": 0.0001,
+  "weight_format": "ternary",
+  "weight_snapshots": {
+    "-1": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.89701704545455,
+      "weight_pos_pct": 50.10298295454545,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "0": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.67553827751196,
+      "weight_pos_pct": 50.32446172248804,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "1": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 48.83840460526316,
+      "weight_pos_pct": 51.16159539473684,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "2": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 48.750747607655505,
+      "weight_pos_pct": 51.249252392344495,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "3": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 48.59393690191388,
+      "weight_pos_pct": 51.40606309808612,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "4": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 48.81223833732057,
+      "weight_pos_pct": 51.18776166267943,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "5": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.360234748803826,
+      "weight_pos_pct": 50.639765251196174,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "6": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.2095918062201,
+      "weight_pos_pct": 50.7904081937799,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "7": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.28248355263158,
+      "weight_pos_pct": 50.71751644736842,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "8": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.78356758373206,
+      "weight_pos_pct": 50.21643241626794,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "9": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.887671949760765,
+      "weight_pos_pct": 50.112328050239235,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    }
+  }
+}
