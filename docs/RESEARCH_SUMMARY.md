@@ -212,6 +212,28 @@ The core ternary infrastructure is verified across 200+ tests: native {-1, 0, +1
 
 ## Future Directions
 
+### ⚠️ STRATEGIC PIVOT (2026-07-30): From Hebbian to STE-Based Ternary Learning
+
+A systematic literature scan (July 28-30, 2026) has fundamentally changed the project's direction. See [`ROADMAP.md`](ROADMAP.md) for the full updated plan.
+
+**What changed:** The ternary network landscape has been transformed by BitNet b1.58 (Microsoft, 2024-2025), BitNet v2 (April 2025), CAT-Q (Intel, ICML 2026 Oral), Neutrino-8B (Fermion Research, July 2026), and the "When Less is More" paper showing quantization improves continual learning.
+
+**Key insight:** Ternary networks CAN learn deep representations — but ONLY with backpropagation (STE). PH-Neuro's 9 Hebbian experiments conclusively proved the ~88% ceiling without backprop. The new question is: given STE works, what else can ternary networks do that nobody has tried?
+
+**The research gap — Ternary + Continual Learning:** Two fields that have never been combined. The "When Less is More" paper (arXiv:2512.18934) showed INT8/INT4 quantization improves continual learning, but ternary remains untested. PH-Neuro's unique infrastructure (packed ternary tensors, hysteresis, flip rate tracking) is ideally positioned to bridge this gap.
+
+**New dual-track approach:**
+
+| | Track A: Low-Memory Supervised | Track B: Continual Learning |
+|:--|:------------------------------|:---------------------------|
+| Goal | Establish modern ternary STE baselines for vision; develop Hysteresis-STE | Prove ternary + EWC/QLoRA achieves <10% forgetting while beating the ~88% ceiling |
+| Risk | Low | Medium |
+| Target | TinyML / ECCV workshop | NeurIPS / ICML / TMLR |
+
+**Phase 0-2 (Hebbian) is CLOSED and will be published as a negative-results paper documenting the ~88% bound.** Phase 3+ begins the STE era.
+
+### Previous Future Directions (Pre-Pivot)
+
 ### 1. Predictive Coding (Whittington & Bogacz, 2017)
 
 Predictive coding is the only non-backpropagation learning mechanism not tested in this work. It is fundamentally different from the approaches above: instead of maximizing correlations (Hebbian), it minimizes **prediction errors** at each layer. Each layer predicts the activity of the layer below; the prediction error drives local weight updates.
@@ -239,31 +261,33 @@ The PH-Net approach (separate project) uses Straight-Through Estimators (STE) wi
 
 ## References
 
-1. **Hinton, G. (2022).** "The Forward-Forward Algorithm: Some Preliminary Investigations." arXiv:2212.13345. — *Forward-Forward as alternative to backpropagation.*
+### New References (2026 Landscape Scan — Strategic Pivot)
 
-2. **Frémaux, N. & Gerstner, W. (2016).** "Neuromodulated Spike-Timing-Dependent Plasticity, and Theory of Three-Factor Learning Rules." *Frontiers in Neural Circuits*, 9:85. — *Three-factor learning rules: ΔW = η · M · pre · post.*
+1. **Ma, S. et al. (2024).** "The Era of 1-bit LLMs: All Large Language Models are in 1.58 Bits." arXiv:2402.17764. — *Ternary LLMs trained from scratch with STE backprop.*
+2. **Wang, H., Ma, S., Wei, F. (2025).** "BitNet v2: Native 4-bit Activations with Hadamard Transformation for 1-bit LLMs." arXiv:2504.18415. — *W1.58A4 with Hadamard transform for activation quantization.*
+3. **Microsoft (2025).** "BitNet b1.58 2B4T Technical Report." arXiv:2504.12285. — *First open-source ternary LLM (2B params, 4T tokens).* Model: https://huggingface.co/microsoft/bitnet-b1.58-2B-4T
+4. **Wang, S. et al. (2026).** "CAT-Q: Cost-efficient and Accurate Ternary Quantization for LLMs." arXiv:2606.26650. ICML 2026 Oral. — *Post-training ternary quantization with 512 calibration samples.* Code: https://github.com/IntelChina-AI/BitTern
+5. **Fermion Research (2026).** "Neutrino-8B." https://huggingface.co/FermionResearch/Neutrino-8B — *8B ternary model, 3.88 GB, MMLU-Redux 67.84, Apache 2.0.*
+6. **Zhang, M.S. et al. (2025).** "When Less is More: 8-bit Quantization Improves Continual Learning in Large Language Models." arXiv:2512.18934. — *INT8/INT4 quantization as implicit regularization against forgetting.*
+7. **Guan, H. et al. (2026).** "TOM: A Ternary Read-only Memory Accelerator for LLM-powered Edge Intelligence." arXiv:2602.20662. — *QLoRA-based on-device tunability for ternary weights.*
+8. **Xu, S. et al. (2026).** "VibeVoice-ASR-BitNet Technical Report." arXiv:2607.21075. — *First ternary ASR model, 1.6-2.3× faster than whisper.cpp.*
+9. **Wang, J. et al. (2025).** "Bitnet.cpp: Efficient Edge Inference for Ternary LLMs." arXiv:2502.11880. — *Official inference framework for 1-bit LLMs.* Code: https://github.com/microsoft/BitNet
+10. **Wang, H., Ma, S., Wei, F. (2024).** "BitNet a4.8: 4-bit Activations for 1-bit LLMs." arXiv:2411.04965. — *Precursor to BitNet v2, hybrid quantization + sparsification.*
 
-3. **Scellier, B. & Bengio, Y. (2017).** "Equilibrium Propagation: Bridging the Gap Between Energy-Based Models and Backpropagation." *Frontiers in Computational Neuroscience*, 11:24. — *Equilibrium Propagation as backprop-free learning.*
+### Original References (Hebbian Era)
 
-4. **Whittington, J.C.R. & Bogacz, R. (2017).** "An Approximation of the Error Backpropagation Algorithm in a Predictive Coding Network with Local Hebbian Synaptic Plasticity." *Neural Computation*, 29(5):1229–1262. — *Predictive coding approximates backprop through local updates.*
-
-5. **Journé, A., Rodriguez, H.G., Guo, Q., & Moraitis, T. (2023).** "Hebbian Deep Learning Without Feedback." *ICLR 2023*. — *SoftHebb: State-of-the-art float Hebbian deep learning, 80.3% CIFAR-10.*
-
-6. **Wang, S. et al. (2024).** "BitNet b1.58: 1.58-bit LLMs." arXiv:2402.17764. — *Ternary LLMs at 3B scale using STE + backprop.*
-
-7. **Lillicrap, T.P., Cownden, D., Tweed, D.B., & Akerman, C.J. (2016).** "Random Synaptic Feedback Weights Support Error Backpropagation for Deep Learning." *Nature Communications*, 7:13276. — *Feedback alignment: random feedback weights can drive learning.*
-
-8. **Nøkland, A. (2016).** "Direct Feedback Alignment Provides Learning in Deep Feedforward Networks." *NeurIPS 2016*. — *Direct feedback alignment for backprop-free learning.*
-
-9. **Tang, Y. et al. (2023).** "Neuro-Modulated Hebbian Learning for Fully Test-Time Adaptation." *CVPR 2023*. — *Modulated Hebbian learning with backprop-trained modulator.*
-
-10. **Millidge, B., Seth, A., & Buckley, C.L. (2022).** "Predictive Coding: A Theoretical and Experimental Review." arXiv:2107.12971. — *Comprehensive survey of predictive coding.*
-
-11. **Rao, R.P.N. & Ballard, D.H. (1999).** "Predictive Coding in the Visual Cortex: A Functional Interpretation of Some Extra-Classical Receptive-Field Effects." *Nature Neuroscience*, 2(1):79–87. — *Original predictive coding framework for visual cortex.*
-
-12. **Oja, E. (1982).** "Simplified Neuron Model as a Principal Component Analyzer." *Journal of Mathematical Biology*, 15(3):267–273. — *Oja's rule: Hebbian learning that finds principal components.*
-
-13. **Bienenstock, E.L., Cooper, L.N., & Munro, P.W. (1982).** "Theory for the Development of Neuron Selectivity: Orientation Specificity and Binocular Interaction in Visual Cortex." *Journal of Neuroscience*, 2(1):32–48. — *BCM rule: sliding-threshold Hebbian learning.*
+11. **Hinton, G. (2022).** "The Forward-Forward Algorithm: Some Preliminary Investigations." arXiv:2212.13345.
+12. **Frémaux, N. & Gerstner, W. (2016).** "Neuromodulated Spike-Timing-Dependent Plasticity, and Theory of Three-Factor Learning Rules." *Frontiers in Neural Circuits*, 9:85.
+13. **Scellier, B. & Bengio, Y. (2017).** "Equilibrium Propagation: Bridging the Gap Between Energy-Based Models and Backpropagation." *Frontiers in Computational Neuroscience*, 11:24.
+14. **Whittington, J.C.R. & Bogacz, R. (2017).** "An Approximation of the Error Backpropagation Algorithm in a Predictive Coding Network with Local Hebbian Synaptic Plasticity." *Neural Computation*, 29(5):1229–1262.
+15. **Journé, A., Rodriguez, H.G., Guo, Q., & Moraitis, T. (2023).** "Hebbian Deep Learning Without Feedback." *ICLR 2023*.
+16. **Lillicrap, T.P., Cownden, D., Tweed, D.B., & Akerman, C.J. (2016).** "Random Synaptic Feedback Weights Support Error Backpropagation for Deep Learning." *Nature Communications*, 7:13276.
+17. **Nøkland, A. (2016).** "Direct Feedback Alignment Provides Learning in Deep Feedforward Networks." *NeurIPS 2016*.
+18. **Tang, Y. et al. (2023).** "Neuro-Modulated Hebbian Learning for Fully Test-Time Adaptation." *CVPR 2023*.
+19. **Millidge, B., Seth, A., & Buckley, C.L. (2022).** "Predictive Coding: A Theoretical and Experimental Review." arXiv:2107.12971.
+20. **Rao, R.P.N. & Ballard, D.H. (1999).** "Predictive Coding in the Visual Cortex." *Nature Neuroscience*, 2(1):79–87.
+21. **Oja, E. (1982).** "Simplified Neuron Model as a Principal Component Analyzer." *Journal of Mathematical Biology*, 15(3):267–273.
+22. **Bienenstock, E.L., Cooper, L.N., & Munro, P.W. (1982).** "Theory for the Development of Neuron Selectivity." *Journal of Neuroscience*, 2(1):32–48.
 
 ---
 

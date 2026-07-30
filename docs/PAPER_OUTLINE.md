@@ -1,10 +1,13 @@
-# Paper Outline
+# Paper Outlines
 
-> **Ternary Hebbian Networks Without Backpropagation: Why Hidden Layers Fail and What Works Instead**
+> **Two papers planned — one from Hebbian era (negative results), one from STE era (new direction)**
+> **Last updated:** 2026-07-30
 
 ---
 
-## Proposed Titles
+## Paper 1: Hebbian Era — Negative Results
+
+### Proposed Titles
 
 1. **Ternary Hebbian Networks Without Backpropagation: Why Hidden Layers Fail and What Works Instead** *(primary)*
 2. **The ~88% Bound: Fundamental Limitations of Ternary Hebbian Learning Without Backpropagation**
@@ -444,6 +447,123 @@ The ternary constraint adds a discrete quantization step that destroys the conti
 12. **Tang, Y. et al. (2023).** "Neuro-Modulated Hebbian Learning for Fully Test-Time Adaptation." *CVPR 2023.* — Modulated Hebbian (backprop modulator).
 
 13. **Wang, S. et al. (2024).** "BitNet b1.58: 1.58-bit LLMs." *arXiv:2402.17764.* — Ternary LLMs via STE + backprop.
+
+---
+
+## Paper 2: STE Era — Ternary Networks for Low-Memory & Continual Learning
+
+> **Status:** PLANNED — experiments not yet started
+> **Target:** NeurIPS 2027 / ICML 2027 / TMLR
+> **Dual contribution:** (1) Hysteresis-STE algorithm for ternary training, (2) First systematic study of ternary continual learning
+
+### Proposed Titles
+
+1. **"Ternary Networks Never Forget: Extreme Quantization as Implicit Regularization for Continual Learning"** *(primary)*
+2. **"From Low-Memory to No-Forgetting: Ternary Weights for Efficient Edge AI"**
+3. **"Hysteresis-STE: Stabilizing Ternary Network Training with Dual-Threshold Weight Updates"**
+
+### Target Venues
+
+| Venue | Fit | Notes |
+|:------|:---:|:------|
+| **NeurIPS** | ⭐⭐⭐ | If ternary + CL results are strong and novel |
+| **ICML** | ⭐⭐⭐ | Good fit for algorithm + empirical contributions |
+| **TMLR** | ⭐⭐⭐ | Rolling review; can submit preliminary results first |
+| **ECCV** (efficient DL workshop) | ⭐⭐ | More suitable for Track A alone |
+| **TinyML** | ⭐⭐ | Engineering focus; good for memory/speed benchmarks |
+
+### Core Contributions
+
+1. **Hysteresis-STE:** A novel training algorithm for ternary networks that uses dual-threshold hysteresis as a weight regularizer during STE backpropagation. The hysteresis mechanism, inherited from PH-Neuro v1, promotes weight sparsity and reduces oscillation.
+
+2. **First ternary continual learning benchmark:** Systematic comparison of forgetting across FP16, INT8, INT4, and ternary weights on Split MNIST, Split CIFAR-10, and Permuted MNIST.
+
+3. **Finding: Ternary = lowest forgetting.** Hypothesis that ternary weights, by imposing the strongest quantization noise, provide the best implicit regularization against catastrophic forgetting — extending "When Less is More" (Zhang et al., 2025) to the 1.58-bit regime.
+
+4. **QLoRA + Frozen Ternary:** Zero-forgetting approach: freeze ternary backbone, train only low-rank adapters per task. Inspired by TOM accelerator (Guan et al., 2026).
+
+### Section Outline
+
+#### 1. Introduction
+- Ternary networks are proven at scale (BitNet, CAT-Q, Neutrino)
+- But all work focuses on static inference — what about continual learning?
+- Quantization noise as regularizer: INT8/INT4 improves CL ("When Less is More")
+- **Our question:** Does ternary (strongest quantization) provide the best regularization?
+- **Our contribution:** First systematic study + Hysteresis-STE algorithm
+
+#### 2. Background
+- Ternary weight networks (BitNet b1.58, BitNet v2, CAT-Q)
+- Continual learning (EWC, SI, PackNet, replay methods)
+- Quantization + CL ("When Less is More" — INT8/INT4 only)
+- Straight-Through Estimator (STE) for ternary training
+
+#### 3. Methods
+- Hysteresis-STE algorithm (formal description)
+- EWC + Ternary STE
+- QLoRA + Frozen Ternary Backbone
+- Baseline methods: FP16, INT8, INT4 (QAT)
+
+#### 4. Experiments
+
+**Experiment 1: Hysteresis-STE vs Standard STE**
+- Datasets: MNIST, Fashion-MNIST, CIFAR-10
+- Architectures: 2-4 layer MLP, Simple CNN
+- Metrics: Accuracy, weight sparsity, flip rate, convergence speed
+- Ablation: θ_upper, θ_lower sweep
+
+**Experiment 2: Ternary Baseline Suite (Track A)**
+- Systematic accuracy comparison across 5 datasets
+- FP16 vs INT8 vs INT4 vs Ternary STE
+- Including memory footprint and inference speed
+
+**Experiment 3: EWC + Ternary STE (Track B)**
+- Split MNIST (5 tasks × 2 classes)
+- Split CIFAR-10 (5 tasks × 2 classes)
+- Permuted MNIST (10 tasks)
+- Metrics: Average accuracy, backward transfer (forgetting), forward transfer
+
+**Experiment 4: Quantization vs Forgetting**
+- Head-to-head: FP16 vs INT8 vs INT4 vs Ternary
+- Same architecture, same CL method (EWC), same data
+- **Key hypothesis:** Ternary < INT4 < INT8 < FP16 in forgetting
+
+**Experiment 5: QLoRA + Frozen Ternary**
+- Ablation: rank 4, 8, 16, 32
+- Zero forgetting (ternary weights frozen)
+- Accuracy vs adapter size trade-off
+
+#### 5. Results (Expected)
+- Ternary STE >95% MNIST (breaking the ~88% Hebbian ceiling)
+- Hysteresis-STE ≥ standard STE with improved sparsity
+- Ternary + EWC <10% forgetting on Split MNIST
+- Ternary forgetting < INT4 forgetting < INT8 forgetting < FP16 forgetting
+
+#### 6. Discussion
+- Why does ternary help? (quantization noise hypothesis)
+- Practical implications for edge deployment
+- Limitations: tested on small vision datasets only; LLM-scale unknown
+- Future: combine with predictive coding? test on NLP tasks?
+
+### Key Figures (Planned)
+
+| # | Figure | Description |
+|:-:|:------|:------------|
+| 1 | **Hysteresis-STE diagram** | Visual explanation of dual-threshold mechanism during STE training |
+| 2 | **Accuracy vs Depth** | Ternary STE vs FP16 vs Hebbian across 1-4 layers on MNIST |
+| 3 | **Forgetting vs Precision** | Bar chart: FP16, INT8, INT4, Ternary — forgetting after 5 tasks |
+| 4 | **Sparsity-Accuracy Trade-off** | Hysteresis-STE sparsity vs accuracy for different θ values |
+| 5 | **Memory Breakdown** | Training/inference memory comparison across precisions |
+| 6 | **QLoRA Ablation** | Accuracy vs rank for frozen ternary + LoRA adapters |
+
+### References (Paper 2 — Additional)
+
+1. **Kirkpatrick, J. et al. (2017).** "Overcoming Catastrophic Forgetting in Neural Networks." *PNAS*, 114(13):3521–3526. — EWC.
+2. **Zenke, F., Poole, B., Ganguli, S. (2017).** "Continual Learning Through Synaptic Intelligence." *ICML 2017*. — SI.
+3. **Hu, E.J. et al. (2022).** "LoRA: Low-Rank Adaptation of Large Language Models." *ICLR 2022*.
+4. **Dettmers, T. et al. (2023).** "QLoRA: Efficient Finetuning of Quantized LLMs." *NeurIPS 2023*.
+5. **Wang, H. et al. (2025).** "BitNet v2: Native 4-bit Activations with Hadamard Transformation for 1-bit LLMs." arXiv:2504.18415.
+6. **Zhang, M.S. et al. (2025).** "When Less is More: 8-bit Quantization Improves Continual Learning in LLMs." arXiv:2512.18934.
+7. **Guan, H. et al. (2026).** "TOM: A Ternary Read-only Memory Accelerator for LLM-powered Edge Intelligence." arXiv:2602.20662.
 
 14. **Millidge, B. et al. (2022).** "Predictive Coding: A Theoretical and Experimental Review." *arXiv:2107.12971.* — PC survey.
 

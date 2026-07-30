@@ -1,41 +1,78 @@
 # PH-Neuro Roadmap
 
-> **Status:** Pre-alpha research — unexplored territory  
-> **Last updated:** 2026-07-29
+> **Status:** Strategic pivot — transitioning from Hebbian to STE-based ternary learning  
+> **Last updated:** 2026-07-30
 
 ---
 
 ## Research Synthesis Documents
 
-> **⚠️ Research phase closed after 9 experiments across 4 approaches.**
+> **⚠️ Phase 0-2 (Hebbian) research phase closed after 9 experiments across 4 approaches.**
 >
-> For the definitive summary of all findings, see:
+> For the definitive summary of all Phase 0-2 findings, see:
 > - **[`RESEARCH_SUMMARY.md`](RESEARCH_SUMMARY.md)** — Complete research document: abstract, hypotheses, methods, results, analysis, and references
-> - **[`PAPER_OUTLINE.md`](PAPER_OUTLINE.md)** — Actionable paper outline for submission (target: TMLR / arXiv)
+> - **[`PAPER_OUTLINE.md`](PAPER_OUTLINE.md)** — Paper outlines for both Phase 0-2 (negative results) and Phase 3+ (new direction)
 >
 > All experiment reports are in [`docs/experiments/`](experiments/).
 
 ---
 
-## Vision
+## Strategic Pivot (2026-07-30)
 
-Build a **deep learning framework that learns without backpropagation** — using ternary weights {-1, 0, +1} and Hebbian plasticity. The weights are biologically inspired: excitatory (+1), inhibitory (-1), or absent (0). Learning is **local, continuous, and brain-like**: each synapse updates based solely on the activity of the two neurons it connects.
+### What Changed
 
-**PH-Neuro learns. PH-Net trains.** PH-Net uses STE + backprop to produce ternary LLMs. PH-Neuro explores the radical question: _can we abandon backpropagation entirely and still build useful neural networks?_
+A systematic literature scan (July 28-30, 2026) revealed that the ternary network landscape has transformed dramatically since early 2025:
 
-### Why This Matters
+| Development | Date | Significance |
+|:-----------|:-----|:-------------|
+| **BitNet b1.58** (Microsoft) | Feb 2024 | Ternary LLMs trained from scratch with STE backprop — proved ternary CAN scale |
+| **BitNet b1.58 2B4T** (Microsoft) | Apr 2025 | First open-source ternary LLM (2B params, 4T tokens), MIT license |
+| **BitNet v2** (Microsoft) | Apr 2025 | Native 4-bit activations with Hadamard transformation — W1.58A4 |
+| **CAT-Q** (Intel, ICML 2026 Oral) | Jun 2026 | Post-training ternary quantization with only 512 calibration samples — 100,000× fewer tokens than BitNet |
+| **Neutrino-8B** (Fermion Research) | Jul 2026 | 8B ternary model, 3.88 GB on disk, MMLU-Redux 67.84, Apache 2.0 |
+| **TOM Accelerator** | Feb 2026 | Ternary ROM-SRAM hardware with QLoRA-based on-device tunability |
+| **"When Less is More"** | Dec 2025 | INT8/INT4 quantization IMPROVES continual learning (quantization noise = implicit regularization) |
+| **VibeVoice-ASR-BitNet** (Microsoft) | Jul 2026 | First ternary ASR model — 1.6-2.3× faster than whisper.cpp on edge CPUs |
 
-| Property | Backprop (PH-Net, GPT, etc.) | PH-Neuro (Hebbian) |
-|----------|------------------------------|---------------------|
-| Learning signal | Global (loss gradient from output) | Local (pre × post activity) |
-| Backward pass | Required (≈2× forward FLOPs) | None |
-| Optimizer states | AdamW: 2× model size in memory | None (no optimizer) |
-| Activation storage | Full graph for backward pass | Not needed |
-| Catastrophic forgetting | Severe (requires replay/memory) | Inherently resistant |
-| Online/continuous learning | Difficult | Natural |
-| Weight drift | Float weights drift continuously | Ternary weights are stable |
-| Compute | Float MatMul + gradient computation | Ternary MatMul (popcount) |
-| Memory (training) | 4-8× model size | ~1× model size |
+### The Key Insight
+
+**Ternary networks CAN learn deep representations — but ONLY with backpropagation (STE).** PH-Neuro's Phase 0-2 conclusively proved that Hebbian/FF/EP methods hit a fundamental ~88% ceiling on MNIST regardless of depth. Meanwhile, BitNet, CAT-Q, and Neutrino prove that STE backprop enables ternary networks at billion-parameter scale.
+
+**The new question:** Given that ternary weights + STE backprop works, what else can we do with it that nobody has tried?
+
+### The Research Gap: Ternary + Continual Learning
+
+Two fields that have NEVER been combined:
+1. **Ternary/1.58-bit networks** — thriving (BitNet, CAT-Q, Neutrino) but focused exclusively on static LLM inference
+2. **Continual/lifelong learning** — "When Less is More" showed quantization helps (INT8/INT4), but **ternary remains untested**
+
+**PH-Neuro is uniquely positioned** with its ternary infrastructure (packed tensors, hysteresis, flip rate tracking, 200+ tests) to bridge this gap.
+
+### New Vision
+
+**PH-Neuro v2: Dual-track research into ternary networks for efficient edge AI**
+
+| | Track A: Low-Memory Supervised | Track B: Continual Learning |
+|:--|:------------------------------|:---------------------------|
+| **Goal** | Establish ternary STE baselines for small vision models; develop novel training techniques (Hysteresis-STE) | Prove that ternary weights + continual learning methods can achieve <10% forgetting while beating the ~88% Hebbian ceiling |
+| **Method** | STE backprop + ternary weights + Hysteresis regularizer | EWC / SI / QLoRA + frozen ternary backbone |
+| **Datasets** | MNIST, Fashion-MNIST, KMNIST, CIFAR-10, CIFAR-100 | Split MNIST, Split CIFAR-10, Permuted MNIST |
+| **Novelty** | First systematic ternary vision benchmark since 2020; Hysteresis-STE algorithm | First combination of ternary weights with continual learning; quantization noise as forgetting regularizer |
+| **Risk** | Low | Medium |
+| **Timeline** | 1-2 weeks | 2-4 weeks |
+| **Target Venue** | TinyML / ECCV Efficient DL Workshop | NeurIPS / ICML / TMLR |
+
+### Why This Matters (Updated)
+
+| Property | Backprop (FP16) | PH-Neuro v1 (Hebbian) | PH-Neuro v2 (Ternary STE) |
+|----------|----------------|----------------------|--------------------------|
+| Deep learning | ✅ Multiple layers work | ❌ ~88% ceiling regardless of depth | ✅ Multi-layer proven (BitNet) |
+| Weight memory | 16 bits/weight | 2 bits/weight (packed) | 2 bits/weight (packed) |
+| Inference compute | Float MatMul | Popcount MatMul | Popcount MatMul |
+| Training memory | 4-8× model size | ~1× model size | ~2× model size (STE needs backward pass) |
+| Catastrophic forgetting | Severe | ⚠️ Multi-head only | 🎯 **UNEXPLORED** — hypothesis: ternary acts as regularizer |
+| Backward pass | Required | None | Required (STE) |
+| Edge deployment | Heavy | Lightweight | Lightweight + deep-capable |
 
 ### The Core Hypotheses
 
@@ -59,75 +96,119 @@ Build a **deep learning framework that learns without backpropagation** — usin
 
 ## Phase Status
 
+### Hebbian Era (COMPLETED — July 2026)
+
 | Phase | Title | Status | Key Result |
 |:------|:------|:------:|:-----------|
 | 0 | Core Mechanism | ✅ | 88.4% MNIST, single-layer WTA Hebbian |
 | 1.1 | Multi-layer MLP | ✅ | 87.9% — depth doesn't help |
 | 1.2 | CNN on CIFAR-10 | ✅ | 32.6% — conv Hebbian ≈ random |
 | 1.3 | Continual Learning | ✅ | <5% multi-head ✅, single-head ❌ |
-| 2 | **Forward Signals & Three-Factor** | 🔴 **RESEARCH PHASE CLOSED** | **TFF-1 ✅ 87.9%, NTH-1 ✅ 88.15%, TFF-2 ❌ 86.81%, NTH-4 ❌ 85.79%, NTH-4b ❌ 86.68%, TEP-1 ❌ 82.57% — ALL 9 approaches exhausted. Ternary Hebbian hidden layers CANNOT be trained without backprop.** |
-| 3-5 | Language Model & Scale | ⬜ **On hold indefinitely** | Closed — requires backprop or predictive coding |
+| 2 | **Forward Signals & Three-Factor** | 🔴 **RESEARCH PHASE CLOSED** | **TFF-1 ✅ 87.9%, NTH-1 ✅ 88.15%, TFF-2 ❌ 86.81%, NTH-4 ❌ 85.79%, NTH-4b ❌ 86.68%, TEP-1 ❌ 82.57% — ALL 9 approaches exhausted.** |
 
-## Phase 1 Key Findings
+**Definitive conclusion:** Ternary Hebbian hidden layers CANNOT be trained without backpropagation. The ~88% MNIST bound represents the linear separability limit of random sparse ternary features.
 
-### 1.1 Multi-Layer MLP on MNIST
-The correct unsupervised Hebbian rule for ternary hidden layers is **online competitive Hebbian with conscience** (winner-take-all + fairness bias). Basic Hebbian, Oja, BCM, and other variants all fail to create useful representations. **Depth does not improve accuracy** beyond the single-layer ~88% bound. Documented in `docs/experiments/E002-mnist-multilayer-mlp.md`.
+### STE Era (NEW — July 2026 onward)
 
-### 1.2 CNN on CIFAR-10
-The `TernaryHebbianConv2d` layer and `HebbianCNN` architecture are fully implemented and verified (132 tests, no `.backward()`, ternary weight invariant, flip rate stabilization). **However, unsupervised Hebbian for conv layers does not improve over random projections** for CIFAR-10 classification. Three variants tested: competitive (32.6%), class-guided (21.9%), and random baseline (33.0%). The architecture works but Hebbian feature learning doesn't provide a classification benefit. Documented in `docs/experiments/E003-cifar10-cnn.md`.
+| Phase | Title | Status | Key Result |
+|:------|:------|:------:|:-----------|
+| **3A** | **Track A: Low-Memory Supervised Baselines** | 🟢 **IN PROGRESS** | Ternary STE baseline suite (L1), Hysteresis-STE algorithm (L2), Forgetting baseline (L8) |
+| 3A.1 | STE TernaryLinear Implementation | ⬜ | Replace Hebbian update with STE backprop; reuse existing TernaryTensor + hysteresis |
+| 3A.2 | Baseline Suite: MNIST/Fashion-MNIST/KMNIST/CIFAR-10 | ⬜ | Systematic accuracy vs depth vs width for ternary vs FP16/INT8/INT4 |
+| 3A.3 | Hysteresis-STE Algorithm | ⬜ | Novel training method: dual-threshold hysteresis as STE regularizer |
+| 3A.4 | Forgetting Baseline (no CL mechanism) | ⬜ | Control experiment: how much does standard SGD forget with ternary weights? |
+| 3A.5 | Memory & Speed Benchmarks | ⬜ | Packed ternary inference speed vs FP16/INT8; training memory footprint |
+| **3B** | **Track B: Continual Learning with Ternary STE** | 🟡 **PLANNED** | EWC + ternary STE (B1), QLoRA + frozen ternary (B2) |
+| 3B.1 | EWC + Ternary STE on Split MNIST | ⬜ | Elastic Weight Consolidation with ternary weights — test quantization noise hypothesis |
+| 3B.2 | QLoRA + Frozen Ternary Backbone | ⬜ | Freeze ternary weights, train only low-rank float adapters per task — zero forgetting by design |
+| 3B.3 | Multi-Head Ternary EWC (5 tasks) | ⬜ | Combine multi-head architecture with EWC for maximal protection |
+| 3B.4 | Comparison: Ternary vs INT8 vs INT4 vs FP16 CL | ⬜ | Replicate "When Less is More" but extend to ternary |
+| **4** | **Advanced Experiments** | ⬜ | Ternary distillation (L4), BN fusion (L5), depth scaling with fixed budget (L7) |
+| **5** | **Papers & Publication** | ⬜ | Paper 1: Low-Memory Vision (TinyML/ECCV), Paper 2: Continual Learning (NeurIPS/ICML) |
 
-**The real value of PH-Neuro is in Phase 1.3 — continual learning**, where Hebbian's local updates and ternary weights should provide inherent resistance to catastrophic forgetting.
+## Phase 3 — Track A: Low-Memory Supervised Experiments
 
-### Strategic Assessment (2026-07-29)
+### L1: Ternary STE Baseline Suite
+**Goal:** Establish modern ternary STE baselines for small vision models (no one has done this systematically since ~2020).
 
-After Phases 0 through 1.3, here is the complete picture:
+| Dataset | Architecture | Expected Ternary STE | Float Baseline | Ternary Gap |
+|:--------|:------------|:--------------------:|:--------------:|:----------:|
+| MNIST | 784→512→256→10 | 96-98% | ~98.5% | ~1-2pp |
+| Fashion-MNIST | 784→512→256→10 | 88-91% | ~92% | ~2-3pp |
+| KMNIST | 784→512→256→10 | 88-91% | ~93% | ~2-3pp |
+| CIFAR-10 | Conv(32→64→128)→Linear | 75-85% | ~90% | ~5-10pp |
+| CIFAR-100 | Conv(64→128→256)→Linear | 55-65% | ~72% | ~7-12pp |
 
-**What works:**
-- Single-layer supervised WTA Hebbian classification (88.4% MNIST) ✅
-- Ternary weight storage, hysteresis, flip rate stabilization ✅
-- Multi-head continual learning: <5% forgetting with separate output neurons per task ✅
-- Infrastructure: NO .backward(), 132+ tests, ternary invariant ✅
+Compare against: FP16, INT8 (QAT), INT4 (QAT), and PH-Neuro v1 Hebbian baseline.
 
-**What doesn't work:**
-- Unsupervised Hebbian for hidden layers — creates statistical features, not discriminative ones ❌
-- Depth — zero improvement over single-layer (MLP and CNN both confirm) ❌
-- Single-head continual learning — anti-Hebbian = gradient interference, ~37% forgetting ❌
-- H4 (layer-wise independence) — **FALSIFIED** ❌
-- H2 (no forgetting with shared neurons) — **PARTIALLY FALSIFIED** ⚠️
-- H5 (Forward-Forward solves hidden layers) — **FALSIFIED for ternary weights** ❌
-- H7 (Three-factor Hebbian propagates to hidden layers) — **PARTIALLY FALSIFIED** ⚠️ (output layer ✅, hidden layers ❌)
-- H8 (Equilibrium Propagation solves hidden layers) — **FALSIFIED** ❌
+### L2: Hysteresis-STE — Novel Training Algorithm
+**Core idea:** Apply PH-Neuro's dual-threshold hysteresis during STE training as a weight regularizer.
 
-**Definitive conclusion — RESEARCH PHASE CLOSED:**
-After 9 experiments across 4 fundamentally different approaches (unsupervised Hebbian, Forward-Forward, three-factor Hebbian, Equilibrium Propagation), the evidence is conclusive: **ternary Hebbian hidden layers cannot learn class-discriminative features without backpropagation.**
+```
+Standard STE:
+  forward:  W_tern = sign(W_latent)
+  backward: ∂L/∂W_latent = ∂L/∂W_tern  (STE)
 
-The root cause is fundamental: all Hebbian update rules optimize for **statistical correlation** (pre × post), not for **classification error minimization**. Each attempt to create a local error signal fails because:
-- Unsupervised Hebbian → PCA, not class structure
-- Forward-Forward → popcount goodness is trivial, not class-specific
-- Three-factor Hebbian → sparse ternary weights kill the feedback signal; dense feedback provides a diffuse scalar modulator, not structured feature information
-- Equilibrium Propagation → noisy hidden targets from latent scores; the nudge cannot propagate backward without recurrent dynamics
+Hysteresis-STE:
+  forward:  W_tern = tern_hyst(W_latent, θ_upper, θ_lower)
+            → |W_latent| < θ_lower: W_tern = 0
+            → |W_latent| > θ_upper: W_tern = sign(W_latent)
+            → otherwise: unchanged from previous step
+  backward: ∂L/∂W_latent = ∂L/∂W_tern  (STE)
+```
 
-**The only viable path forward is predictive coding** (Whittington & Bogacz, 2017), which is fundamentally different: it computes prediction errors at each layer and uses those errors (not Hebbian correlations) to drive learning. This requires floating-point error nodes and is incompatible with the "no backward pass" philosophy.
+**Hypothesis:** Hysteresis acts as a sparsity-promoting regularizer. Small latent weights stay at 0, only strong signals cross the threshold. This may improve generalization and reduce weight oscillation.
 
-**Literature review confirms the path forward:**
-1. **Forward-Forward (Hinton, 2022):** Each layer has its own local "goodness" objective. Achieves 98.6% on MNIST without backprop. Perfect fit for ternary weights (popcount goodness).
-2. **Three-factor learning rules (Frémaux & Gerstner, 2016):** ΔW = η · M · pre · post where M is a neuromodulator. Well-established in computational neuroscience (659 citations).
-3. **Predictive coding (Whittington & Bogacz, 2017; Millidge et al., 2022):** Local Hebbian updates can approximate backprop through prediction error minimization. 494 citations.
-4. **Neuro-Modulated Hebbian Learning (Tang et al., CVPR 2023):** Combines unsupervised Hebbian with a learned modulator — proves the concept but still uses backprop for the modulator.
+**Ablation:** Compare standard STE vs Hysteresis-STE across θ_upper ∈ {0.3, 0.5, 1.0, 2.0} and θ_lower ∈ {0.1, 0.15, 0.3}.
 
-**Revised roadmap (2026-07-29):**
-1. **Phase 2: Forward Signals & Three-Factor Learning** — 🔴 COMPLETE. ALL approaches exhausted. No method trains ternary Hebbian hidden layers.
-2. **Phase 3: Language & Predictive Coding** — ⚠️ ON HOLD. Predictive coding requires continuous error propagation through hidden layers, which faces the same fundamental limitation shown in Phase 2.
-3. **Phase 4-5: Scale & Ship** — ⬜ On hold pending Phase 3 outcome.
-4. **Recommendation**: Publish the negative Phase 2 results and consider pivoting to PH-Net (STE + backprop for ternary weights) for deep networks. PH-Neuro remains viable for single-layer classification and multi-head continual learning.
+### L8: Forgetting Baseline (Standard SGD)
+**Goal:** Measure how much standard ternary STE training forgets WITHOUT any continual learning mechanism. This is the control experiment for Track B.
 
-### What This Is NOT
+| Setup | Metric |
+|:------|:------|
+| Split MNIST, sequential SGD, no EWC, no replay | Forgetting after 5 tasks |
+| Permuted MNIST, 10 tasks | Average accuracy, forgetting |
+| Comparison: FP16 vs Ternary STE | Does ternary naturally forget less? |
 
-- **NOT a replacement for backprop** in high-accuracy regimes. We expect lower raw accuracy.
-- **NOT trying to beat GPT-4**. This is fundamental research into alternative learning paradigms.
-- **NOT a quantization technique**. The weights are natively ternary, not quantized from floats.
-- **NOT biologically detailed**. We borrow the Hebbian principle and predictive coding, not detailed synaptic dynamics (no STDP, no calcium models, no dopamine modulation — yet).
-- **NOT a monolithic Transformer**. We explore modular, brain-inspired architectures — not just "GPT with Hebbian."
+---
+
+## Phase 3 — Track B: Continual Learning Experiments
+
+### B1: EWC + Ternary STE
+**Goal:** Test whether Elastic Weight Consolidation works with ternary weights.
+
+**Hypothesis:** Ternary weights provide a natural "stiffness" — small latent score changes don't flip ternary values. EWC further protects important weights. Combined effect: <10% forgetting while beating the ~88% Hebbian ceiling.
+
+| Variant | Description |
+|:--------|:------------|
+| EWC-ternary | Standard EWC with Fisher computed after each task on ternary model |
+| EWC-hysteresis | EWC + Hysteresis-STE — double protection against forgetting |
+| Online EWC | Update Fisher incrementally (no separate post-task phase) |
+
+### B2: QLoRA + Frozen Ternary Backbone
+**Goal:** Zero-forgetting approach: freeze ternary weights, train only low-rank adapters.
+
+Inspired by TOM accelerator (arXiv:2602.20662) which implements QLoRA-based on-device tunability for ternary weights.
+
+| Variant | Description |
+|:--------|:------------|
+| QLoRA-rank8 | Rank-8 LoRA adapters per task, frozen ternary backbone |
+| QLoRA-rank32 | Rank-32 for harder tasks |
+| QLoRA-shared | Shared ternary backbone + task-specific LoRA routing |
+
+**Advantage:** Zero forgetting (ternary weights never change). Disadvantage: needs small float adapters per task (~0.1-1% of model size).
+
+### B3: Comparison — Ternary vs INT8 vs INT4 vs FP16
+**Goal:** Replicate "When Less is More" (arXiv:2512.18934) findings but extend to ternary.
+
+| Precision | Expected Forgetting | Expected Accuracy |
+|:----------|:------------------:|:-----------------:|
+| FP16 | Highest (~36%) | Highest (~98%) |
+| INT8 | Medium (~25%) | High (~97%) |
+| INT4 | Low (~15%) | Medium (~95%) |
+| **Ternary** | **Lowest? (~8%)** | **Good? (~94%)** |
+
+**Hypothesis:** Ternary provides the strongest quantization noise → best implicit regularization → lowest forgetting. This would be a novel finding.
 
 ---
 
@@ -190,14 +271,42 @@ Both strategies use the same tensor operations; packing/unpacking is transparent
 
 ---
 
-## Success Criteria
+## Success Criteria (Updated)
 
-| Milestone | Target | Means of verification |
-|-----------|--------|----------------------|
-| **M0: Core Mechanism** | Ternary Hebbian MLP >85% MNIST (10 epochs) | `tests/`, experiment E001 | ✅ 88.4% achieved |
-| M1: CNN Vision | Ternary Hebbian CNN >55% CIFAR-10 | Experiment log | Adjusted from >60% based on MLP findings |
-| M1b: Continual Learning | <5% forgetting on split MNIST (5 tasks), backprop baseline >40% forgetting | Experiment log + comparison table | **Primary contribution** — accuracy is secondary to unforgetfulness |
-| **M2: Forward Signals** | Stage 1: FF/NTH >88% MNIST (match WTA). Stage 2: FF 2-layer >95% MNIST (prove depth works). Stage 3: FF CNN >45% CIFAR-10 (only if Stage 2 passes). | Experiment log | **NEW — staged gates, MNIST first** |
+| Milestone | Target | Means of verification | Status |
+|-----------|--------|----------------------|--------|
+| **M0: Hebbian Core** | Ternary Hebbian MLP >85% MNIST | E001 | ✅ 88.4% |
+| **M1: Multi-Head CL** | <5% forgetting on Split MNIST | continual.py | ✅ <5% (multi-head) |
+| **M2: Hebbian Phase 2** | FF/NTH 2-layer >88% MNIST | E004-E008 | ❌ All <88% |
+| **M3: STE TernaryLinear** | STE backward pass works, ternary invariant holds | Unit tests | ⬜ |
+| **M4: Track A Baseline** | Ternary STE 2-layer MLP >95% MNIST (beating 88% Hebbian ceiling) | Experiment log | ⬜ |
+| **M5: Hysteresis-STE** | Hysteresis-STE ≥ standard STE accuracy + improved sparsity | Ablation study | ⬜ |
+| **M6: Track B EWC** | Ternary STE + EWC <10% forgetting on Split MNIST, >90% avg accuracy | Experiment log | ⬜ |
+| **M7: Track B QLoRA** | Frozen ternary + LoRA achieves <1% forgetting with >85% accuracy | Experiment log | ⬜ |
+| **M8: Paper 1** | Low-Memory Ternary Vision submitted | arXiv + workshop | ⬜ |
+| **M9: Paper 2** | Ternary Continual Learning submitted | arXiv + conference | ⬜ |
+
+## New References (2026 Landscape Scan)
+
+1. **Ma, S. et al. (2024).** "The Era of 1-bit LLMs: All Large Language Models are in 1.58 Bits." arXiv:2402.17764.
+2. **Wang, H., Ma, S., Wei, F. (2025).** "BitNet v2: Native 4-bit Activations with Hadamard Transformation for 1-bit LLMs." arXiv:2504.18415.
+3. **Microsoft (2025).** "BitNet b1.58 2B4T Technical Report." arXiv:2504.12285. Model: huggingface.co/microsoft/bitnet-b1.58-2B-4T
+4. **Wang, S. et al. (2026).** "CAT-Q: Cost-efficient and Accurate Ternary Quantization for LLMs." arXiv:2606.26650. ICML 2026 Oral. Code: github.com/IntelChina-AI/BitTern
+5. **Fermion Research (2026).** "Neutrino-8B." huggingface.co/FermionResearch/Neutrino-8B
+6. **Zhang, M.S. et al. (2025).** "When Less is More: 8-bit Quantization Improves Continual Learning in Large Language Models." arXiv:2512.18934.
+7. **Guan, H. et al. (2026).** "TOM: A Ternary Read-only Memory Accelerator for LLM-powered Edge Intelligence." arXiv:2602.20662.
+8. **Xu, S. et al. (2026).** "VibeVoice-ASR-BitNet Technical Report." arXiv:2607.21075.
+9. **Wang, J. et al. (2025).** "Bitnet.cpp: Efficient Edge Inference for Ternary LLMs." arXiv:2502.11880. Code: github.com/microsoft/BitNet
+10. **Wang, H., Ma, S., Wei, F. (2024).** "BitNet a4.8: 4-bit Activations for 1-bit LLMs." arXiv:2411.04965.
+
+### Existing Key References (Hebbian Era)
+
+11. **Hinton, G. (2022).** "The Forward-Forward Algorithm." arXiv:2212.13345.
+12. **Frémaux, N. & Gerstner, W. (2016).** "Neuromodulated Spike-Timing-Dependent Plasticity." Frontiers in Neural Circuits, 9:85.
+13. **Scellier, B. & Bengio, Y. (2017).** "Equilibrium Propagation." Frontiers in Computational Neuroscience, 11:24.
+14. **Whittington, J.C.R. & Bogacz, R. (2017).** "An Approximation of the Error Backpropagation Algorithm in a Predictive Coding Network." Neural Computation, 29(5):1229–1262.
+15. **Journé, A. et al. (2023).** "Hebbian Deep Learning Without Feedback." ICLR 2023.
+16. **Lillicrap, T.P. et al. (2016).** "Random Synaptic Feedback Weights Support Error Backpropagation for Deep Learning." Nature Communications, 7:13276.
 | **M3a: Sequence Learning** | Hebbian network learns n-gram transitions, Reber grammar, toy language (100 words, 5 rules) | Experiment log |
 | **M3b: Predictive Hebbian** | Prediction error as teaching signal outperforms basic Hebbian on sequential tasks | Experiment log |
 | **M3c: First LM** | 100M ternary Hebbian Transformer generates coherent paragraphs on TinyStories | Perplexity + human eval |
