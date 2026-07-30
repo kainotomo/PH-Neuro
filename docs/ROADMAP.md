@@ -112,9 +112,9 @@ Two fields that have NEVER been combined:
 
 | Phase | Title | Status | Key Result |
 |:------|:------|:------:|:-----------|
-| **3A** | **Track A: Low-Memory Supervised Baselines** | 🟢 **IN PROGRESS** | L1: Ternary STE beats Hebbian ceiling ✅ (98.17% MNIST); CIFAR-10/100 running |
-| 3A.1 | STE TernaryLinear Implementation | 🟡 **PLANNED** | Replace Hebbian update with STE backprop; reuse existing TernaryTensor + hysteresis |
-| 3A.2 | Baseline Suite: MNIST/Fashion-MNIST/KMNIST/CIFAR-10/CIFAR-100 | 🟡 **PLANNED** | 5 variants (Ternary STE, FP16, INT8 QAT, INT4 QAT, Hebbian v1) × 5 datasets = 25 runs. See [`E009`](experiments/E009-ste-baseline-suite.md) |
+| **3A** | **Track A: Low-Memory Supervised Baselines** | ✅ **L1 COMPLETE** | L1: 25/25 runs done. Ternary STE beats Hebbian ✅ (98.17% MNIST). M3+M4 achieved. Next: L2 (Hysteresis-STE) |
+| 3A.1 | STE TernaryLinear Implementation | ✅ **COMPLETED** | `TernarySTELinear`, `TernarySTEConv2d` + `_STESign` autograd. 22/22 tests pass |
+| 3A.2 | Baseline Suite: MNIST/Fashion-MNIST/KMNIST/CIFAR-10/CIFAR-100 | ✅ **COMPLETED** | All 5 variants × 5 datasets = 25 runs done. See [`E009`](experiments/E009-ste-baseline-suite.md) |
 | 3A.3 | Hysteresis-STE Algorithm | ⬜ | Novel training method: dual-threshold hysteresis as STE regularizer |
 | 3A.4 | Forgetting Baseline (no CL mechanism) | ⬜ | Control experiment: how much does standard SGD forget with ternary weights? |
 | 3A.5 | Memory & Speed Benchmarks | ⬜ | Packed ternary inference speed vs FP16/INT8; training memory footprint |
@@ -788,13 +788,14 @@ docs/experiments/
 ├── 006-cnn-cifar10-multilayer.md
 ├── 007-float-hebbian-baseline.md
 ├── 008-softhebb-reproduction.md
-├── 009-ngram-hebbian-prediction.md
-├── 010-reber-grammar-hebbian.md
-├── 011-toy-language-hebbian.md
-├── 012-predictive-vs-basic-hebbian.md
-├── 013-echo-state-memory-ablation.md
-├── 014-100m-lm-tinystories.md
-├── 015-1b-lm-pretrain.md
+├── 009-ste-baseline-suite.md  ✅ L1 COMPLETE
+├── 010-ngram-hebbian-prediction.md
+├── 011-reber-grammar-hebbian.md
+├── 012-toy-language-hebbian.md
+├── 013-predictive-vs-basic-hebbian.md
+├── 014-echo-state-memory-ablation.md
+├── 015-100m-lm-tinystories.md
+├── 016-1b-lm-pretrain.md
 └── ...
 ```
 
