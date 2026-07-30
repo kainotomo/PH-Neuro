@@ -9,7 +9,7 @@ from __future__ import annotations
 import torch
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from torchvision.datasets import CIFAR10, MNIST
+from torchvision.datasets import CIFAR10, CIFAR100, FashionMNIST, KMNIST, MNIST
 
 
 # ── MNIST dataset helpers ──────────────────────────────────────────
@@ -44,6 +44,147 @@ def get_mnist_loaders(
 
     train_dataset = MNIST(root=root, train=True, download=True, transform=transform)
     test_dataset = MNIST(root=root, train=False, download=True, transform=transform)
+
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=num_workers,
+    )
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+    )
+
+    return train_loader, test_loader
+
+
+# ── Fashion-MNIST ──────────────────────────────────────────────────
+
+
+def get_fashion_mnist_loaders(
+    batch_size: int = 128,
+    root: str = "./data",
+    num_workers: int = 2,
+) -> tuple[DataLoader, DataLoader]:
+    """Get Fashion-MNIST train and test data loaders.
+
+    Args:
+        batch_size: Batch size for both loaders.
+        root: Root directory for dataset storage.
+        num_workers: Number of data loading workers.
+
+    Returns:
+        Tuple of ``(train_loader, test_loader)``.
+    """
+    transform = transforms.Compose(
+        [
+            transforms.ToTensor(),
+            transforms.Normalize((0.2860,), (0.3530,)),
+        ]
+    )
+
+    train_dataset = FashionMNIST(root=root, train=True, download=True, transform=transform)
+    test_dataset = FashionMNIST(root=root, train=False, download=True, transform=transform)
+
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=num_workers,
+    )
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+    )
+
+    return train_loader, test_loader
+
+
+# ── KMNIST ─────────────────────────────────────────────────────────
+
+
+def get_kmnist_loaders(
+    batch_size: int = 128,
+    root: str = "./data",
+    num_workers: int = 2,
+) -> tuple[DataLoader, DataLoader]:
+    """Get Kuzushiji-MNIST train and test data loaders.
+
+    Args:
+        batch_size: Batch size for both loaders.
+        root: Root directory for dataset storage.
+        num_workers: Number of data loading workers.
+
+    Returns:
+        Tuple of ``(train_loader, test_loader)``.
+    """
+    transform = transforms.Compose(
+        [
+            transforms.ToTensor(),
+            transforms.Normalize((0.1918,), (0.3483,)),
+        ]
+    )
+
+    train_dataset = KMNIST(root=root, train=True, download=True, transform=transform)
+    test_dataset = KMNIST(root=root, train=False, download=True, transform=transform)
+
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=num_workers,
+    )
+    test_loader = DataLoader(
+        test_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+    )
+
+    return train_loader, test_loader
+
+
+# ── CIFAR-100 ──────────────────────────────────────────────────────
+
+
+def get_cifar100_loaders(
+    batch_size: int = 128,
+    root: str = "./data",
+    num_workers: int = 2,
+) -> tuple[DataLoader, DataLoader]:
+    """Get CIFAR-100 train and test data loaders.
+
+    Args:
+        batch_size: Batch size for both loaders.
+        root: Root directory for dataset storage.
+        num_workers: Number of data loading workers.
+
+    Returns:
+        Tuple of ``(train_loader, test_loader)``.
+    """
+    transform_train = transforms.Compose(
+        [
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
+        ]
+    )
+
+    transform_test = transforms.Compose(
+        [
+            transforms.ToTensor(),
+            transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
+        ]
+    )
+
+    train_dataset = CIFAR100(root=root, train=True, download=True, transform=transform_train)
+    test_dataset = CIFAR100(root=root, train=False, download=True, transform=transform_test)
 
     train_loader = DataLoader(
         train_dataset,

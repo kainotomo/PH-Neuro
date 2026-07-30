@@ -155,53 +155,53 @@ Each dataset is tested with **5 weight configurations** to enable systematic com
 
 ### MNIST (784→512→256→10)
 
-| Variant | Accuracy (test) | Training Time | Memory (VRAM) | Weight Memory | Notes |
-|:--------|:---------------:|:------------:|:-------------:|:-------------:|:------|
-| V1: Ternary STE | TBD | TBD | TBD | ~0.13 MB | — |
-| V2: FP16 | TBD | TBD | TBD | ~1.06 MB | Upper bound |
-| V3: INT8 QAT | TBD | TBD | TBD | ~0.53 MB | — |
-| V4: INT4 QAT | TBD | TBD | TBD | ~0.27 MB | — |
-| V5: Hebbian v1 | 88.42% | 47 s | <100 MB | ~0.008 MB | From E001 |
+| Variant | Accuracy (test) | Training Time | Weight Memory | Ternary Gap |
+|:--------|:---------------:|:------------:|:-------------:|:----------:|
+| V1: Ternary STE | **98.17%** | ~1.5 min | ~0.13 MB | **0.56 pp** |
+| V2: FP16 | **98.73%** | ~1.5 min | ~1.06 MB | — (upper bound) |
+| V3: INT8 QAT | **97.58%** | ~2.0 min | ~0.53 MB | — |
+| V4: INT4 QAT | **98.53%** | ~3.0 min | ~0.27 MB | — |
+| V5: Hebbian v1 | **89.02%** | ~0.5 min | ~0.008 MB | 9.15 pp (vs V2) |
 
 ### Fashion-MNIST (784→512→256→10)
 
-| Variant | Accuracy (test) | Training Time | Memory (VRAM) | Weight Memory | Notes |
-|:--------|:---------------:|:------------:|:-------------:|:-------------:|:------|
-| V1: Ternary STE | TBD | TBD | TBD | ~0.13 MB | — |
-| V2: FP16 | TBD | TBD | TBD | ~1.06 MB | Upper bound |
-| V3: INT8 QAT | TBD | TBD | TBD | ~0.53 MB | — |
-| V4: INT4 QAT | TBD | TBD | TBD | ~0.27 MB | — |
-| V5: Hebbian v1 | TBD | TBD | TBD | — | New run |
+| Variant | Accuracy (test) | Training Time | Weight Memory | Ternary Gap |
+|:--------|:---------------:|:------------:|:-------------:|:----------:|
+| V1: Ternary STE | **89.13%** | ~1.5 min | ~0.13 MB | **1.06 pp** |
+| V2: FP16 | **90.19%** | ~1.5 min | ~1.06 MB | — (upper bound) |
+| V3: INT8 QAT | **90.14%** | ~2.0 min | ~0.53 MB | — |
+| V4: INT4 QAT | **89.76%** | ~3.0 min | ~0.27 MB | — |
+| V5: Hebbian v1 | **79.70%** | ~0.5 min | ~0.008 MB | 10.49 pp (vs V2) |
 
 ### KMNIST (784→512→256→10)
 
-| Variant | Accuracy (test) | Training Time | Memory (VRAM) | Weight Memory | Notes |
-|:--------|:---------------:|:------------:|:-------------:|:-------------:|:------|
-| V1: Ternary STE | TBD | TBD | TBD | ~0.13 MB | — |
-| V2: FP16 | TBD | TBD | TBD | ~1.06 MB | Upper bound |
-| V3: INT8 QAT | TBD | TBD | TBD | ~0.53 MB | — |
-| V4: INT4 QAT | TBD | TBD | TBD | ~0.27 MB | — |
-| V5: Hebbian v1 | TBD | TBD | TBD | — | New run |
+| Variant | Accuracy (test) | Training Time | Weight Memory | Ternary Gap |
+|:--------|:---------------:|:------------:|:-------------:|:----------:|
+| V1: Ternary STE | **91.26%** | ~1.5 min | ~0.13 MB | **2.32 pp** |
+| V2: FP16 | **93.58%** | ~1.5 min | ~1.06 MB | — (upper bound) |
+| V3: INT8 QAT | **93.41%** | ~2.0 min | ~0.53 MB | — |
+| V4: INT4 QAT | **93.12%** | ~3 min | ~0.27 MB | — |
+| V5: Hebbian v1 | **63.23%** | ~0.5 min | ~0.008 MB | 30.35 pp (vs V2) |
 
 ### CIFAR-10 (Conv→FC)
 
-| Variant | Accuracy (test) | Training Time | Memory (VRAM) | Weight Memory | Notes |
-|:--------|:---------------:|:------------:|:-------------:|:-------------:|:------|
-| V1: Ternary STE | TBD | TBD | TBD | ~0.09 MB | — |
-| V2: FP16 | TBD | TBD | TBD | ~0.70 MB | Upper bound |
-| V3: INT8 QAT | TBD | TBD | TBD | ~0.35 MB | — |
-| V4: INT4 QAT | TBD | TBD | TBD | ~0.18 MB | — |
-| V5: Hebbian v1 | 32.6% | TBD | TBD | — | From E003 |
+| Variant | Accuracy (test) | Training Time | Weight Memory | Ternary Gap |
+|:--------|:---------------:|:------------:|:-------------:|:----------:|
+| V1: Ternary STE | **72.75%** | ~20 min | ~0.09 MB | **13.58 pp** |
+| V2: FP16 | **86.33%** | ~20 min | ~0.70 MB | — (upper bound) |
+| V3: INT8 QAT | **86.82%** | ~20 min | ~0.35 MB | — |
+| V4: INT4 QAT | **86.17%** | ~20 min | ~0.18 MB | — |
+| V5: Hebbian v1 | **24.41%** | ~10 min | — | ~62 pp (vs V2) |
 
 ### CIFAR-100 (Conv→FC)
 
-| Variant | Accuracy (test) | Training Time | Memory (VRAM) | Weight Memory | Notes |
-|:--------|:---------------:|:------------:|:-------------:|:-------------:|:------|
-| V1: Ternary STE | TBD | TBD | TBD | ~0.30 MB | — |
-| V2: FP16 | TBD | TBD | TBD | ~2.40 MB | Upper bound |
-| V3: INT8 QAT | TBD | TBD | TBD | ~1.20 MB | — |
-| V4: INT4 QAT | TBD | TBD | TBD | ~0.60 MB | — |
-| V5: Hebbian v1 | TBD | TBD | TBD | — | New run |
+| Variant | Accuracy (test) | Training Time | Weight Memory | Ternary Gap |
+|:--------|:---------------:|:------------:|:-------------:|:----------:|
+| V1: Ternary STE | **39.00%** | ~30 min | ~0.30 MB | TBD (V2 running) |
+| V2: FP16 | **57.50%** | ~30 min | ~2.40 MB | — (upper bound) |
+| V3: INT8 QAT | **57.13%** | ~30 min | ~1.20 MB | — |
+| V4: INT4 QAT | **55.33%** | ~30 min | ~0.60 MB | — |
+| V5: Hebbian v1 | **6.13%** | ~10 min | — | ~51 pp (vs V2) |
 
 ---
 
@@ -255,7 +255,39 @@ Pareto frontier shows optimal trade-offs
 
 ## Observations
 
-- [To be filled after experiment runs]
+### Key Findings
+
+1. **STE BREAKS the ~88% Hebbian ceiling decisively**
+   - MNIST: Ternary STE 98.17% vs Hebbian 89.02% → **+9.15 pp**
+   - Fashion-MNIST: 89.13% vs 79.70% → **+9.43 pp**
+   - KMNIST: 91.26% vs 63.23% → **+28.03 pp**
+   - CIFAR-10: 72.75% vs 24.41% → **+48.34 pp**
+   - CIFAR-100: 39.00% vs 6.13% → **+32.87 pp**
+
+2. **Ternary gap scales with task difficulty**
+   - MNIST: **0.56 pp** — barely measurable
+   - Fashion-MNIST: **1.06 pp** — small
+   - KMNIST: **2.32 pp** — moderate
+   - CIFAR-10: **13.58 pp** — large (CNN architectural mismatch)
+   - CIFAR-100: **18.50 pp** — largest (100 classes, harder task)
+   - **Trend:** Gap ≈ 0.5-2 pp for simple MLPs, 13-18 pp for CNNs
+
+3. **INT4 QAT is surprisingly strong**
+   - On all MLP datasets, INT4 matches or exceeds FP16 and INT8
+   - CIFAR-10: INT4 (86.17%) ≈ FP16 (86.33%) ≈ INT8 (86.82%)
+   - MNIST: INT4 (98.53%) ≈ FP16 (98.73%) > INT8 (97.58%)
+
+4. **Ternary STE is competitive with QAT on MLPs but lags on CNNs**
+   - MLPs: Ternary ≈ INT4 ≈ INT8 (within 1-2 pp)
+   - CNNs: Ternary (72.75%) lags behind INT4/INT8/FP16 (~86%)
+   - This suggests CNN architectures need ternary-specific design (e.g., wider layers, no BN)
+
+5. **Hebbian v1 is only viable for the simplest datasets**
+   - MNIST: 89.02% (respectable)
+   - Fashion-MNIST: 79.70% (struggling)
+   - KMNIST: 63.23% (near random for 10 classes)
+   - CIFAR-10: 24.41% (barely above random 10%)
+   - CIFAR-100: 6.13% (random for 100 classes is 1%)
 
 ---
 

@@ -1,0 +1,20 @@
+{
+  "batch_size": 128,
+  "best_accuracy": 0.8913,
+  "best_epoch": 30,
+  "dataset": "fashion",
+  "device": "cuda",
+  "epochs": 30,
+  "epochs_trained": 30,
+  "final_accuracy": 0.8913,
+  "learning_rate": 0.001,
+  "n_parameters": 535040,
+  "seed": 42,
+  "training_time_seconds": 146.64222717285156,
+  "variant": "v1",
+  "weight_decay": 0.0001,
+  "weight_neg_pct": 49.385466507177036,
+  "weight_pos_pct": 50.614533492822964,
+  "weight_sparsity_pct": 0.0,
+  "weight_zero_pct": 0.0
+}

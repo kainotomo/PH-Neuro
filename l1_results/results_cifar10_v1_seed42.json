@@ -1,0 +1,20 @@
+{
+  "batch_size": 128,
+  "best_accuracy": 0.7275,
+  "best_epoch": 76,
+  "dataset": "cifar10",
+  "device": "cuda",
+  "epochs": 100,
+  "epochs_trained": 86,
+  "final_accuracy": 0.7215,
+  "learning_rate": 0.001,
+  "n_parameters": 4274880,
+  "seed": 42,
+  "training_time_seconds": 1225.0899493694305,
+  "variant": "v1",
+  "weight_decay": 0.0001,
+  "weight_neg_pct": 51.87121041994161,
+  "weight_pos_pct": 48.12878958005839,
+  "weight_sparsity_pct": 0.0,
+  "weight_zero_pct": 0.0
+}

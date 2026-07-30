@@ -1,0 +1,20 @@
+{
+  "batch_size": 128,
+  "best_accuracy": 0.6323,
+  "best_epoch": 3,
+  "dataset": "kmnist",
+  "device": "cuda",
+  "epochs": 30,
+  "epochs_trained": 30,
+  "final_accuracy": 0.6106,
+  "learning_rate": 0.001,
+  "n_parameters": 7840,
+  "seed": 42,
+  "training_time_seconds": 228.36070251464844,
+  "variant": "v5",
+  "weight_decay": 0.0001,
+  "weight_neg_pct": 18.635204081632654,
+  "weight_pos_pct": 19.426020408163264,
+  "weight_sparsity_pct": 61.93877551020408,
+  "weight_zero_pct": 61.93877551020408
+}
