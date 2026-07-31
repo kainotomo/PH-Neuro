@@ -16,6 +16,7 @@ import torch.nn as nn
 from ph_neuro.layers.ste_conv import TernarySTEConv2d
 from ph_neuro.layers.ste_hysteresis import HysteresisSTEConv2d, HysteresisSTELinear
 from ph_neuro.layers.ste_linear import TernarySTELinear
+from ph_neuro.layers.ste_lora import TernarySTELoRALinear
 
 
 def ste_mlp(
@@ -103,6 +104,66 @@ def ste_cnn(
         # Output layer (no activation — raw logits)
         TernarySTELinear(512, n_classes),
     ]
+
+    model = nn.Sequential(*layers)
+    if device is not None:
+        model = model.to(device)
+    return model
+
+
+# ── LoRA-STE Model Factories ────────────────────────────────────────
+
+
+def ste_mlp_lora(
+    layer_sizes: Sequence[int],
+    r: int = 4,
+    alpha: float | None = None,
+    batch_norm: bool = True,
+    flatten: bool = True,
+    device: torch.device | str | None = None,
+) -> nn.Sequential:
+    """Build an MLP with ternary STE + LoRA layers.
+
+    Uses :class:`TernarySTELoRALinear` layers, which combine a frozen
+    ternary backbone with trainable low-rank adapters. The architecture
+    mirrors :func:`ste_mlp` (same widths, ReLU + BatchNorm after hidden
+    layers) so results are directly comparable.
+
+    The backbone is **not** frozen by this factory; call
+    :func:`ph_neuro.layers.freeze_backbone` after loading pre-trained
+    weights to lock the ternary weights.
+
+    Args:
+        layer_sizes: Sequence of layer sizes, e.g. ``[784, 512, 256, 10]``.
+        r: LoRA rank for every layer.
+        alpha: LoRA scaling constant (defaults to ``r``).
+        batch_norm: Whether to insert ``BatchNorm1d`` after each hidden layer.
+        flatten: If ``True``, prepend ``nn.Flatten()`` for image inputs.
+        device: Torch device.
+
+    Returns:
+        ``nn.Sequential`` with LoRA-STE linear layers.
+    """
+    layers: list[nn.Module] = []
+    sizes = list(layer_sizes)
+
+    if flatten:
+        layers.append(nn.Flatten())
+
+    for i in range(len(sizes) - 1):
+        layers.append(
+            TernarySTELoRALinear(
+                sizes[i],
+                sizes[i + 1],
+                r=r,
+                alpha=alpha,
+                bias=not batch_norm,
+            )
+        )
+        if i < len(sizes) - 2:
+            layers.append(nn.ReLU(inplace=True))
+            if batch_norm:
+                layers.append(nn.BatchNorm1d(sizes[i + 1]))
 
     model = nn.Sequential(*layers)
     if device is not None:

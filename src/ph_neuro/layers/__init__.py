@@ -10,6 +10,15 @@ from ph_neuro.layers.embedding import TernaryHebbianEmbedding
 from ph_neuro.layers.linear import TernaryHebbianLinear
 from ph_neuro.layers.ste_linear import TernarySTELinear, ste_sign
 from ph_neuro.layers.ste_conv import TernarySTEConv2d
+from ph_neuro.layers.ste_lora import (
+    TernarySTELoRALinear,
+    count_lora_parameters,
+    freeze_backbone,
+    get_model_lora_state,
+    iter_lora_layers,
+    load_model_lora_state,
+    reset_lora,
+)
 from ph_neuro.layers.ste_hysteresis import (
     HysteresisSTEConv2d,
     HysteresisSTELinear,
@@ -29,6 +38,13 @@ __all__ = [
     "TernaryHebbianAttention",
     "TernarySTELinear",
     "TernarySTEConv2d",
+    "TernarySTELoRALinear",
+    "iter_lora_layers",
+    "freeze_backbone",
+    "get_model_lora_state",
+    "load_model_lora_state",
+    "reset_lora",
+    "count_lora_parameters",
     "ste_sign",
     "ste_sign_hysteresis",
     "HysteresisSTELinear",

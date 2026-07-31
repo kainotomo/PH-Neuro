@@ -1,0 +1,168 @@
+{
+  "accuracy_matrix": [
+    [
+      0.9990543735224586
+    ],
+    [
+      0.7172576832151301,
+      0.9941234084231146
+    ],
+    [
+      0.2359338061465721,
+      0.8937316356513222,
+      0.9973319103521878
+    ],
+    [
+      0.46761229314420805,
+      0.8325171400587659,
+      0.651547491995731,
+      0.9944612286002014
+    ],
+    [
+      0.5432624113475177,
+      0.7473065621939275,
+      0.17662753468516543,
+      0.8620342396777442,
+      0.9858799798285426
+    ]
+  ],
+  "batch_size": 128,
+  "device": "cuda",
+  "epochs_per_task": 10,
+  "ewc_gamma": 1.0,
+  "ewc_lambda": 10000.0,
+  "ewc_online": true,
+  "experiment": "B1 EWC + Ternary STE",
+  "fisher_samples": 500,
+  "global_accuracies": [
+    0.218,
+    0.1408,
+    0.0481,
+    0.0852,
+    0.1054
+  ],
+  "learning_rate": 0.001,
+  "metrics": {
+    "average_accuracy": 0.6630221455465795,
+    "average_forgetting": 0.33114803459872155,
+    "per_task_accuracy": [
+      0.5432624113475177,
+      0.7473065621939275,
+      0.17662753468516543,
+      0.8620342396777442,
+      0.9858799798285426
+    ],
+    "per_task_forgetting": [
+      0.4557919621749409,
+      0.2468168462291871,
+      0.8207043756670224,
+      0.1324269889224572,
+      0.0
+    ]
+  },
+  "n_parameters": 536576,
+  "n_tasks": 5,
+  "per_task_accuracies": {
+    "after_task_0": [
+      0.9990543735224586
+    ],
+    "after_task_1": [
+      0.7172576832151301,
+      0.9941234084231146
+    ],
+    "after_task_2": [
+      0.2359338061465721,
+      0.8937316356513222,
+      0.9973319103521878
+    ],
+    "after_task_3": [
+      0.46761229314420805,
+      0.8325171400587659,
+      0.651547491995731,
+      0.9944612286002014
+    ],
+    "after_task_4": [
+      0.5432624113475177,
+      0.7473065621939275,
+      0.17662753468516543,
+      0.8620342396777442,
+      0.9858799798285426
+    ]
+  },
+  "protocol": "split",
+  "seed": 42,
+  "total_training_time_seconds": 20.22337293624878,
+  "training_metrics": [
+    {
+      "final_loss": 0.00029515619605819407,
+      "final_train_acc": 0.9999210422424003,
+      "training_time": 2.8260955810546875
+    },
+    {
+      "final_loss": 0.02788145869874177,
+      "final_train_acc": 0.9959467284308049,
+      "training_time": 3.199000835418701
+    },
+    {
+      "final_loss": 0.005375585115732084,
+      "final_train_acc": 0.9992009233774305,
+      "training_time": 3.1285898685455322
+    },
+    {
+      "final_loss": 0.01664593793095708,
+      "final_train_acc": 0.9984404498071082,
+      "training_time": 3.5909037590026855
+    },
+    {
+      "final_loss": 0.025616912776762146,
+      "final_train_acc": 0.9975423728813559,
+      "training_time": 3.6285171508789062
+    }
+  ],
+  "weight_decay": 0.0001,
+  "weight_format": "ternary",
+  "weight_snapshots": {
+    "-1": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 50.01214862440192,
+      "weight_pos_pct": 49.98785137559808,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "0": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 50.213441985645936,
+      "weight_pos_pct": 49.786558014354064,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "1": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.94336872009569,
+      "weight_pos_pct": 50.05663127990431,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "2": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.79104366028708,
+      "weight_pos_pct": 50.20895633971292,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "3": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.784128289473685,
+      "weight_pos_pct": 50.215871710526315,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    },
+    "4": {
+      "n_parameters": 535040.0,
+      "weight_neg_pct": 49.86318779904306,
+      "weight_pos_pct": 50.13681220095694,
+      "weight_sparsity_pct": 0.0,
+      "weight_zero_pct": 0.0
+    }
+  }
+}
