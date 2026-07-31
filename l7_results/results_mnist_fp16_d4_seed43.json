@@ -1,0 +1,67 @@
+{
+  "experiment": "L7",
+  "dataset": "mnist",
+  "weight_format": "fp16",
+  "depth": 4,
+  "layer_sizes": [
+    784,
+    308,
+    308,
+    308,
+    308,
+    10
+  ],
+  "seed": 43,
+  "device": "cuda",
+  "epochs": 30,
+  "batch_size": 128,
+  "learning_rate": 0.001,
+  "weight_decay": 0.0001,
+  "n_parameters": 531608,
+  "best_accuracy": 0.9864,
+  "best_epoch": 28,
+  "final_accuracy": 0.9861,
+  "training_time_seconds": 62.60410284996033,
+  "epochs_trained": 30,
+  "weight_sparsity_pct": 15.225316398549307,
+  "weight_zero_pct": 0.0,
+  "weight_pos_pct": 0.0,
+  "weight_neg_pct": 0.0,
+  "per_layer": [
+    {
+      "layer_name": "1",
+      "n_params": 241472,
+      "mean": -9.667566337157041e-05,
+      "std": 0.04954604059457779,
+      "near_zero_pct": 18.841521998409753
+    },
+    {
+      "layer_name": "4",
+      "n_params": 94864,
+      "mean": -0.0005179553991183639,
+      "std": 0.06399670988321304,
+      "near_zero_pct": 12.433589138134593
+    },
+    {
+      "layer_name": "7",
+      "n_params": 94864,
+      "mean": -0.0014966863673180342,
+      "std": 0.06566718220710754,
+      "near_zero_pct": 12.0751813121943
+    },
+    {
+      "layer_name": "10",
+      "n_params": 94864,
+      "mean": -0.0054557593539357185,
+      "std": 0.0628732442855835,
+      "near_zero_pct": 12.5
+    },
+    {
+      "layer_name": "13",
+      "n_params": 3080,
+      "mean": -0.011166851036250591,
+      "std": 0.08227989822626114,
+      "near_zero_pct": 5.616883116883117
+    }
+  ]
+}

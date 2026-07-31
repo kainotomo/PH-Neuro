@@ -69,6 +69,50 @@ Both share the ternary weight philosophy. PH-Net uses proven methods (gradient d
 
 ---
 
+## STE Era (v2) — Current Experiments (July 2026 onward)
+
+After the Hebbian research phase closed, PH-Neuro **pivoted to STE backpropagation with ternary weights** — the approach proven at scale by BitNet b1.58, CAT-Q, and Neutrino-8B. The infrastructure (packed tensors, hysteresis, flip-rate tracking, 200+ tests) now supports dual-track research into **low-memory supervised learning** and **continual learning with ternary weights**.
+
+### Experiment Summary
+
+| ID | Experiment | Status | Key Result |
+|:---|:-----------|:------:|:-----------|
+| **L1** | Ternary STE Baseline Suite (5 datasets × 5 variants) | ✅ | MNIST 98.17% — beats the 88% Hebbian ceiling by **+9.15 pp**. See [`E009`](docs/experiments/E009-ste-baseline-suite.md) |
+| **L2** | Hysteresis-STE algorithm (dual-threshold regularizer) | 🟡 Code complete | Layers, runner, sweep script, 35 tests — awaiting full run |
+| **L5** | BatchNorm → ElementWiseAffine fusion | ✅ | Accuracy preserved; CPU/edge inference win. See [`E011`](docs/experiments/E011-l5-batchnorm-fusion.md) |
+| **L7** | Depth vs Width Scaling (fixed 530K budget) | ✅ | Depth helps ternary **more** than FP16; no STE gradient degradation. See [`E012`](docs/experiments/E012-l7-depth-vs-width.md) |
+| **L8** | Forgetting Baseline (control for Track B) | ✅ | Ternary ≈ FP16 forgetting (gap <1 pp). See [`E010`](docs/experiments/E010-l8-forgetting-baseline.md) |
+
+### L7 Depth vs Width Scaling (latest)
+
+At a fixed parameter budget (~530K), 5 equal-width depth configs × Ternary STE vs FP16 × 3 seeds (30 runs) on MNIST:
+
+| Depth | Ternary STE | FP16 | Ternary Gap |
+|:-----:|:-----------:|:----:|:-----------:|
+| D=1 | 97.86% | 98.53% | 0.67 pp |
+| D=2 | 98.15% | 98.56% | 0.41 pp |
+| **D=3** | **98.27%** | 98.68% | 0.41 pp |
+| D=4 | 98.26% | 98.68% | 0.42 pp |
+| D=5 | 98.24% | 98.69% | 0.45 pp |
+
+**Key findings:**
+1. **Depth scaling works for ternary STE** — the hypothesis that repeated STE sign ops cause gradient degradation is **falsified**. Ternary gains *more* from depth than FP16 (+0.41 pp vs +0.15 pp from D=1→D=3).
+2. **Ternary gap is flat** (~0.4–0.7 pp) across all depths — no ternary depth penalty.
+3. **Optimal config at this budget:** D=3 `[784, 353, 353, 353, 10]` → 98.27%.
+4. **0% weight sparsity** at all depths (standard STE + AdamW → all weights ±1, no implicit regularization).
+
+### Track B (Continual Learning) — Planned
+
+| ID | Experiment | Status |
+|:---|:-----------|:------:|
+| B1 | EWC + Ternary STE on Split MNIST | ⬜ |
+| B2 | QLoRA + Frozen Ternary Backbone | ⬜ |
+| B3 | Ternary vs INT8/INT4/FP16 continual learning | ⬜ |
+
+See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full plan.
+
+---
+
 ## Quick Start
 
 ```python

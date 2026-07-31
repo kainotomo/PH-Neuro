@@ -1,0 +1,75 @@
+{
+  "experiment": "L7",
+  "dataset": "mnist",
+  "weight_format": "fp16",
+  "depth": 5,
+  "layer_sizes": [
+    784,
+    278,
+    278,
+    278,
+    278,
+    278,
+    10
+  ],
+  "seed": 44,
+  "device": "cuda",
+  "epochs": 30,
+  "batch_size": 128,
+  "learning_rate": 0.001,
+  "weight_decay": 0.0001,
+  "n_parameters": 532648,
+  "best_accuracy": 0.9875,
+  "best_epoch": 25,
+  "final_accuracy": 0.9869,
+  "training_time_seconds": 61.4629340171814,
+  "epochs_trained": 30,
+  "weight_sparsity_pct": 14.615468376864271,
+  "weight_zero_pct": 0.0,
+  "weight_pos_pct": 0.0,
+  "weight_neg_pct": 0.0,
+  "per_layer": [
+    {
+      "layer_name": "1",
+      "n_params": 217952,
+      "mean": -0.00011903375707333907,
+      "std": 0.049765389412641525,
+      "near_zero_pct": 18.60455513140508
+    },
+    {
+      "layer_name": "4",
+      "n_params": 77284,
+      "mean": -0.00044596922816708684,
+      "std": 0.0652604028582573,
+      "near_zero_pct": 12.102116867656953
+    },
+    {
+      "layer_name": "7",
+      "n_params": 77284,
+      "mean": 0.000881104962900281,
+      "std": 0.06705699115991592,
+      "near_zero_pct": 11.5302003001915
+    },
+    {
+      "layer_name": "10",
+      "n_params": 77284,
+      "mean": -0.001437834114767611,
+      "std": 0.06467282027006149,
+      "near_zero_pct": 11.86403395269396
+    },
+    {
+      "layer_name": "13",
+      "n_params": 77284,
+      "mean": -0.00593122374266386,
+      "std": 0.06273137778043747,
+      "near_zero_pct": 12.301381916049895
+    },
+    {
+      "layer_name": "16",
+      "n_params": 2780,
+      "mean": -0.009052776731550694,
+      "std": 0.0779603123664856,
+      "near_zero_pct": 6.58273381294964
+    }
+  ]
+}

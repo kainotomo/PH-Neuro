@@ -1,0 +1,43 @@
+{
+  "experiment": "L7",
+  "dataset": "mnist",
+  "weight_format": "ternary",
+  "depth": 1,
+  "layer_sizes": [
+    784,
+    667,
+    10
+  ],
+  "seed": 43,
+  "device": "cuda",
+  "epochs": 30,
+  "batch_size": 128,
+  "learning_rate": 0.001,
+  "weight_decay": 0.0001,
+  "n_parameters": 529598,
+  "best_accuracy": 0.9781,
+  "best_epoch": 27,
+  "final_accuracy": 0.9772,
+  "training_time_seconds": 58.65344762802124,
+  "epochs_trained": 30,
+  "weight_sparsity_pct": 0.0,
+  "weight_zero_pct": 0.0,
+  "weight_pos_pct": 52.59838594556626,
+  "weight_neg_pct": 47.40161405443374,
+  "per_layer": [
+    {
+      "layer_name": "1",
+      "n_params": 522928,
+      "zero_pct": 0.0,
+      "pos_pct": 52.64147263103143,
+      "neg_pct": 47.35852736896857
+    },
+    {
+      "layer_name": "4",
+      "n_params": 6670,
+      "zero_pct": 0.0,
+      "pos_pct": 49.220389805097454,
+      "neg_pct": 50.779610194902546
+    }
+  ]
+}

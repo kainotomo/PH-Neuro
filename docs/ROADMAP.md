@@ -1,7 +1,7 @@
 # PH-Neuro Roadmap
 
 > **Status:** Strategic pivot — transitioning from Hebbian to STE-based ternary learning  
-> **Last updated:** 2026-07-30 (L5 BN Fusion ✅)
+> **Last updated:** 2026-07-31 (L7 Depth vs Width ✅)
 
 ---
 
@@ -123,7 +123,7 @@ Two fields that have NEVER been combined:
 | 3B.2 | QLoRA + Frozen Ternary Backbone | ⬜ | Freeze ternary weights, train only low-rank float adapters per task — zero forgetting by design |
 | 3B.3 | Multi-Head Ternary EWC (5 tasks) | ⬜ | Combine multi-head architecture with EWC for maximal protection |
 | 3B.4 | Comparison: Ternary vs INT8 vs INT4 vs FP16 CL | ⬜ | Replicate "When Less is More" but extend to ternary |
-| **4** | **Advanced Experiments** | 🟡 **L5 DONE** | Ternary distillation (L4), BN fusion (L5) ✅, depth scaling with fixed budget (L7) |
+| **4** | **Advanced Experiments** | 🟡 **L5 + L7 DONE** | Ternary distillation (L4), BN fusion (L5) ✅, depth scaling with fixed budget (L7) ✅ |
 | **5** | **Papers & Publication** | ⬜ | Paper 1: Low-Memory Vision (TinyML/ECCV), Paper 2: Continual Learning (NeurIPS/ICML) |
 
 ## Phase 3 — Track A: Low-Memory Supervised Experiments
@@ -193,6 +193,29 @@ Hysteresis-STE:
 **Hypothesis:** Hysteresis acts as a sparsity-promoting regularizer. Small latent weights stay at 0, only strong signals cross the threshold. This may improve generalization and reduce weight oscillation.
 
 **Ablation:** Compare standard STE vs Hysteresis-STE across θ_upper ∈ {0.3, 0.5, 1.0, 2.0} and θ_lower ∈ {0.1, 0.15, 0.3}.
+
+### L7: Depth vs Width Scaling
+**Goal:** Determine the optimal depth-to-width ratio for ternary STE networks at a fixed parameter budget (~530K, matching L1).
+
+**Experiment document:** [`docs/experiments/E012-l7-depth-vs-width.md`](experiments/E012-l7-depth-vs-width.md)
+
+**Design:** 5 equal-width depth configs (D=1..5) × Ternary STE vs FP16 × 3 seeds = **30 runs** on MNIST.
+
+**Results (30/30 runs completed):**
+
+| Depth | Ternary STE | FP16 | Gap |
+|:-----:|:-----------:|:----:|:---:|
+| D=1 | 97.86% | 98.53% | 0.67 pp |
+| D=2 | 98.15% | 98.56% | 0.41 pp |
+| D=3 | **98.27%** | 98.68% | 0.41 pp |
+| D=4 | 98.26% | 98.68% | 0.42 pp |
+| D=5 | 98.24% | 98.69% | 0.45 pp |
+
+**Key findings:**
+1. **Depth scaling works for ternary** — D=1→D=3 gives +0.41 pp for ternary vs +0.15 pp for FP16. The hypothesis that repeated STE sign ops cause gradient degradation is **FALSIFIED**.
+2. **Ternary gap is flat** (~0.4-0.7 pp) across all depths — no ternary depth penalty.
+3. **Optimal config**: D=3 `[784, 353, 353, 353, 10]` at 98.27%.
+4. **0% ternary sparsity** at all depths (standard STE + AdamW → all weights ±1).
 
 ### L8: Forgetting Baseline (Standard SGD)
 **Goal:** Measure how much standard ternary STE training forgets WITHOUT any continual learning mechanism. This is the control experiment for Track B.
