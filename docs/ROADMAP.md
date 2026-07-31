@@ -118,11 +118,11 @@ Two fields that have NEVER been combined:
 | 3A.3 | Hysteresis-STE Algorithm | ✅ **CODE COMPLETE** | Layers, runner, sweep script, aggregator, 35 tests — awaiting full run |
 | 3A.4 | Forgetting Baseline (no CL mechanism) | ✅ **COMPLETED** | 12/12 runs done. Ternary ≈ FP16 forgetting (gap <1 pp). See [`E010`](experiments/E010-l8-forgetting-baseline.md) |
 | 3A.5 | Memory & Speed Benchmarks | ⬜ | Packed ternary inference speed vs FP16/INT8; training memory footprint |
-| **3B** | **Track B: Continual Learning with Ternary STE** | 🟡 **B1 + B2 DONE** | EWC + ternary STE (B1) ✅, QLoRA + frozen ternary (B2) ✅ |
+| **3B** | **Track B: Continual Learning with Ternary STE** | 🟢 **B1 + B2 + B3 DONE** | EWC + ternary STE (B1) ✅, QLoRA + frozen ternary (B2) ✅, precision comparison (B3) ✅ |
 | 3B.1 | EWC + Ternary STE on Split MNIST | ✅ **COMPLETED** | EWC (λ=10000) reduces Split-MNIST forgetting 37.33%→**32.78%** (−4.55 pp) and raises accuracy 62.16%→**66.65%** (+4.48 pp). Permuted unchanged. See [`E013`](experiments/E013-b1-ewc-ternary-ste.md) |
 | 3B.2 | QLoRA + Frozen Ternary Backbone | ✅ **COMPLETED** | **Zero forgetting (0.00% ± 0.00) in all 30 runs.** r=64 beats L8/B1 by 32-53 pp: Split 99.43% (vs L8 62.16%), Permuted 86.84-92.55% (vs L8 41.92%). Weak `task1` backbone beats `full` on Permuted. See [`E014`](experiments/E014-b2-qlora-frozen-ternary.md) |
 | 3B.3 | Multi-Head Ternary EWC (5 tasks) | ⬜ | Combine multi-head architecture with EWC for maximal protection |
-| 3B.4 | Comparison: Ternary vs INT8 vs INT4 vs FP16 CL | ⬜ | Replicate "When Less is More" but extend to ternary |
+| 3B.4 | Comparison: Ternary vs INT8 vs INT4 vs FP16 CL | ✅ **COMPLETED** | **"When Less is More" confirmed but weak** — quantization cuts forgetting only 0.2-1.2 pp (INT8≈INT4 best, ternary between FP16 and INT8/INT4; NOT lowest). See [`E015`](experiments/E015-b3-precision-comparison.md) |
 | **4** | **Advanced Experiments** | 🟡 **L5 + L7 DONE** | Ternary distillation (L4), BN fusion (L5) ✅, depth scaling with fixed budget (L7) ✅ |
 | **5** | **Papers & Publication** | ⬜ | Paper 1: Low-Memory Vision (TinyML/ECCV), Paper 2: Continual Learning (NeurIPS/ICML) |
 
@@ -265,14 +265,16 @@ Inspired by TOM accelerator (arXiv:2602.20662) which implements QLoRA-based on-d
 ### B3: Comparison — Ternary vs INT8 vs INT4 vs FP16
 **Goal:** Replicate "When Less is More" (arXiv:2512.18934) findings but extend to ternary.
 
-| Precision | Expected Forgetting | Expected Accuracy |
-|:----------|:------------------:|:-----------------:|
-| FP16 | Highest (~36%) | Highest (~98%) |
-| INT8 | Medium (~25%) | High (~97%) |
-| INT4 | Low (~15%) | Medium (~95%) |
-| **Ternary** | **Lowest? (~8%)** | **Good? (~94%)** |
+| Precision | Expected Forgetting | Actual (Split / Permuted) | Expected Accuracy | Actual (Split / Permuted) |
+|:----------|:------------------:|:------------------------:|:-----------------:|:-------------------------:|
+| FP16 | Highest (~36%) | 37.55% / 55.52% | Highest (~98%) | 62.12% / 41.94% |
+| INT8 | Medium (~25%) | **37.06% / 54.40%** | High (~97%) | **62.54% / 43.08%** |
+| INT4 | Low (~15%) | 37.11% / 54.36% | Medium (~95%) | 62.50% / 43.07% |
+| **Ternary** | **Lowest? (~8%)** | 37.33% / 54.86% | **Good? (~94%)** | 62.16% / 41.92% |
 
-**Hypothesis:** Ternary provides the strongest quantization noise → best implicit regularization → lowest forgetting. This would be a novel finding.
+**Hypothesis:** Ternary provides the strongest quantization noise → best implicit regularization → lowest forgetting.
+
+**Results (2026-07-31, 12 new runs + 12 L8 reused):** The direction of "When Less is More" **holds but is weak** at MLP+MNIST scale — quantization reduces forgetting by only **0.2–1.2 pp** (not the ~11–28 pp hypothesized). Ranking: **FP16 > Ternary > INT8 ≈ INT4** (INT8/INT4 identical; effect saturates at 8-bit). **Ternary is NOT the lowest-forgetting precision** — it sits between FP16 and INT8/INT4. INT8/INT4 also give a small accuracy win over FP16 and ternary. L8 finding refined: INT8/INT4 < Ternary ≈ FP16. See [`E015`](experiments/E015-b3-precision-comparison.md).
 
 ---
 
