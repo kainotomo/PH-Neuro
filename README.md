@@ -87,10 +87,6 @@ The answer so far: **combine ternary networks with continual learning** — a re
 
 ## STE Era (v2) — Active
 
----
-
-## STE Era (v2) — Current Experiments (July 2026 onward)
-
 After the Hebbian research phase closed, PH-Neuro **pivoted to STE backpropagation with ternary weights** — the approach proven at scale by BitNet b1.58, CAT-Q, and Neutrino-8B. The infrastructure (packed tensors, hysteresis, flip-rate tracking, 200+ tests) now supports dual-track research into **low-memory supervised learning** and **continual learning with ternary weights**.
 
 ### Experiment Summary
