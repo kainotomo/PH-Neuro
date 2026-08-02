@@ -1,50 +1,58 @@
 # PH-Neuro
 
-> **Ternary Hebbian deep learning — no backpropagation.**
+> **Ternary deep learning — from Hebbian to STE.**
 >
 > Weights are {-1, 0, +1} like biological synapses: excitatory, inhibitory, or absent.
-> Learning is local, brain-inspired, and continuous.
-> No backward pass. No optimizer. No loss function.
+> Two eras: Hebbian (backprop-free, biological) → STE (backprop, scalable).
+> Research question: what can ternary networks do that nobody has tried?
 
 ---
 
 ## What is PH-Neuro?
 
-> 📚 **Research phase closed.** See [`docs/RESEARCH_SUMMARY.md`](docs/RESEARCH_SUMMARY.md) for the definitive summary of all 9 experiments and [`docs/PAPER_OUTLINE.md`](docs/PAPER_OUTLINE.md) for the paper outline.
+> 📚 **Phase 0-2 (Hebbian) closed.** See [`docs/RESEARCH_SUMMARY.md`](docs/RESEARCH_SUMMARY.md) for all 9 Hebbian experiments. **Phase 3 (STE) active** — see [`docs/ROADMAP.md`](docs/ROADMAP.md). See [`docs/PAPER_OUTLINE.md`](docs/PAPER_OUTLINE.md) for paper outlines.
 
-PH-Neuro is a **research framework** exploring a radical hypothesis: can we build useful neural networks that learn **without backpropagation**?
+PH-Neuro started as a **research framework** exploring a radical hypothesis: can we build useful neural networks that learn **without backpropagation**, using only Hebbian plasticity and ternary weights?
 
-Instead of gradient descent, PH-Neuro uses **Hebbian learning** — "neurons that fire together, wire together." Each synapse updates based only on the activity of the two neurons it connects. No global error signal. No chain rule. Just local correlation.
+After **9 experiments across 4 fundamentally different approaches**, the answer was definitive: **no.** Ternary Hebbian hidden layers hit a fundamental ~88% accuracy ceiling on MNIST regardless of depth. Hebbian learning optimizes for correlation, not classification — a fundamental limitation.
 
-Combined with **ternary weights** {-1, 0, +1}, this creates networks that are:
-- **Memory-efficient**: ~50× less training memory than backprop (no optimizer states, no gradient buffers)
-- **Compute-efficient**: ~6.5× fewer FLOPs (no backward pass, popcount MatMul)
-- **Continually learning**: No catastrophic forgetting — learn new tasks without erasing old ones
-- **Brain-inspired**: Local learning rules, stable discrete weights, homeostatic regulation
+**But the journey continued.** A systematic literature scan (July 2026) revealed that ternary networks CAN learn deep representations — just with STE backpropagation (BitNet, CAT-Q, Neutrino-8B). So PH-Neuro **pivoted to STE-based ternary training**, asking a new question:
+
+> *Given that ternary weights + STE backprop works, what else can we do that nobody has tried?*
+
+The answer so far: **combine ternary networks with continual learning** — a research gap no one had explored.
+
+### Key Results Across Both Eras
+
+| Era | Key Finding | Best Result |
+|:----|:------------|:-----------:|
+| **Hebbian** | All 9 approaches hit ~88% MNIST ceiling | WTA Hebbian: 88.4% single-layer |
+| **STE Supervised** | Ternary STE beats Hebbian by +10pp, gap to FP16 only 0.7pp | MNIST 98.0% (FP16: 98.7%) |
+| **STE Continual** | QLoRA + frozen ternary = 0% forgetting, 99.2% accuracy | Split MNIST, rank=8 |
+| **Hysteresis-STE** | Novel algorithm: 0%→95% sparsity at −0.25pp cost | MNIST 97.9% at 95.6% sparsity |
 
 ### PH-Neuro vs PH-Net
 
-| | PH-Net | PH-Neuro |
-|---|---|---|
-| **Learning** | STE + Backprop | Hebbian (no backprop) |
-| **Weights** | Ternary (from float latents) | Native ternary |
-| **Optimizer** | AdamW | None |
-| **Goal** | Train ternary LLMs for deployment | Explore backprop-free learning |
-| **Status** | Production path | Research project |
-
-Both share the ternary weight philosophy. PH-Net uses proven methods (gradient descent). PH-Neuro explores the alternative.
+| | PH-Net | PH-Neuro v1 (Hebbian) | PH-Neuro v2 (STE) |
+|---|---|---|---|
+| **Learning** | STE + Backprop | Hebbian (no backprop) | STE + Backprop |
+| **Optimizer** | AdamW | None | AdamW |
+| **Deep learning** | ✅ | ❌ ~88% ceiling | ✅ 98% MNIST |
+| **Continual learning** | ❌ (severe forgetting) | ⚠️ multi-head only | 🏆 0% via QLoRA |
+| **Goal** | Train ternary LLMs | Explore backprop-free | Low-memory + continual |
+| **Status** | Production path | Closed (July 2026) | Active |
 
 ---
 
 ## Why?
 
-1. **Scientific curiosity**: The brain learns without backprop. How far can we push biologically plausible learning?
-2. **Practical advantages**: If it works, Hebbian learning enables online learning on edge devices, continual adaptation, and training models on hardware that can't afford backprop's memory overhead.
-3. **Unexplored territory**: No paper has combined ternary weights with Hebbian learning. This is genuinely new.
+1. **Scientific**: The Hebbian era proved a fundamental negative result — ternary Hebbian hidden layers cannot learn. The STE era bridges two unexplored fields: ternary networks + continual learning.
+2. **Practical**: Ternary weights = 2 bits/weight, popcount MatMul, 3.88 GB for an 8B model. Combined with QLoRA, you get zero-forgetting edge deployment.
+3. **Unexplored**: No paper has combined ternary weights with continual learning. No paper has measured forgetting across FP16/INT8/INT4/ternary. PH-Neuro is first.
 
 ---
 
-## Current Status
+## Hebbian Era (v1) — Closed July 2026
 
 | Phase | Title | Status | Key Result |
 |:------|:------|:------:|:-----------|
@@ -52,20 +60,32 @@ Both share the ternary weight philosophy. PH-Net uses proven methods (gradient d
 | 1.1 | Multi-layer MLP | ✅ | 87.9% — depth doesn't help |
 | 1.2 | CNN on CIFAR-10 | ✅ | 32.6% — conv Hebbian ≈ random |
 | 1.3 | Continual Learning | ✅ | <5% multi-head ✅, single-head ❌ |
-| 2 | **Forward Signals & Three-Factor** | 🔴 **COMPLETE** | TFF-1 ✅ 87.9%, NTH-1 ✅ 88.15%, TFF-2 ❌ 86.81%, NTH-4 ❌ 85.79%, NTH-4b ❌ **86.68%**, TEP-1 ❌ **82.57%** — **ALL 9 approaches exhausted. No method trains ternary Hebbian hidden layers. Research phase closed.** |
-| 3-5 | Language Model & Scale | ⬜ | Closed — requires backprop or predictive coding |
+| 2 | Forward Signals & Three-Factor | 🔴 **CLOSED** | 9 approaches exhausted. TFF-1 87.9%, NTH-1 88.15%, TFF-2 86.81%, NTH-4b 86.68%, TEP-1 82.57%. **No method trains ternary Hebbian hidden layers.** |
 
-**Critical findings across 9 experiments:**
-1. **WTA Hebbian works** for single-task classification — but only on the output layer (88.4% MNIST)
-2. **Unsupervised Hebbian ≠ discriminative features** — H4 falsified: depth provides zero improvement (MLP 87.9% = 1-layer 88.4%, CNN 32.6% = random 33.0%)
-3. **Anti-Hebbian = gradient interference** — single-head continual learning fails (37% forgetting) because weakening wrong predictions destroys old knowledge
-4. **Multi-head works** — separate output neurons per task achieve <5% forgetting ✅
-5. **Forward-Forward + ternary ≠ hidden layer learning** — H5 falsified: TFF-2 achieves 86.81% (same as 1-layer). FF's popcount goodness trivially saturates; the contrastive signal doesn't create class-discriminative features.
-6. **Three-factor Hebbian works for output layer** — H7 verified (output): NTH-1 achieves 88.15% MNIST with label modulator M∈{-1,0,+1}.
-7. **Three-factor Hebbian fails for hidden layers** — H7 falsified (hidden): NTH-4 achieves 85.79% across all modulator propagation approaches. NTH-4b reaches 86.68% with dense continuous latent score feedback, but hidden flip rate is still ~0.000%/step — **sparsity was not the bottleneck.** The Hebbian correlation-based update cannot create discriminative features even with a perfect dense feedback pathway.
-8. **Equilibrium Propagation moves hidden weights but reduces accuracy** — TEP-1 achieves 0.005%/step hidden flip rate (first non-backprop method to do so) but accuracy drops to 82.57% — the EP signal pushes hidden representations in non-discriminative directions.
+**Definitive conclusion:** Ternary Hebbian hidden layers cannot learn class-discriminative features without backpropagation. See [`docs/RESEARCH_SUMMARY.md`](docs/RESEARCH_SUMMARY.md).
 
-**Definitive conclusion: All 9 experiments confirm that ternary Hebbian hidden layers cannot learn class-discriminative features without backpropagation.** Research phase is closed. See [`docs/experiments/E008-equilibrium-propagation-mnist.md`](docs/experiments/E008-equilibrium-propagation-mnist.md) for the full report.
+### Hebbian Critical Findings
+
+1. **WTA Hebbian works** — but only on output layer (88.4% MNIST)
+2. **Unsupervised Hebbian ≠ discriminative features** — depth provides zero improvement
+3. **Anti-Hebbian = gradient interference** — single-head continual learning fails (37% forgetting)
+4. **Multi-head works** — separate output neurons per task achieve <5% forgetting
+5. **Forward-Forward + ternary fails** — popcount goodness is not class-discriminative
+6. **Three-factor Hebbian fails for hidden layers** — even dense continuous feedback doesn't work
+7. **Equilibrium Propagation moves weights but hurts accuracy** — 82.57%, worst of all methods
+
+### Hebbian Conclusion
+
+| Approach | Best Accuracy | Verdict |
+|:---------|:------------:|:--------|
+| Unsupervised Hebbian | 87.9% | ❌ PCA, not classes |
+| Forward-Forward | 86.81% | ❌ Popcount is trivial |
+| Three-factor Hebbian | 86.68% | ❌ Correlation ≠ classification |
+| Equilibrium Propagation | 82.57% | ❌ Noisy, non-discriminative |
+
+---
+
+## STE Era (v2) — Active
 
 ---
 
@@ -117,8 +137,28 @@ See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full plan.
 
 ## Quick Start
 
+### STE Era (v2) — Recommended
+
 ```python
-import torch
+from ph_neuro.layers import TernarySTELinear
+from ph_neuro.models.ste_models import ste_mlp
+
+# Ternary STE model with AdamW
+model = ste_mlp(784, [512, 256], 10)
+optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
+loss_fn = torch.nn.CrossEntropyLoss()
+
+for x, y in train_loader:
+    optimizer.zero_grad()
+    out = model(x)
+    loss = loss_fn(out, y)
+    loss.backward()      # STE backward through ternary weights
+    optimizer.step()
+```
+
+### Hebbian Era (v1) — Legacy
+
+```python
 from ph_neuro import TernaryHebbianLinear, HebbianTrainer
 
 model = torch.nn.Sequential(
@@ -126,10 +166,8 @@ model = torch.nn.Sequential(
     torch.nn.Sign(),
     TernaryHebbianLinear(256, 10, theta_upper=5.0, theta_lower=1.0),
 )
-
 trainer = HebbianTrainer(model, lr=0.001, decay=1e-5)
 trainer.fit(train_loader, epochs=10)
-
 # No .backward(), no optimizer, no loss function.
 ```
 
@@ -165,46 +203,23 @@ Or individual test files:
 
 ---
 
-## Roadmap
-
-See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full development plan.
-
-| Phase | Milestone | Status | Key Result |
-|-------|-----------|--------|------------|
-| 0 | Core Mechanism | ✅ Complete | 88.4% MNIST, single-layer WTA Hebbian |
-| 1.1 | Multi-layer MLP on MNIST | ✅ Complete | 87.9%, depth doesn't help |
-| 1.2 | CNN on CIFAR-10 | ✅ Complete | 32.6%, conv Hebbian = random |
-| 1.3 | Continual Learning | ✅ Complete | **Primary contribution** — <5% multi-head forgetting |
-| 2 | Forward Signals & Three-Factor | 🔴 **DEFINITIVELY CLOSED** | TFF-1 (87.9%), NTH-1 (88.15%), TFF-2 (86.81%), NTH-4 (85.79%), NTH-4b (86.68%), **TEP-1 (82.57%)** — All 9 approaches exhausted. |
-| 3-5 | Language Model, Scale & Publish | ⬜ **On hold indefinitely** | Ternary Hebbian hidden layers cannot be trained without backprop. See research conclusion below. |
-
-### Definitive Research Conclusion
-
-After **9 experiments** across **4 fundamentally different approaches**, the evidence is conclusive:
-
-| Approach | Experiments | Best Accuracy | Verdict |
-|:---------|:-----------:|:------------:|:--------|
-| Unsupervised Hebbian | Phase 1.1, 1.2 | 87.9% | ❌ Learns PCA, not classes |
-| Forward-Forward | TFF-1, TFF-2 | 86.81% | ❌ Popcount goodness is trivial |
-| Three-factor Hebbian | NTH-1, NTH-4 (B/C/D) | 86.68% | ❌ Sparse weights kill feedback; dense feedback gives diffuse modulators |
-| Equilibrium Propagation | **TEP-1** | **82.57%** | ❌ Noisy targets; moving-target/stale-target instability |
-
-**Ternary Hebbian hidden layers cannot learn class-discriminative features without backpropagation.** The research phase of PH-Neuro is officially closed. All plausible methods have been tested and exhausted.
-
-**What remains:**
-- **Multi-head continual learning** (<5% forgetting) is a publishable result
-- **Predictive coding** is the only remaining non-backprop approach — but it requires floating-point error nodes and significant architectural changes
-
----
-
 ## Key References
 
-- **SoftHebb** (Journé et al., ICLR 2023) — SOTA Hebbian deep learning (float weights)
-- **BitNet b1.58** (Wang et al., 2024) — Ternary LLMs at 3B scale
-- **Forward-Forward** (Hinton, 2022) — Backprop-free learning with contrastive signals
-- **Predictive Coding** (Whittington & Bogacz, 2017) — Learning through prediction error minimization
+### STE Era (v2)
+- **BitNet b1.58** (Ma et al., 2024) — Ternary LLMs at scale via STE
+- **BitNet v2** (Wang et al., 2025) — 4-bit activations with Hadamard transform
+- **CAT-Q** (Wang et al., ICML 2026 Oral) — Post-training ternary quantization, 512 samples
+- **Neutrino-8B** (Fermion Research, 2026) — 8B ternary model, 3.88 GB, Apache 2.0
+- **"When Less is More"** (Zhang et al., 2025) — Quantization improves continual learning
+- **TOM Accelerator** (Guan et al., 2026) — QLoRA on-device tunability for ternary
 
-See [`docs/ROADMAP.md#key-references`](docs/ROADMAP.md#key-references) for the full reference list.
+### Hebbian Era (v1)
+- **SoftHebb** (Journé et al., ICLR 2023) — SOTA Hebbian deep learning (float)
+- **Forward-Forward** (Hinton, 2022) — Backprop-free with contrastive signals
+- **Equilibrium Propagation** (Scellier & Bengio, 2017) — Energy-based learning
+- **Predictive Coding** (Whittington & Bogacz, 2017) — Prediction error minimization
+
+See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full plan and reference list.
 
 ---
 
@@ -214,4 +229,4 @@ MIT — see [LICENSE](LICENSE).
 
 ---
 
-> *"The brain does not compute gradients. It learns by association. PH-Neuro explores whether machines can too."*
+> *"The Hebbian era proved what doesn't work. The STE era explores what does."*

@@ -1,9 +1,10 @@
 # PH-Neuro Research Summary
 
-> **Ternary Hebbian Networks Without Backpropagation: Why Hidden Layers Fail and What Works Instead**
+> **Era 1 (Hebbian):** Ternary Hebbian Networks Without Backpropagation — Why Hidden Layers Fail
+> **Era 2 (STE):** Ternary Networks for Low-Memory & Continual Learning
 >
-> **Status:** Research phase closed after 9 experiments across 4 fundamentally different approaches.
-> **Last updated:** 2026-07-29
+> **Status:** Hebbian era closed (9 experiments). STE era active (8 experiments completed).
+> **Last updated:** 2026-08-02
 
 ---
 
@@ -210,6 +211,38 @@ The core ternary infrastructure is verified across 200+ tests: native {-1, 0, +1
 
 ---
 
+## STE Era (v2) — Results Summary (2026-07-30 to 2026-08-02)
+
+After the Hebbian era closed, PH-Neuro pivoted to STE backpropagation. See [`ROADMAP.md`](ROADMAP.md) for the full strategic rationale.
+
+### Track A: Low-Memory Supervised Learning
+
+| # | Experiment | Datasets | Key Result |
+|:-:|:-----------|:---------|:-----------|
+| **L1** | Ternary STE Baseline Suite | MNIST, Fashion, KMNIST, CIFAR-10, CIFAR-100 | **Ternary STE breaks the ~88% Hebbian ceiling:** MNIST 98.0% (FP16: 98.7%, gap: 0.7pp). CIFAR-10: 72.2% (FP16: 86.3%). Hebbian: 22.4% → STE: 72.2% (+49.8pp). See [E009](experiments/E009-ste-baseline-suite.md) |
+| **L2** | Hysteresis-STE Algorithm | MNIST, Fashion, KMNIST | Novel dual-threshold STE regularizer. **Sparsity: 0%→95% at −0.25pp cost** (MNIST 97.9% at 95.6% sparsity). Deadzone barrier at θ_u≥0.5 — narrow working window. See [E016](experiments/E016-l2-hysteresis-ste.md) |
+| **L5** | BatchNorm Fusion | MNIST | BN → ElementWiseAffine: accuracy preserved. See [E011](experiments/E011-l5-batchnorm-fusion.md) |
+| **L7** | Depth vs Width Scaling | MNIST | Depth helps ternary **more** than FP16 (+0.41pp vs +0.15pp D=1→3). No STE gradient degradation. Optimal: D=3 at 98.27%. See [E012](experiments/E012-l7-depth-vs-width.md) |
+| **L8** | Forgetting Baseline | Split/Permuted MNIST | **Ternary ≈ FP16 forgetting** (gap <1pp). No natural regularization benefit. See [E010](experiments/E010-l8-forgetting-baseline.md) |
+
+### Track B: Continual Learning
+
+| # | Experiment | Datasets | Key Result |
+|:-:|:-----------|:---------|:-----------|
+| **B1** | EWC + Ternary STE | Split/Permuted MNIST | EWC reduces Split forgetting 37.3%→32.8% (−4.6pp). **No benefit on Permuted.** See [E013](experiments/E013-b1-ewc-ternary-ste.md) |
+| **B2** | QLoRA + Frozen Ternary | Split/Permuted MNIST | 🏆 **Zero forgetting, 99.2% accuracy** (Split, r=8). Permuted: 86.5% (r=64). See [E014](experiments/E014-b2-qlora-frozen-ternary.md) |
+| **B3** | Precision vs Forgetting | Split/Permuted MNIST | Quantization effect is **weak** — only 0.2–1.2pp less forgetting. Ternary NOT the lowest. Ranking: FP16 > Ternary > INT8 ≈ INT4. See [E015](experiments/E015-b3-precision-comparison.md) |
+
+### Key STE Era Conclusions
+
+1. **Ternary STE beats Hebbian dramatically** — MNIST: +10pp, CIFAR-10: +50pp
+2. **Ternary does NOT naturally reduce forgetting** — needs external mechanism (EWC or QLoRA)
+3. **QLoRA + frozen ternary = zero forgetting, high accuracy** — the clear winner
+4. **"More quantization = less forgetting" hypothesis NOT supported** — differences are negligible
+5. **Hysteresis-STE delivers 95% sparsity at minimal accuracy cost** — novel algorithmic contribution
+
+---
+
 ## Future Directions
 
 ### ⚠️ STRATEGIC PIVOT (2026-07-30): From Hebbian to STE-Based Ternary Learning
@@ -293,6 +326,8 @@ The PH-Net approach (separate project) uses Straight-Through Estimators (STE) wi
 
 ## Experiment Reports
 
+### Hebbian Era (E001–E008)
+
 | Report | Description |
 |:-------|:------------|
 | [E001: Single-Layer Hebbian MNIST](experiments/E001-mnist-hebbian-baseline.md) | 88.4% MNIST, WTA Hebbian, Phase 0 baseline |
@@ -303,3 +338,16 @@ The PH-Net approach (separate project) uses Straight-Through Estimators (STE) wi
 | [E006: Forward-Forward 2-Layer (TFF-2)](experiments/E006-forward-forward-multilayer-mnist.md) | 86.81%, FF fails for hidden layers |
 | [E007: NTH Multi-Layer (NTH-4)](experiments/E007-nth-multilayer-mnist.md) | 86.68% best, all 4 approaches fail, sparsity not the bottleneck |
 | [E008: Equilibrium Propagation (TEP-1)](experiments/E008-equilibrium-propagation-mnist.md) | 82.57%, EP moves weights but hurts accuracy |
+
+### STE Era (E009–E016)
+
+| Report | Description |
+|:-------|:------------|
+| [E009: STE Baseline Suite (L1)](experiments/E009-ste-baseline-suite.md) | 5 datasets × 5 variants. Ternary STE: MNIST 98.0%, CIFAR-10 72.2%, CIFAR-100 38.2% |
+| [E010: Forgetting Baseline (L8)](experiments/E010-l8-forgetting-baseline.md) | Ternary ≈ FP16 forgetting (gap <1pp). Control for Track B. |
+| [E011: BatchNorm Fusion (L5)](experiments/E011-l5-batchnorm-fusion.md) | BN → ElementWiseAffine: accuracy preserved, edge inference win |
+| [E012: Depth vs Width Scaling (L7)](experiments/E012-l7-depth-vs-width.md) | Depth helps ternary more than FP16. Optimal D=3 at 98.27%. 30 runs. |
+| [E013: EWC + Ternary STE (B1)](experiments/E013-b1-ewc-ternary-ste.md) | Split forgetting −4.6pp. No benefit on Permuted. |
+| [E014: QLoRA + Frozen Ternary (B2)](experiments/E014-b2-qlora-frozen-ternary.md) | 🏆 Zero forgetting. Split 99.2% (r=8), Permuted 86.5% (r=64). 30 runs. |
+| [E015: Precision vs Forgetting (B3)](experiments/E015-b3-precision-comparison.md) | Quantization cuts forgetting only 0.2–1.2pp. Ternary NOT lowest. |
+| [E016: Hysteresis-STE (L2)](experiments/E016-l2-hysteresis-ste.md) | Novel algorithm: 0%→95% sparsity at −0.25pp cost. 36 runs. |
