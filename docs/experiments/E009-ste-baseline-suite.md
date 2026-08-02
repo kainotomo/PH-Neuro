@@ -2,7 +2,7 @@
 
 - **Date:** 2026-07-30
 - **Git commit:** `TBD`
-- **Status:** planned
+- **Status:** completed
 - **Phase:** 3A (Track A: Low-Memory Supervised Baselines)
 
 ---
@@ -147,7 +147,7 @@ Each dataset is tested with **5 weight configurations** to enable systematic com
 | Data augmentation (MNIST/Fashion/KMNIST) | None |
 | Validation split | 10% of training set |
 | Early stopping | Patience=10 epochs on validation accuracy |
-| Seeds | 3 random seeds (42, 123, 456) for error bars |
+| Seeds | 1 (seed=42) — all 25 baseline runs completed on seed 42; multi-seed error bars not yet run |
 
 ---
 

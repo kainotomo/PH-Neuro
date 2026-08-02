@@ -1,7 +1,7 @@
 # PH-Neuro Roadmap
 
 > **Status:** Strategic pivot — transitioning from Hebbian to STE-based ternary learning  
-> **Last updated:** 2026-07-31 (L7 Depth vs Width ✅)
+> **Last updated:** 2026-07-31 (L7 ✅, Track B B1+B2+B3 ✅)
 
 ---
 
@@ -119,7 +119,7 @@ Two fields that have NEVER been combined:
 | 3A.4 | Forgetting Baseline (no CL mechanism) | ✅ **COMPLETED** | 12/12 runs done. Ternary ≈ FP16 forgetting (gap <1 pp). See [`E010`](experiments/E010-l8-forgetting-baseline.md) |
 | 3A.5 | Memory & Speed Benchmarks | ⬜ | Packed ternary inference speed vs FP16/INT8; training memory footprint |
 | **3B** | **Track B: Continual Learning with Ternary STE** | 🟢 **B1 + B2 + B3 DONE** | EWC + ternary STE (B1) ✅, QLoRA + frozen ternary (B2) ✅, precision comparison (B3) ✅ |
-| 3B.1 | EWC + Ternary STE on Split MNIST | ✅ **COMPLETED** | EWC (λ=10000) reduces Split-MNIST forgetting 37.33%→**32.78%** (−4.55 pp) and raises accuracy 62.16%→**66.65%** (+4.48 pp). Permuted unchanged. See [`E013`](experiments/E013-b1-ewc-ternary-ste.md) |
+| 3B.1 | EWC + Ternary STE on Split MNIST | ✅ **COMPLETED** | EWC (λ=10000) reduces Split-MNIST forgetting 37.33%→**32.78%** (−4.55 pp) and raises accuracy 62.16%→**66.65%** (+4.48 pp). Permuted: no benefit (forgetting ns, accuracy −2.14 pp). See [`E013`](experiments/E013-b1-ewc-ternary-ste.md) |
 | 3B.2 | QLoRA + Frozen Ternary Backbone | ✅ **COMPLETED** | **Zero forgetting (0.00% ± 0.00) in all 30 runs.** r=64 beats L8/B1 by 32-53 pp: Split 99.43% (vs L8 62.16%), Permuted 86.84-92.55% (vs L8 41.92%). Weak `task1` backbone beats `full` on Permuted. See [`E014`](experiments/E014-b2-qlora-frozen-ternary.md) |
 | 3B.3 | Multi-Head Ternary EWC (5 tasks) | ⬜ | Combine multi-head architecture with EWC for maximal protection |
 | 3B.4 | Comparison: Ternary vs INT8 vs INT4 vs FP16 CL | ✅ **COMPLETED** | **"When Less is More" confirmed but weak** — quantization cuts forgetting only 0.2-1.2 pp (INT8≈INT4 best, ternary between FP16 and INT8/INT4; NOT lowest). See [`E015`](experiments/E015-b3-precision-comparison.md) |
@@ -162,14 +162,14 @@ Two fields that have NEVER been combined:
 | V1 vs V5 | Does STE definitively beat the ~88% Hebbian ceiling? |
 | V2 vs V3 vs V4 vs V1 | Memory-vs-accuracy Pareto frontier for vision models |
 
-**Preliminary results (seed=42, CIFAR-10/100 still running):**
+**Final results (seed=42, 25/25 runs completed):**
 
 | Dataset | V1: Ternary STE | V2: FP16 | V3: INT8 QAT | V4: INT4 QAT | V5: Hebbian v1 | Ternary Gap |
 |:--------|:---------------:|:--------:|:------------:|:------------:|:--------------:|:----------:|
 | MNIST | **98.17%** | 98.73% | 97.58% | 98.53% | 89.02% | **0.56 pp** |
 | Fashion-MNIST | **89.13%** | 90.19% | 90.14% | 89.76% | 79.70% | **1.06 pp** |
-| KMNIST | **91.26%** | 93.58% | 93.41% | — | 63.23% | **2.32 pp** |
-| CIFAR-10 | **72.75%** | **86.33%** | TBD | TBD | 32.6% | **13.58 pp** |
+| KMNIST | **91.26%** | 93.58% | 93.41% | 93.12% | 63.23% | **2.32 pp** |
+| CIFAR-10 | **72.75%** | **86.33%** | **86.82%** | **86.17%** | **24.41%** | **13.58 pp** |
 | CIFAR-100 | **39.00%** | **57.50%** | **57.13%** | **55.33%** | **6.13%** | **18.50 pp** |
 
 **✅ Milestone M4 achieved:** Ternary STE 98.17% on MNIST — beats the 88% Hebbian ceiling by **+9.15 percentage points**.

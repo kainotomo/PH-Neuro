@@ -101,13 +101,15 @@ At a fixed parameter budget (~530K), 5 equal-width depth configs × Ternary STE 
 3. **Optimal config at this budget:** D=3 `[784, 353, 353, 353, 10]` → 98.27%.
 4. **0% weight sparsity** at all depths (standard STE + AdamW → all weights ±1, no implicit regularization).
 
-### Track B (Continual Learning) — Planned
+### Track B (Continual Learning) — Complete
 
-| ID | Experiment | Status |
-|:---|:-----------|:------:|
-| B1 | EWC + Ternary STE on Split MNIST | ⬜ |
-| B2 | QLoRA + Frozen Ternary Backbone | ⬜ |
-| B3 | Ternary vs INT8/INT4/FP16 continual learning | ⬜ |
+All three Track B experiments are **completed** (2026-07-31): EWC, QLoRA, and precision comparison on Split/Permuted MNIST.
+
+| ID | Experiment | Status | Key Result |
+|:---|:-----------|:------:|:-----------|
+| **B1** | EWC + Ternary STE | ✅ | Split forgetting 37.33%→**32.78%** (−4.55 pp), accuracy 62.16%→**66.65%** (+4.48 pp); no benefit on shared-head Permuted. See [`E013`](docs/experiments/E013-b1-ewc-ternary-ste.md) |
+| **B2** | QLoRA + Frozen Ternary Backbone | ✅ | **Zero forgetting** (0.00% ± 0.00 in all 30 runs); r=64: Split **99.43%**, Permuted **92.55%** (task1) — beats L8/B1 by 32–53 pp. See [`E014`](docs/experiments/E014-b2-qlora-frozen-ternary.md) |
+| **B3** | Ternary vs INT8/INT4/FP16 continual learning | ✅ | "When Less is More" holds but **weak** — quantization cuts forgetting only 0.2–1.2 pp; ranking **FP16 > Ternary > INT8 ≈ INT4**. See [`E015`](docs/experiments/E015-b3-precision-comparison.md) |
 
 See [`docs/ROADMAP.md`](docs/ROADMAP.md) for the full plan.
 
