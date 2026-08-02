@@ -309,7 +309,7 @@ Pareto frontier shows optimal trade-offs
 
 ## L2: Hysteresis-STE Ablation
 
-**Status:** ✅ CODE COMPLETE (2026-07-30) — awaiting full run
+**Status:** ✅ **COMPLETED** (2026-08-02) — 36/36 runs done. Full report: [`E016`](E016-l2-hysteresis-ste.md)
 
 **Core idea:** Apply PH-Neuro's dual-threshold hysteresis during STE training as a weight regularizer.
 
@@ -331,8 +331,18 @@ Pareto frontier shows optimal trade-offs
 
 **Smoke test (MNIST, 2 epochs, θ_u=0.3, θ_l=0.1):** 91.93% accuracy, 99% sparsity ✅
 
+**Ablation results (2026-08-02, 36/36 runs):**
+
+| Dataset | Control | Best Hyst (θ_u, θ_l) | Δ | Sparsity |
+|:--------|:-------:|:--------------------:|:-:|:--------:|
+| MNIST | 98.17% | 97.92% (0.3, 0.15) | −0.25 pp | 95.64% |
+| Fashion-MNIST | 89.13% | 88.63% (0.3, 0.10) | −0.50 pp | 95.41% |
+| KMNIST | 91.26% | 89.66% (0.3, 0.10) | −1.60 pp | 93.39% |
+
+**Key findings:** (1) sparsity 0% → ~95% (hypothesis confirmed); (2) accuracy is *lower* at every working config (−0.25 to −1.60 pp); (3) **θ_u ≥ 0.5 fails completely** (deadzone barrier, 27/33 runs at ~10% accuracy) — latents init `N(0, 0.1)` never cross the activation threshold.
+
 ## Next Steps
 
-- After L2 code complete → **Run full ablation sweep**: `bash scripts/run_l2_ablation.sh`
-- After L2 → **L8 (Forgetting Baseline)**: Measure forgetting with standard SGD on Split MNIST
+- ✅ **L2 ablation sweep DONE** (2026-08-02): 36/36 runs. See [`E016`](E016-l2-hysteresis-ste.md)
+- ✅ **L8 (Forgetting Baseline) DONE**: see [`E010`](E010-l8-forgetting-baseline.md)
 - Use L1 baselines as reference for all Track B (continual learning) experiments

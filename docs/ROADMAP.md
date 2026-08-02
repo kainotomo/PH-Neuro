@@ -112,10 +112,10 @@ Two fields that have NEVER been combined:
 
 | Phase | Title | Status | Key Result |
 |:------|:------|:------:|:-----------|
-| **3A** | **Track A: Low-Memory Supervised Baselines** | 🟡 **L1 DONE, L2 CODE DONE** | L1: 25/25 runs. L2: layers, runner, 35 tests complete. M3+M4+M5(code) achieved |
+| **3A** | **Track A: Low-Memory Supervised Baselines** | 🟢 **L1 + L2 DONE** | L1: 25/25 runs. L2: 36/36 runs — 95% sparsity, −0.3 to −1.6 pp acc. M3+M4+M5(code) achieved |
 | 3A.1 | STE TernaryLinear Implementation | ✅ **COMPLETED** | `TernarySTELinear`, `TernarySTEConv2d` + `_STESign` autograd. 22/22 tests pass |
 | 3A.2 | Baseline Suite: MNIST/Fashion-MNIST/KMNIST/CIFAR-10/CIFAR-100 | ✅ **COMPLETED** | All 5 variants × 5 datasets = 25 runs done. See [`E009`](experiments/E009-ste-baseline-suite.md) |
-| 3A.3 | Hysteresis-STE Algorithm | ✅ **CODE COMPLETE** | Layers, runner, sweep script, aggregator, 35 tests — awaiting full run |
+| 3A.3 | Hysteresis-STE Algorithm | ✅ **COMPLETED** | 36/36 runs. θ_u=0.3 → 0%→**95% sparsity** at −0.25/−0.50/−1.60 pp; θ_u≥0.5 fails (deadzone). See [`E016`](experiments/E016-l2-hysteresis-ste.md) |
 | 3A.4 | Forgetting Baseline (no CL mechanism) | ✅ **COMPLETED** | 12/12 runs done. Ternary ≈ FP16 forgetting (gap <1 pp). See [`E010`](experiments/E010-l8-forgetting-baseline.md) |
 | 3A.5 | Memory & Speed Benchmarks | ⬜ | Packed ternary inference speed vs FP16/INT8; training memory footprint |
 | **3B** | **Track B: Continual Learning with Ternary STE** | 🟢 **B1 + B2 + B3 DONE** | EWC + ternary STE (B1) ✅, QLoRA + frozen ternary (B2) ✅, precision comparison (B3) ✅ |
@@ -193,6 +193,19 @@ Hysteresis-STE:
 **Hypothesis:** Hysteresis acts as a sparsity-promoting regularizer. Small latent weights stay at 0, only strong signals cross the threshold. This may improve generalization and reduce weight oscillation.
 
 **Ablation:** Compare standard STE vs Hysteresis-STE across θ_upper ∈ {0.3, 0.5, 1.0, 2.0} and θ_lower ∈ {0.1, 0.15, 0.3}.
+
+**Results (36/36 runs, 2026-08-02):** Full report: [`E016`](experiments/E016-l2-hysteresis-ste.md)
+
+| Dataset | Control | Best Hyst (θ_u, θ_l) | Δ | Sparsity |
+|:--------|:-------:|:--------------------:|:-:|:--------:|
+| MNIST | 98.17% | 97.92% (0.3, 0.15) | −0.25 pp | 95.64% |
+| Fashion-MNIST | 89.13% | 88.63% (0.3, 0.10) | −0.50 pp | 95.41% |
+| KMNIST | 91.26% | 89.66% (0.3, 0.10) | −1.60 pp | 93.39% |
+
+**Key findings:**
+1. **Sparsity confirmed:** 0% (standard STE) → **~93–96%** with hysteresis — huge efficiency win (packed ternary storage) at a small accuracy cost.
+2. **Accuracy < control at every working config** (−0.25 to −1.60 pp) — M5 target "≥ standard STE accuracy" NOT met.
+3. **Critical failure mode:** `θ_upper ≥ 0.5` → **complete deadzone barrier** (27/33 runs at ~10% accuracy, 100% sparsity, 0 flips). Latents init `N(0, 0.1)`; nothing ever crosses the activation threshold. The working window is narrow — only `θ_u=0.3` learns.
 
 ### L7: Depth vs Width Scaling
 **Goal:** Determine the optimal depth-to-width ratio for ternary STE networks at a fixed parameter budget (~530K, matching L1).
@@ -346,7 +359,7 @@ Both strategies use the same tensor operations; packing/unpacking is transparent
 | **M2: Hebbian Phase 2** | FF/NTH 2-layer >88% MNIST | E004-E008 | ❌ All <88% |
 | **M3: STE TernaryLinear** | STE backward pass works, ternary invariant holds | Unit tests + E009 (V1) | ✅ 22/22 tests pass |
 | **M4: Track A Baseline** | Ternary STE >95% MNIST, systematic comparison of 5 variants × 5 datasets | [`E009`](experiments/E009-ste-baseline-suite.md) | ✅ **98.17%** — beats Hebbian ceiling by 9.15 pp |
-| **M5: Hysteresis-STE** | Hysteresis-STE ≥ standard STE accuracy + improved sparsity | Ablation study | 🟡 **CODE DONE** — layers, runner, tests all ✅. Full sweep pending |
+| **M5: Hysteresis-STE** | Hysteresis-STE ≥ standard STE accuracy + improved sparsity | Ablation study | 🟡 **RUN DONE, TARGET NOT MET** — sparsity 0%→95% ✅, but accuracy −0.25…−1.60 pp ❌; θ_u≥0.5 deadzone. See [`E016`](experiments/E016-l2-hysteresis-ste.md) |
 | **M6: Track B EWC** | Ternary STE + EWC <10% forgetting on Split MNIST, >90% avg accuracy | Experiment log | ⬜ |
 | **M7: Track B QLoRA** | Frozen ternary + LoRA achieves <1% forgetting with >85% accuracy | Experiment log | ⬜ |
 | **M8: Paper 1** | Low-Memory Ternary Vision submitted | arXiv + workshop | ⬜ |

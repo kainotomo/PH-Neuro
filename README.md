@@ -78,7 +78,7 @@ After the Hebbian research phase closed, PH-Neuro **pivoted to STE backpropagati
 | ID | Experiment | Status | Key Result |
 |:---|:-----------|:------:|:-----------|
 | **L1** | Ternary STE Baseline Suite (5 datasets × 5 variants) | ✅ | MNIST 98.17% — beats the 88% Hebbian ceiling by **+9.15 pp**. See [`E009`](docs/experiments/E009-ste-baseline-suite.md) |
-| **L2** | Hysteresis-STE algorithm (dual-threshold regularizer) | 🟡 Code complete | Layers, runner, sweep script, 35 tests — awaiting full run |
+| **L2** | Hysteresis-STE algorithm (dual-threshold regularizer) | ✅ | 36/36 runs. θ_u=0.3 → **0%→95% sparsity** at −0.25/−0.50/−1.60 pp; θ_u≥0.5 fails (deadzone). See [`E016`](docs/experiments/E016-l2-hysteresis-ste.md) |
 | **L5** | BatchNorm → ElementWiseAffine fusion | ✅ | Accuracy preserved; CPU/edge inference win. See [`E011`](docs/experiments/E011-l5-batchnorm-fusion.md) |
 | **L7** | Depth vs Width Scaling (fixed 530K budget) | ✅ | Depth helps ternary **more** than FP16; no STE gradient degradation. See [`E012`](docs/experiments/E012-l7-depth-vs-width.md) |
 | **L8** | Forgetting Baseline (control for Track B) | ✅ | Ternary ≈ FP16 forgetting (gap <1 pp). See [`E010`](docs/experiments/E010-l8-forgetting-baseline.md) |
