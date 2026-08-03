@@ -234,6 +234,7 @@ After the Hebbian era closed, PH-Neuro pivoted to STE backpropagation. See [`ROA
 | **B3** | Precision vs Forgetting | Split/Permuted MNIST | Quantization effect is **weak** — only 0.2–1.2pp less forgetting. Ternary NOT the lowest. Ranking: FP16 > Ternary > INT8 ≈ INT4. See [E015](experiments/E015-b3-precision-comparison.md) |
 
 | **DQT** | Direct Quantized Training | MNIST | **98.23% MNIST** (beats STE 98.17%), **56% sparsity**, **4.5× less training memory** — no latent float scores. First DQT demonstration on vision. See [E017](experiments/E017-dqt-pilot.md) |
+| **DQT+Hyst** | DQT + Hysteresis | MNIST | **98.09%**, **60.5% sparsity**. Stochastic rounding overrides hysteresis — DQT alone is the better trade-off. 3 seeds. See [E018](experiments/E018-dqt-hysteresis.md) |
 
 ### Key STE Era Conclusions
 
@@ -355,3 +356,4 @@ The PH-Net approach (separate project) uses Straight-Through Estimators (STE) wi
 | [E015: Precision vs Forgetting (B3)](experiments/E015-b3-precision-comparison.md) | Quantization cuts forgetting only 0.2–1.2pp. Ternary NOT lowest. |
 | [E016: Hysteresis-STE (L2)](experiments/E016-l2-hysteresis-ste.md) | Novel algorithm: 0%→95% sparsity at −0.25pp cost. 36 runs. |
 | [E017: DQT Pilot](experiments/E017-dqt-pilot.md) | Direct Quantized Training: no latent scores, 98.23% MNIST, 56% sparsity, 4.5× less training memory. First DQT on vision. |
+| [E018: DQT+Hysteresis](experiments/E018-dqt-hysteresis.md) | DQT + Hysteresis combination: 98.09%, 60.5% sparsity. Stochastic rounding overrides hysteresis — DQT alone is better. 3 seeds. |
