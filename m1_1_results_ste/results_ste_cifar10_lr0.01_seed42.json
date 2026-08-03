@@ -1,0 +1,12 @@
+{
+  "experiment": "m1_1_ste_baseline",
+  "dataset": "cifar10",
+  "seed": 42,
+  "architecture": "ste_cnn (4.27M) same as dqt_cnn",
+  "learning_rate": 0.01,
+  "epochs": 100,
+  "best_accuracy": 0.7609,
+  "best_epoch": 94,
+  "training_time_seconds": 422.6621587276459,
+  "n_parameters": 4277002
+}
