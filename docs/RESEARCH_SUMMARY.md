@@ -235,6 +235,7 @@ After the Hebbian era closed, PH-Neuro pivoted to STE backpropagation. See [`ROA
 
 | **DQT** | Direct Quantized Training | MNIST | **98.23% MNIST** (beats STE 98.17%), **56% sparsity**, **4.5× less training memory** — no latent float scores. First DQT demonstration on vision. See [E017](experiments/E017-dqt-pilot.md) |
 | **DQT+Hyst** | DQT + Hysteresis | MNIST | **98.09%**, **60.5% sparsity**. Stochastic rounding overrides hysteresis — DQT alone is the better trade-off. 3 seeds. See [E018](experiments/E018-dqt-hysteresis.md) |
+| **MoE DQT** | Mixture of Experts + DQT | MNIST | **91.21%** (beats dense 88.73% by **+2.48pp**) with **50.5% active params**. First ternary MoE on vision. See [E019](experiments/E019-moe-dqt-pilot.md) |
 
 ### Key STE Era Conclusions
 
@@ -357,3 +358,4 @@ The PH-Net approach (separate project) uses Straight-Through Estimators (STE) wi
 | [E016: Hysteresis-STE (L2)](experiments/E016-l2-hysteresis-ste.md) | Novel algorithm: 0%→95% sparsity at −0.25pp cost. 36 runs. |
 | [E017: DQT Pilot](experiments/E017-dqt-pilot.md) | Direct Quantized Training: no latent scores, 98.23% MNIST, 56% sparsity, 4.5× less training memory. First DQT on vision. |
 | [E018: DQT+Hysteresis](experiments/E018-dqt-hysteresis.md) | DQT + Hysteresis combination: 98.09%, 60.5% sparsity. Stochastic rounding overrides hysteresis — DQT alone is better. 3 seeds. |
+| [E019: MoE DQT Pilot](experiments/E019-moe-dqt-pilot.md) | First ternary MoE on vision: 91.21% (beats dense +2.48pp), 50.5% active params, 4 experts, top-2 routing. |

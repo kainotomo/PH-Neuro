@@ -99,7 +99,8 @@ After the Hebbian research phase closed, PH-Neuro **pivoted to STE backpropagati
 | **L7** | Depth vs Width Scaling (fixed 530K budget) | ✅ | Depth helps ternary **more** than FP16; no STE gradient degradation. See [`E012`](docs/experiments/E012-l7-depth-vs-width.md) |
 | **L8** | Forgetting Baseline (control for Track B) | ✅ | Ternary ≈ FP16 forgetting (gap <1 pp). See [`E010`](docs/experiments/E010-l8-forgetting-baseline.md) |
 | **DQT** | Direct Quantized Training (Zhao et al., ACML 2025) | ✅ | **98.23% MNIST** (beats STE 98.17%), **56% sparsity**, **4.5× less training memory** — no latent float scores. See [`E017`](docs/experiments/E017-dqt-pilot.md) |
-| **DQT+Hyst** | DQT + Hysteresis combination | ✅ | **98.09% MNIST**, **60.5% sparsity**. Stochastic rounding overrides hysteresis sparsity — DQT alone is the better trade-off. See [`E018`](docs/experiments/E018-dqt-hysteresis.md) |
+| **DQT+Hyst** | DQT + Hysteresis combination | ✅ | **98.09% MNIST**, **60.5% sparsity**. Stochastic rounding overrides hysteresis — DQT alone is better. See [`E018`](docs/experiments/E018-dqt-hysteresis.md) |
+| **MoE DQT** | Mixture of Experts + DQT ternary | ✅ | **91.21% MNIST** (beats dense 88.73% by **+2.48pp**) with **50.5% active params**. First ternary MoE on vision. See [`E019`](docs/experiments/E019-moe-dqt-pilot.md) |
 
 ### DQT — Direct Quantized Training (new)
 
@@ -114,6 +115,8 @@ Trained ternary MLP on MNIST **without latent float scores** using stochastic ro
 | **DQT (E017)** | **98.23%** | **56%** | **~2 bytes/param** |
 
 **Key finding:** DQT beats STE accuracy while using 4.5× less training memory and producing naturally sparse weights — no explicit regularization needed. See [`E017`](docs/experiments/E017-dqt-pilot.md).
+
+**MoE DQT — Mixture of Experts (new):** DQT + MoE with ternary experts achieves **91.21% vs dense 88.73% (+2.48pp)** using only **50.5% active parameters**. First ternary MoE on vision. Requires load-balancing loss + slow router to prevent expert collapse. See [`E019`](docs/experiments/E019-moe-dqt-pilot.md).
 
 ### L7 Depth vs Width Scaling
 
