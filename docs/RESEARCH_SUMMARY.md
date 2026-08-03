@@ -233,6 +233,8 @@ After the Hebbian era closed, PH-Neuro pivoted to STE backpropagation. See [`ROA
 | **B2** | QLoRA + Frozen Ternary | Split/Permuted MNIST | 🏆 **Zero forgetting, 99.2% accuracy** (Split, r=8). Permuted: 86.5% (r=64). See [E014](experiments/E014-b2-qlora-frozen-ternary.md) |
 | **B3** | Precision vs Forgetting | Split/Permuted MNIST | Quantization effect is **weak** — only 0.2–1.2pp less forgetting. Ternary NOT the lowest. Ranking: FP16 > Ternary > INT8 ≈ INT4. See [E015](experiments/E015-b3-precision-comparison.md) |
 
+| **DQT** | Direct Quantized Training | MNIST | **98.23% MNIST** (beats STE 98.17%), **56% sparsity**, **4.5× less training memory** — no latent float scores. First DQT demonstration on vision. See [E017](experiments/E017-dqt-pilot.md) |
+
 ### Key STE Era Conclusions
 
 1. **Ternary STE beats Hebbian dramatically** — MNIST: +10pp, CIFAR-10: +50pp
@@ -240,6 +242,7 @@ After the Hebbian era closed, PH-Neuro pivoted to STE backpropagation. See [`ROA
 3. **QLoRA + frozen ternary = zero forgetting, high accuracy** — the clear winner
 4. **"More quantization = less forgetting" hypothesis NOT supported** — differences are negligible
 5. **Hysteresis-STE delivers 95% sparsity at minimal accuracy cost** — novel algorithmic contribution
+6. **DQT eliminates latent float scores entirely** — 4.5× less training memory, beats STE accuracy, produces natural sparsity
 
 ---
 
@@ -351,3 +354,4 @@ The PH-Net approach (separate project) uses Straight-Through Estimators (STE) wi
 | [E014: QLoRA + Frozen Ternary (B2)](experiments/E014-b2-qlora-frozen-ternary.md) | 🏆 Zero forgetting. Split 99.2% (r=8), Permuted 86.5% (r=64). 30 runs. |
 | [E015: Precision vs Forgetting (B3)](experiments/E015-b3-precision-comparison.md) | Quantization cuts forgetting only 0.2–1.2pp. Ternary NOT lowest. |
 | [E016: Hysteresis-STE (L2)](experiments/E016-l2-hysteresis-ste.md) | Novel algorithm: 0%→95% sparsity at −0.25pp cost. 36 runs. |
+| [E017: DQT Pilot](experiments/E017-dqt-pilot.md) | Direct Quantized Training: no latent scores, 98.23% MNIST, 56% sparsity, 4.5× less training memory. First DQT on vision. |

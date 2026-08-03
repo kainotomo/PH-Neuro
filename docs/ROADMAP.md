@@ -123,7 +123,7 @@ Two fields that have NEVER been combined:
 | 3B.2 | QLoRA + Frozen Ternary Backbone | ✅ **COMPLETED** | **Zero forgetting (0.00% ± 0.00) in all 30 runs.** r=64 beats L8/B1 by 32-53 pp: Split 99.43% (vs L8 62.16%), Permuted 86.84-92.55% (vs L8 41.92%). Weak `task1` backbone beats `full` on Permuted. See [`E014`](experiments/E014-b2-qlora-frozen-ternary.md) |
 | 3B.3 | Multi-Head Ternary EWC (5 tasks) | ⬜ | Combine multi-head architecture with EWC for maximal protection |
 | 3B.4 | Comparison: Ternary vs INT8 vs INT4 vs FP16 CL | ✅ **COMPLETED** | **"When Less is More" confirmed but weak** — quantization cuts forgetting only 0.2-1.2 pp (INT8≈INT4 best, ternary between FP16 and INT8/INT4; NOT lowest). See [`E015`](experiments/E015-b3-precision-comparison.md) |
-| **4** | **Advanced Experiments** | 🟡 **L5 + L7 DONE** | Ternary distillation (L4), BN fusion (L5) ✅, depth scaling with fixed budget (L7) ✅ |
+| **4** | **Advanced Experiments** | � **L5 + L7 + DQT DONE** | Ternary distillation (L4), BN fusion (L5) ✅, depth scaling (L7) ✅, DQT pilot (E017) ✅ |
 | **5** | **Papers & Publication** | ⬜ | Paper 1: Low-Memory Vision (TinyML/ECCV), Paper 2: Continual Learning (NeurIPS/ICML) |
 
 ## Phase 3 — Track A: Low-Memory Supervised Experiments

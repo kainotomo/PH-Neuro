@@ -10,6 +10,7 @@ from ph_neuro.layers.embedding import TernaryHebbianEmbedding
 from ph_neuro.layers.linear import TernaryHebbianLinear
 from ph_neuro.layers.ste_linear import TernarySTELinear, ste_sign
 from ph_neuro.layers.ste_conv import TernarySTEConv2d
+from ph_neuro.layers.ste_dqt import TernaryDQTLinear, stochastic_round
 from ph_neuro.layers.ste_lora import (
     TernarySTELoRALinear,
     count_lora_parameters,
@@ -49,6 +50,8 @@ __all__ = [
     "ste_sign_hysteresis",
     "HysteresisSTELinear",
     "HysteresisSTEConv2d",
+    "TernaryDQTLinear",
+    "stochastic_round",
     "ElementWiseAffine1d",
     "ElementWiseAffine2d",
     "FusedTernaryLinear",

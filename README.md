@@ -98,8 +98,23 @@ After the Hebbian research phase closed, PH-Neuro **pivoted to STE backpropagati
 | **L5** | BatchNorm → ElementWiseAffine fusion | ✅ | Accuracy preserved; CPU/edge inference win. See [`E011`](docs/experiments/E011-l5-batchnorm-fusion.md) |
 | **L7** | Depth vs Width Scaling (fixed 530K budget) | ✅ | Depth helps ternary **more** than FP16; no STE gradient degradation. See [`E012`](docs/experiments/E012-l7-depth-vs-width.md) |
 | **L8** | Forgetting Baseline (control for Track B) | ✅ | Ternary ≈ FP16 forgetting (gap <1 pp). See [`E010`](docs/experiments/E010-l8-forgetting-baseline.md) |
+| **DQT** | Direct Quantized Training (Zhao et al., ACML 2025) | ✅ | **98.23% MNIST** (beats STE 98.17%), **56% sparsity**, **4.5× less training memory** — no latent float scores. See [`E017`](docs/experiments/E017-dqt-pilot.md) |
 
-### L7 Depth vs Width Scaling (latest)
+### DQT — Direct Quantized Training (new)
+
+### DQT — Direct Quantized Training (new)
+
+Trained ternary MLP on MNIST **without latent float scores** using stochastic rounding (Zhao et al., ACML 2025). First demonstration that DQT works for vision, not just LLMs.
+
+| Method | Accuracy | Sparsity | Training Memory |
+|:-------|:--------:|:--------:|:---------------:|
+| Standard STE (L1) | 98.17% | 0% | ~9 bytes/param |
+| Hysteresis-STE (L2) | 97.92% | 95% | ~9 bytes/param |
+| **DQT (E017)** | **98.23%** | **56%** | **~2 bytes/param** |
+
+**Key finding:** DQT beats STE accuracy while using 4.5× less training memory and producing naturally sparse weights — no explicit regularization needed. See [`E017`](docs/experiments/E017-dqt-pilot.md).
+
+### L7 Depth vs Width Scaling
 
 At a fixed parameter budget (~530K), 5 equal-width depth configs × Ternary STE vs FP16 × 3 seeds (30 runs) on MNIST:
 
