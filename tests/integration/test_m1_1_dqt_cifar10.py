@@ -16,7 +16,11 @@ import torch.nn as nn
 import torch.nn.functional as F  # noqa: N812
 from torch.utils.data import DataLoader, TensorDataset
 
-from ph_neuro.examples.run_m1_1_dqt_cifar10 import train_dqt_cnn
+from ph_neuro.examples.run_m1_1_dqt_cifar10 import (
+    ANNEAL_FRACTION,
+    apply_dqt_rounding,
+    train_dqt_cnn,
+)
 from ph_neuro.layers.ste_dqt import TernaryDQTLinear
 from ph_neuro.layers.ste_dqt_conv import TernaryDQTConv2d
 from ph_neuro.models.dqt_models import dqt_cnn
@@ -94,11 +98,11 @@ class TestDqtCnnBuild:
         assert _count_dqt_layers(model) == 4, (
             "Expected 2 DQT conv + 2 DQT linear layers"
         )
-        # Architecture sanity: 8192 -> 512 classifier (mirrors ste_cnn)
+        # Architecture sanity: 8192 -> 256 classifier (M1.1-RETRY head)
         linear = model[9]  # index 8 is Flatten
         assert isinstance(linear, TernaryDQTLinear)
         assert linear.in_features == 8192
-        assert linear.out_features == 512
+        assert linear.out_features == 256
 
     def test_dqt_cnn_forward(self):
         """Forward pass with dummy CIFAR-shaped data should produce logits."""
@@ -200,3 +204,56 @@ class TestDqtCnnTrainingLoop:
             epochs=2, max_patience=10, verbose=False,
         )
         assert _check_ternary_invariants(model)
+
+    def test_annealing_switch(self):
+        """Training should anneal stochastic -> deterministic rounding correctly."""
+        torch.manual_seed(3)
+        loader = _make_synthetic_cifar_loader(
+            n_samples=64, batch_size=16, img_size=16, n_classes=4,
+        )
+        model = dqt_cnn(img_size=16, device=DEVICE)
+        optimizer = torch.optim.AdamW(model.parameters(), lr=0.01)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=4)
+
+        results = train_dqt_cnn(
+            model, loader, loader, optimizer, scheduler, DEVICE,
+            epochs=4, max_patience=10, verbose=False,
+        )
+
+        # int(4 * 0.85) = 3 → epochs 1-3 stochastic, epoch 4 deterministic
+        assert results["anneal_start_epoch"] == int(4 * ANNEAL_FRACTION) == 3
+        # After the final deterministic epoch, weight_ternary == sign(weight_float)
+        for m in model.modules():
+            if isinstance(m, (TernaryDQTConv2d, TernaryDQTLinear)):
+                expected = m.weight_float.data.sign().clamp(-1, 1).to(torch.int8)
+                assert torch.equal(m.weight_ternary, expected), (
+                    "After the final deterministic epoch, weight_ternary should "
+                    "equal sign(weight_float)"
+                )
+        assert _check_ternary_invariants(model)
+
+    def test_annealing_switch_flag(self):
+        """use_stochastic flag should control stochastic vs deterministic rounding."""
+        torch.manual_seed(4)
+        model = dqt_cnn(img_size=16, device=DEVICE)
+        with torch.no_grad():
+            for m in model.modules():
+                if isinstance(m, (TernaryDQTConv2d, TernaryDQTLinear)):
+                    m.weight_float.data.add_(0.5)
+
+        # Deterministic: weight_ternary == sign(weight_float) exactly
+        apply_dqt_rounding(model, use_stochastic=False)
+        for m in model.modules():
+            if isinstance(m, (TernaryDQTConv2d, TernaryDQTLinear)):
+                expected = m.weight_float.data.sign().clamp(-1, 1).to(torch.int8)
+                assert torch.equal(m.weight_ternary, expected), (
+                    "Deterministic rounding must snap to sign(weight_float)"
+                )
+
+        # Stochastic: weights stay ternary int8 (values may differ from sign)
+        apply_dqt_rounding(model, use_stochastic=True)
+        for m in model.modules():
+            if isinstance(m, (TernaryDQTConv2d, TernaryDQTLinear)):
+                w = m.weight_ternary
+                assert w.dtype == torch.int8
+                assert bool(torch.all((w >= -1) & (w <= 1)).item())

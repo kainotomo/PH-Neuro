@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
-# ── M1.1 — DQT CNN on CIFAR-10 (GO/NO-GO >80%) ─────────────────────
+# ── M1.1-RETRY — DQT CNN on CIFAR-10 (GO/NO-GO >80%) ───────────────
 #
-# Milestone M1.1: first Direct Quantized Training (DQT) on CONVOLUTIONAL
-# layers. Trains a ternary DQT CNN on CIFAR-10 (mirrors the E009/L1 STE
-# baseline architecture) and targets >80% test accuracy (STE baseline:
-# 72.75%).
+# Milestone M1.1-RETRY: fix the original M1.1 NO-GO (mean 77.65%). Three
+# changes, no new layers/runner:
+#   1. Anneal stochastic rounding -> deterministic sign for the final 15%
+#      of epochs (removes the late-training flip jitter).
+#   2. Smaller FC head: 8192->256->10 instead of 8192->512->10 (halves
+#      classifier flip noise).
+#   3. Same 3 seeds (42/43/44), lr=0.01, 100 ep.
 #
 # Usage:
 #   bash scripts/run_m1_1_dqt_cifar10.sh                    # 3 seeds, lr=0.01, 100 ep
@@ -12,8 +15,13 @@
 #   bash scripts/run_m1_1_dqt_cifar10.sh 42 43 44           # custom seeds
 #
 # Output:
-#   JSON files: m1_1_results/results_dqt_cifar10_lr{lr}_seed{seed}.json
-#   Log files:  logs/m1_1/  (gitignored)
+#   JSON files: m1_1_retry_results/results_dqt_cifar10_lr{lr}_seed{seed}.json
+#   Log files:  logs/m1_1_retry/  (gitignored)
+#
+# STE baseline (same architecture, for comparison) — run manually:
+#   .venv/bin/python -m ph_neuro.examples.run_m1_1_dqt_cifar10 \
+#       --lr 0.01 --epochs 100 --seed 42 --batch-size 128 \
+#       --output-dir m1_1_retry_results
 #
 # Runs whose result JSON already exists are SKIPPED, so this script is
 # safe to re-run.
@@ -35,8 +43,8 @@ if [ ! -x "$PROJECT_ROOT/.venv/bin/python" ]; then
 fi
 cd "$PROJECT_ROOT"
 
-RESULTS_DIR="m1_1_results"
-LOG_DIR="logs/m1_1"
+RESULTS_DIR="m1_1_retry_results"
+LOG_DIR="logs/m1_1_retry"
 mkdir -p "$RESULTS_DIR" "$LOG_DIR"
 
 # ── Configuration ──────────────────────────────────────────────────
@@ -72,11 +80,12 @@ log() {
 
 print_config() {
     log "═══════════════════════════════════════════════════════════════"
-    log "  M1.1 DQT CNN CIFAR-10  (GO/NO-GO >80%)"
+    log "  M1.1-RETRY DQT CNN CIFAR-10  (GO/NO-GO >80%)"
     log "  Architecture: TernaryDQTConv2d(3->64)->Pool->TernaryDQTConv2d(64->128)"
-    log "                ->Pool->TernaryDQTLinear(8192->512)->TernaryDQTLinear(512->10)"
+    log "                ->Pool->TernaryDQTLinear(8192->256)->TernaryDQTLinear(256->10)"
     log "  Optimizer: AdamW (lr=${LR}, wd=${WEIGHT_DECAY}) + CosineAnnealingLR"
-    log "  DQT: apply_stochastic_rounding() after EVERY optimizer.step()"
+    log "  DQT: apply_dqt_rounding() after EVERY optimizer.step()"
+    log "       stochastic_round() for first 85%, deterministic sign() for last 15%"
     log "  Epochs: ${EPOCHS}  Batch: ${BATCH_SIZE}  Patience: ${PATIENCE}"
     log "═══════════════════════════════════════════════════════════════"
 }

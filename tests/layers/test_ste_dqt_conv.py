@@ -113,6 +113,27 @@ class TestTernaryDQTConv2d:
             assert torch.all((layer.weight_ternary >= -1) & (layer.weight_ternary <= 1))
             assert 0.0 <= stats["flip_rate"] <= 1.0
 
+    def test_deterministic_rounding(self):
+        """After deterministic rounding, weight_ternary == sign(weight_float)."""
+        layer = TernaryDQTConv2d(3, 8, kernel_size=3, padding=1)
+        # Perturb the float buffer so sign() differs from the initial ternary
+        with torch.no_grad():
+            layer.weight_float.data.add_(0.5)
+        old = layer.weight_ternary.clone()
+        stats = layer.apply_deterministic_rounding()
+
+        expected = layer.weight_float.data.sign().clamp(-1, 1).to(torch.int8)
+        assert torch.equal(layer.weight_ternary, expected), (
+            "weight_ternary should equal sign(weight_float) after deterministic rounding"
+        )
+        assert layer.weight_ternary.dtype == torch.int8
+        assert torch.all((layer.weight_ternary >= -1) & (layer.weight_ternary <= 1))
+        assert 0.0 <= stats["flip_rate"] <= 1.0
+        # n_flips should count the actual old->new differences
+        n_actual = (old != expected).sum().item()
+        assert stats["n_flips"] == n_actual
+        assert stats["flip_rate"] == n_actual / max(expected.numel(), 1)
+
     def test_flip_rate_tracking(self):
         """get_flip_rate() should return a value in [0, 1]."""
         layer = TernaryDQTConv2d(3, 8, kernel_size=3, padding=1)

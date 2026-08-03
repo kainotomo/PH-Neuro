@@ -27,7 +27,9 @@ def dqt_cnn(
 ) -> nn.Sequential:
     """Build a small CNN with ternary DQT layers for CIFAR-style images.
 
-    Architecture (identical to :func:`ste_cnn` for direct comparison):
+    Architecture (mirrors :func:`ste_cnn` for direct comparison, except the
+    FC head is 8192→256→10 instead of 8192→512→10 — M1.1-RETRY reduces
+    classifier flip noise while the conv feature path stays identical):
         ``TernaryDQTConv2d → ReLU → BN → MaxPool →
          TernaryDQTConv2d → ReLU → BN → MaxPool →
          Flatten → TernaryDQTLinear → ReLU → BN → TernaryDQTLinear``
@@ -46,8 +48,14 @@ def dqt_cnn(
     Returns:
         ``nn.Sequential`` with ternary DQT conv and linear layers.
     """
-    # After two MaxPool2d(2), spatial size is img_size // 4
+    # After two MaxPool2d(2), spatial size is img_size // 4.
+    # flat_features is the fan-IN of the first linear layer (8192 for 32x32):
+    # (2 * hidden_channels) * (img_size // 4) * (img_size // 4)
     flat_features = (2 * hidden_channels) * (img_size // 4) * (img_size // 4)
+
+    # Smaller FC head than ste_cnn() (8192->512) — M1.1-RETRY: halves the
+    # classifier flip noise while leaving the conv feature path untouched.
+    head_hidden = 256
 
     layers: list[nn.Module] = [
         # Conv block 1
@@ -63,11 +71,11 @@ def dqt_cnn(
         # Flatten
         nn.Flatten(),
         # Linear block
-        TernaryDQTLinear(flat_features, 512),
+        TernaryDQTLinear(flat_features, head_hidden),
         nn.ReLU(inplace=True),
-        nn.BatchNorm1d(512),
+        nn.BatchNorm1d(head_hidden),
         # Output layer (no activation — raw logits)
-        TernaryDQTLinear(512, n_classes),
+        TernaryDQTLinear(head_hidden, n_classes),
     ]
 
     model = nn.Sequential(*layers)

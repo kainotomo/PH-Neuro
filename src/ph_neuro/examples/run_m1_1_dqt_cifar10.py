@@ -9,8 +9,12 @@ architecture so results are directly comparable to the E009/L1 STE baseline
 (72.2-72.75% on CIFAR-10).
 
 The critical DQT mechanic: after EVERY ``optimizer.step()`` we call
-``apply_stochastic_rounding()`` on every DQT layer to discretize the float
-accumulation buffer into int8 ternary weights.
+``apply_dqt_rounding()`` on every DQT layer to discretize the float
+accumulation buffer into int8 ternary weights. For the first 85% of epochs
+this uses stochastic rounding (exploration); the final 15% anneals to
+deterministic ``sign()`` so the network enters a clean fine-tuning regime
+(M1.1-RETRY: this is the fix for the late-training flip jitter that kept
+the original M1.1 at 77.65% mean, below the 80% gate).
 
 Usage::
 
@@ -44,6 +48,11 @@ warnings.filterwarnings("ignore", category=UserWarning, module="torch.quantizati
 
 DQT_LAYERS = (TernaryDQTConv2d, TernaryDQTLinear)
 
+# Fraction of training spent with stochastic rounding before annealing to
+# deterministic sign. The final (1 - ANNEAL_FRACTION) of epochs run in a
+# clean deterministic fine-tuning regime (no stochastic flip noise).
+ANNEAL_FRACTION = 0.85
+
 
 # ── Helpers ─────────────────────────────────────────────────────────
 
@@ -54,8 +63,13 @@ def is_dqt_module(module: nn.Module) -> bool:
 
 
 @torch.no_grad()
-def apply_stochastic_rounding(model: nn.Module) -> float:
-    """Apply DQT stochastic rounding to every DQT layer.
+def apply_dqt_rounding(model: nn.Module, use_stochastic: bool = True) -> float:
+    """Apply DQT rounding to every DQT layer.
+
+    Args:
+        model: The DQT model.
+        use_stochastic: If True, use ``stochastic_round()``. If False,
+            use deterministic ``sign()`` (annealing / fine-tuning phase).
 
     Returns:
         Mean flip rate across all DQT layers.
@@ -63,7 +77,10 @@ def apply_stochastic_rounding(model: nn.Module) -> float:
     flips: list[float] = []
     for module in model.modules():
         if is_dqt_module(module):
-            flips.append(module.apply_stochastic_rounding()["flip_rate"])
+            if use_stochastic:
+                flips.append(module.apply_stochastic_rounding()["flip_rate"])
+            else:
+                flips.append(module.apply_deterministic_rounding()["flip_rate"])
     return sum(flips) / max(len(flips), 1) if flips else 0.0
 
 
@@ -124,12 +141,19 @@ def train_dqt_cnn(
     """Train a DQT CNN on CIFAR-10.
 
     Key DQT difference from STE: after each ``optimizer.step()`` we call
-    ``apply_stochastic_rounding()`` on every DQT layer to discretize the
-    float accumulation buffer into int8 ternary weights.
+    ``apply_dqt_rounding()`` on every DQT layer to discretize the float
+    accumulation buffer into int8 ternary weights.
+
+    Annealing: for the first ``int(epochs * ANNEAL_FRACTION)`` epochs the
+    discretization uses ``stochastic_round()`` (exploration). For the final
+    ``(1 - ANNEAL_FRACTION)`` of epochs it switches to deterministic
+    ``sign()`` so the ternary weights stop jittering and the network enters
+    a clean fine-tuning regime.
 
     Returns:
         Dict with per-epoch histories and final metrics:
         - ``best_accuracy``, ``best_epoch``, ``final_accuracy``
+        - ``anneal_start_epoch`` (first epoch of deterministic mode)
         - ``epochs_trained``, ``training_time_seconds``
         - ``train_acc_history``, ``test_acc_history``, ``loss_history``,
           ``lr_history``, ``flip_history``, ``epoch_times``
@@ -140,6 +164,8 @@ def train_dqt_cnn(
     final_acc = 0.0
     patience = 0
     epochs_trained = 0
+    anneal_start_epoch = int(epochs * ANNEAL_FRACTION)
+    deterministic_active = False
 
     history: dict[str, list] = {
         "train_acc": [],
@@ -160,6 +186,17 @@ def train_dqt_cnn(
         epoch_flips = 0.0
         n_steps = 0
 
+        # Anneal: use stochastic rounding until we cross anneal_start_epoch,
+        # then switch to deterministic sign() for the fine-tuning phase.
+        use_stochastic = epoch < anneal_start_epoch
+        if (not use_stochastic) and (not deterministic_active):
+            deterministic_active = True
+            if verbose:
+                print(
+                    f"  🔒 Epoch {epoch}: switching to DETERMINISTIC sign "
+                    "(no more stochastic rounding)"
+                )
+
         for x, y in train_loader:
             x, y = x.to(device), y.to(device)
 
@@ -169,8 +206,8 @@ def train_dqt_cnn(
             loss.backward()
             optimizer.step()
 
-            # ── DQT: stochastic rounding after EVERY optimizer step ──
-            epoch_flips += apply_stochastic_rounding(model)
+            # ── DQT: rounding after EVERY optimizer step ──
+            epoch_flips += apply_dqt_rounding(model, use_stochastic=use_stochastic)
             n_steps += 1
 
             total_loss += loss.item() * x.size(0)
@@ -231,6 +268,7 @@ def train_dqt_cnn(
         "best_accuracy": float(best_acc),
         "best_epoch": best_epoch,
         "final_accuracy": float(final_acc),
+        "anneal_start_epoch": anneal_start_epoch,
         "epochs_trained": epochs_trained,
         "training_time_seconds": float(total_time),
         "final_flip_rate": float(final_flip_rate),
@@ -277,8 +315,8 @@ def main() -> None:
         torch.backends.cudnn.benchmark = False
 
     print_header(
-        f"M1.1 DQT CNN CIFAR-10 (GO/NO-GO >80%): "
-        f"lr={args.lr}, {args.epochs}ep, seed={args.seed}"
+        f"M1.1-RETRY DQT CNN CIFAR-10 (GO/NO-GO >80%): "
+        f"lr={args.lr}, {args.epochs}ep, seed={args.seed}, anneal@85%"
     )
     print(f"Device: {device}")
     if device.type == "cuda":
@@ -334,8 +372,9 @@ def main() -> None:
         "learning_rate": args.lr,
         "weight_decay": args.weight_decay,
         "patience": args.patience,
-        "architecture": "DQT CNN: Conv(3->64)->Pool->Conv(64->128)->Pool->FC(8192->512)->FC(512->10)",
-        "method": "Direct Quantized Training (DQT) with stochastic rounding (conv + linear)",
+        "anneal_fraction": ANNEAL_FRACTION,
+        "architecture": "DQT CNN: Conv(3->64)->Pool->Conv(64->128)->Pool->FC(8192->256)->FC(256->10)",
+        "method": "Direct Quantized Training (DQT) with stochastic rounding annealed to deterministic sign for final 15% (conv + linear)",
         "n_parameters": n_params,
         "peak_gpu_memory_mb": peak_mem_mb,
         "ste_baseline_accuracy": 0.7275,  # E009/L1 CIFAR-10 ternary STE
@@ -357,6 +396,7 @@ def main() -> None:
     print_header("Results Summary")
     print(f"  Best Test Accuracy:  {100 * result['best_accuracy']:.2f}%  (epoch {result['best_epoch']})")
     print(f"  Final Test Accuracy: {100 * result['final_accuracy']:.2f}%")
+    print(f"  Anneal Start Epoch:  {result['anneal_start_epoch']} (deterministic sign after)")
     print(f"  Training Time:       {result['training_time_seconds']:.1f}s")
     print(f"  Weight +1:           {ws['pos_pct']:.1f}%")
     print(f"  Weight -1:           {ws['neg_pct']:.1f}%")

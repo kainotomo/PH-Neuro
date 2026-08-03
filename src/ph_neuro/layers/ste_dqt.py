@@ -260,6 +260,29 @@ class TernaryDQTLinear(nn.Module):
         }
 
     @torch.no_grad()
+    def apply_deterministic_rounding(self) -> dict[str, float]:
+        """Apply DETERMINISTIC rounding: sign() instead of stochastic_round().
+
+        Used during the annealing (fine-tuning) phase: once training switches
+        to deterministic rounding, the float accumulation buffer is snapped
+        to ``sign(float)`` so the ternary weights stop jittering and the
+        network can settle into a clean fine-tuning regime (no more
+        stochastic flip noise near the end of training).
+
+        Returns:
+            Dict with flip statistics (identical interface to
+            ``apply_stochastic_rounding``):
+            - ``flip_rate``: fraction of ternary weights that changed
+            - ``n_flips``: absolute number of flips
+        """
+        self._prev_ternary = self.weight_ternary.clone()
+        w_new = self.weight_float.data.sign().clamp(-1, 1).to(torch.int8)
+        n_flips = (self.weight_ternary != w_new).sum().item()
+        total = w_new.numel()
+        self.weight_ternary.copy_(w_new)
+        return {"flip_rate": n_flips / max(total, 1), "n_flips": n_flips}
+
+    @torch.no_grad()
     def get_flip_rate(self) -> float:
         """Get the flip rate since the last stochastic rounding step.
 

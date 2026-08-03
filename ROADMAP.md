@@ -95,3 +95,17 @@ Right now, the ONLY thing that matters:
 > **M1.1: DQT CNN on CIFAR-10 >80% accuracy.**
 
 Everything else depends on this.
+
+### M1.1 progress
+
+| Attempt | Config | Mean Best Acc | Result |
+|:--------|:-------|:-------------:|:------:|
+| E020 (original) | 8192→512 head, 100% stochastic | 77.65% | 🔴 NO-GO |
+| E020 fallback | +150 epochs | 78.36% | 🔴 NO-GO |
+| **E021 (RETRY)** | 8192→256 head + anneal→deterministic @85% | **78.42%** | 🔴 NO-GO |
+
+**E021 analysis:** annealing removed the late-training flip jitter (flip rate
+0.18 → 0.0006) and helped seeds 42/43 (+1.5/+2.5 pp), but seed 44 regressed
+(−1.74 pp) and early-stopping cut the deterministic tail short for seeds 43/44.
+Next fallbacks: anneal@80%, longer/disabled early stopping, lr=0.005, or
+512-head + annealing only.
