@@ -1,7 +1,7 @@
 # PH-Neuro — Product Roadmap
 
 > **Last updated:** 2026-08-04
-> **Status:** Phase 1 — M1.1/M1.2/M1.3 closed, M1.4 next
+> **Status:** Phase 1 — M1.1–M1.4 closed, M1.5 next
 
 ---
 
@@ -26,7 +26,7 @@ All 19 experiments completed. See [`research/`](research/).
 | **M1.1** DQT CNN on CIFAR-10 | >80% accuracy | 🔴 Critical | ✅ CONDITIONAL GO |
 | **M1.2** DQT CNN on CIFAR-100 | >55% accuracy | 🟡 High | 🟡 CONDITIONAL GO |
 | **M1.3** Model export (ONNX/C) | <100MB, runs on Raspberry Pi | 🟡 High | ✅ GO |
-| **M1.4** Production README + docs | Clear quickstart + API docs | 🟡 High | ⬜ |
+| **M1.4** Production README + docs | Clear quickstart + API docs | 🟡 High | ✅ GO |
 | **M1.5** Memory benchmarks vs TF Lite | 4× smaller, 2× faster inference | 🟢 Medium | ⬜ |
 
 **Go/No-go gate:** M1.1 — accuracy gate 78.98% (missed 80% by 1.02pp), but **scientific goal achieved**: DQT Conv2d layer validated, DQT > STE by +2.89pp on identical architecture. Closed as CONDITIONAL GO. See [E020–E021.3](research/docs/RESEARCH_SUMMARY.md).
@@ -90,7 +90,14 @@ All 19 experiments completed. See [`research/`](research/).
 
 ## Current Focus (August 2026)
 
-> **M1.4: Production README + docs.** Next milestone.
+> **M1.5: Memory benchmarks vs TF Lite.** Final Phase 1 milestone.
+
+### M1.4 — CLOSED (GO) ✅
+
+**Goal achieved:** Production-quality documentation. 5 files created/rewritten:
+`README.md` (179 lines, <200 ✅), `docs/api.md` (12 public APIs, 880 lines),
+`docs/quickstart.md` (4 runnable examples), `docs/benchmarks.md` (DQT vs STE vs TF Lite),
+`README_EL.md` (Greek version). All examples verified runnable, all links checked.
 
 ### M1.3 — CLOSED (GO) ✅
 
