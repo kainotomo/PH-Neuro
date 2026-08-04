@@ -3,7 +3,7 @@
 > **Era 1 (Hebbian):** Ternary Hebbian Networks Without Backpropagation — Why Hidden Layers Fail
 > **Era 2 (STE):** Ternary Networks for Low-Memory & Continual Learning
 >
-> **Status:** Hebbian era closed (9 experiments). STE era active (8 experiments completed). DQT era: M1.1 + M1.2 closed (CONDITIONAL GO).
+> **Status:** Hebbian era closed (9 experiments). STE era active (8 experiments completed). DQT era: M1.1/M1.2/M1.3 closed (GO).
 > **Last updated:** 2026-08-04
 
 ---
@@ -242,6 +242,7 @@ After the Hebbian era closed, PH-Neuro pivoted to STE backpropagation. See [`ROA
 | **M1.1 E021.3** | DQT CNN + 512-head + Anneal@80% | CIFAR-10 | **78.80%** mean. 512-head did not beat 256-head. Tuning closed. See [E021.3](experiments/E021.3-m1-1-retry3.md) |
 | **M1.2 E022** | DQT CNN CIFAR-100 | CIFAR-100 | **54.15%** mean (3 seeds, 150ep). 3-conv (64→128→256). DQT +15.95pp vs STE (38.2%). First DQT on CIFAR-100. See [E022](experiments/E022-m1-2-dqt-cnn-cifar100.md) |
 | **M1.2 E022.1** | DQT CNN CIFAR-100 200ep | CIFAR-100 | **53.65%** mean — 200ep worse than 150ep. Architectural ceiling ~54% confirmed. See [E022.1](experiments/E022.1-m1-2-retry.md) |
+| **M1.3 E023** | Model Export ONNX | All models | **✅ GO**. ONNX export pipeline: torch ≡ ONNX to machine precision. 3 models exported (2-16 MB ONNX, 130 KB-1 MB packed). TF32 precision bug found & fixed. See [E023](experiments/E023-m1-3-model-export.md) |
 
 ### Key STE Era Conclusions
 

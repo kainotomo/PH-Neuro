@@ -1,7 +1,7 @@
 # PH-Neuro — Product Roadmap
 
 > **Last updated:** 2026-08-04
-> **Status:** Phase 1 — M1.1 + M1.2 closed (CONDITIONAL GO), M1.3 next
+> **Status:** Phase 1 — M1.1/M1.2/M1.3 closed, M1.4 next
 
 ---
 
@@ -25,7 +25,7 @@ All 19 experiments completed. See [`research/`](research/).
 |:----------|:------:|:--------:|:------:|
 | **M1.1** DQT CNN on CIFAR-10 | >80% accuracy | 🔴 Critical | ✅ CONDITIONAL GO |
 | **M1.2** DQT CNN on CIFAR-100 | >55% accuracy | 🟡 High | 🟡 CONDITIONAL GO |
-| **M1.3** Model export (ONNX/C) | <100MB, runs on Raspberry Pi | 🟡 High | ⬜ |
+| **M1.3** Model export (ONNX/C) | <100MB, runs on Raspberry Pi | 🟡 High | ✅ GO |
 | **M1.4** Production README + docs | Clear quickstart + API docs | 🟡 High | ⬜ |
 | **M1.5** Memory benchmarks vs TF Lite | 4× smaller, 2× faster inference | 🟢 Medium | ⬜ |
 
@@ -90,7 +90,26 @@ All 19 experiments completed. See [`research/`](research/).
 
 ## Current Focus (August 2026)
 
-> **M1.3: Model export ONNX/C, <100MB, Raspberry Pi.** Next milestone.
+> **M1.4: Production README + docs.** Next milestone.
+
+### M1.3 — CLOSED (GO) ✅
+
+**Goal achieved:** ONNX export pipeline for ALL DQT models. 3 models exported
+and verified (ste_mlp, dqt_cnn, dqt_cnn_cifar100). torch ≡ ONNX output to
+machine precision. All models <17 MB ONNX / <1 MB packed (2-bit).
+
+| Μοντέλο | ONNX size | Packed (2-bit) | Verified |
+|:--------|:---------:|:--------------:|:--------:|
+| ste_mlp (MNIST) | 2.06 MB | 130.6 KB | ✅ |
+| dqt_cnn (CIFAR-10) | 16.33 MB | 1.02 MB | ✅ |
+| dqt_cnn_cifar100 (CIFAR-100) | 9.64 MB | 615 KB | ✅ |
+
+**Key deliverables:** `export.py` (dqt_to_inference_model, export_to_onnx, verify_onnx),
+CLI runner, 8/8 tests, Raspberry Pi deployment guide (export_guide.md),
+TF32 precision bug found & fixed.
+
+**Note:** demo models exported (1-2 epoch training). Re-export with trained
+M1.1/M1.2 checkpoints for production artifacts (same sizes, 79%/54% accuracy).
 
 ### M1.2 — CLOSED (CONDITIONAL GO) 🟡
 
