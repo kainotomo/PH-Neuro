@@ -51,7 +51,7 @@ DQT_LAYERS = (TernaryDQTConv2d, TernaryDQTLinear)
 # Fraction of training spent with stochastic rounding before annealing to
 # deterministic sign. The final (1 - ANNEAL_FRACTION) of epochs run in a
 # clean deterministic fine-tuning regime (no stochastic flip noise).
-ANNEAL_FRACTION = 0.85
+ANNEAL_FRACTION = 0.80
 
 
 # ── Helpers ─────────────────────────────────────────────────────────
@@ -295,7 +295,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
-    parser.add_argument("--patience", type=int, default=15,
+    parser.add_argument("--patience", type=int, default=25,
                         help="Early stopping patience (epochs)")
     parser.add_argument("--num-workers", type=int, default=2)
     parser.add_argument("--device", default=None,
