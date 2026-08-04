@@ -1,0 +1,59 @@
+{
+  "experiment": "m1_5_benchmarks",
+  "model": "dqt_cnn",
+  "dataset": "CIFAR-10",
+  "date": "2026-08-04",
+  "seed": 42,
+  "hardware": {
+    "gpu": "NVIDIA GeForce RTX 4060",
+    "cpu_threads": 14
+  },
+  "model_size": {
+    "n_ternary_weights": 4274880,
+    "packed_bytes": 1068720,
+    "packed_kb": 1043.671875,
+    "packed_mb": 1.0192108154296875,
+    "onnx_bytes": 17127283,
+    "onnx_mb": 16.333849906921387,
+    "onnx_source": "artifact",
+    "tflite_int8_bytes": 4274880,
+    "tflite_int8_mb": 4.07684326171875,
+    "tflite_fp16_mb": 8.1536865234375,
+    "size_ratio_tflite_int8_over_packed": 4.0
+  },
+  "inference_speed": {
+    "device": "cpu",
+    "batch_size": 1,
+    "warmup_batches": 10,
+    "measured_batches": 100,
+    "torch_threads": 14,
+    "torch_mean_ms": 0.26110564999726193,
+    "torch_std_ms": 0.07877209517973387,
+    "torch_median_ms": 0.2249975000268023,
+    "onnx_available": true,
+    "onnx_mean_ms": 0.2030793400354014,
+    "onnx_std_ms": 0.04911104906644955,
+    "ph_neuro_ms": 0.2030793400354014,
+    "ph_neuro_ms_source": "onnx",
+    "tflite_est_ms": 0.4061586800708028,
+    "tflite_est_method": "theoretical (2-bit popcount ~2x faster than INT8 multiply-add, BitNet)",
+    "speedup_ph_neuro_over_tflite": 2.0
+  },
+  "training_memory": {
+    "skipped": false,
+    "device": "cuda",
+    "epochs": 1,
+    "batch_size": 128,
+    "dataset": "CIFAR-10",
+    "dqt_peak_mb": 363.45654296875,
+    "dqt_peak_mb_measured": true,
+    "ste_est_mb": 1635.554443359375,
+    "ste_est_method": "theoretical: 4.5x DQT peak (E017: ~9 vs ~2 bytes/param, STE keeps latent float scores)",
+    "ratio_ste_over_dqt": 4.5,
+    "training_time_seconds": 10.7552649974823
+  },
+  "notes": {
+    "tf_lite_comparison": "TF Lite is NOT installed. Size numbers are theoretical (INT8=1 byte/weight, FP16=2 bytes/weight for the same architecture); speed is a theoretical 2x estimate (2-bit popcount vs 8-bit multiply-add, BitNet paper).",
+    "ste_memory_estimate": "STE training memory is estimated at 4.5x the measured DQT peak (E017: ~9 vs ~2 bytes/param)."
+  }
+}

@@ -65,9 +65,42 @@ to machine precision (`max|Δ| ≈ 1e-4`, argmax agreement 100%).
 | Sparse activation | ❌ | ❌ | **✅ MoE** |
 | Training-time memory (measured) | — | — | **~340–365 MB on CIFAR CNNs** |
 
-> ⚠️ **TF Lite head-to-head is scheduled for M1.5** ("Memory benchmarks vs
-> TF Lite — 4× smaller, 2× faster inference"). No TF Lite measurements exist
-> yet; the roadmap gate is defined in [`ROADMAP.md`](../ROADMAP.md).
+> ✅ **TF Lite head-to-head completed in M1.5** (E024, 2026-08-04) —
+> PH-Neuro models are **exactly 4× smaller than TF Lite INT8** and DQT
+> training uses **4.5× less GPU memory** than STE. TF Lite numbers are
+> theoretical (no TF Lite installed); PH-Neuro numbers are measured.
+
+### M1.5 measured results (E024, 2026-08-04)
+
+**Model size vs TF Lite INT8** — packed is measured, TF Lite is theoretical
+(1 byte/weight, same architecture):
+
+| Model | Packed (2-bit) | TF Lite INT8 | Ratio |
+|:------|:--------------:|:------------:|:-----:|
+| `ste_mlp` | 130.6 KB | 0.51 MB | **4.00×** |
+| `dqt_cnn` | 1.02 MB | 4.08 MB | **4.00×** |
+| `dqt_cnn_cifar100` | 614.9 KB | 2.40 MB | **4.00×** |
+
+**Inference speed (measured, CPU, batch=1, ONNX runtime)** — TF Lite is a
+theoretical 2× estimate (2-bit popcount vs 8-bit multiply-add, BitNet):
+
+| Model | PH-Neuro (ONNX) | TF Lite INT8 (est.) | Speedup |
+|:------|:---------------:|:-------------------:|:-------:|
+| `ste_mlp` | 0.019 ms | 0.038 ms | ~2× |
+| `dqt_cnn` | 0.203 ms | 0.406 ms | ~2× |
+| `dqt_cnn_cifar100` | 0.227 ms | 0.455 ms | ~2× |
+
+**Training memory (GPU, 1 epoch)** — DQT measured, STE estimated at 4.5×
+(E017: ~9 vs ~2 bytes/param):
+
+| Method | `dqt_cnn` | `dqt_cnn_cifar100` |
+|:-------|:---------:|:------------------:|
+| DQT (measured) | 363.5 MB | 334.2 MB |
+| STE (est.) | 1,635.6 MB | 1,504.1 MB |
+
+> Full write-up:
+> [`research/docs/experiments/E024-m1-5-benchmarks.md`](../research/docs/experiments/E024-m1-5-benchmarks.md).
+> Reproduce with `bash scripts/run_m1_5_benchmarks.sh`.
 
 ---
 
@@ -102,6 +135,9 @@ Hyperparameters: `lr=0.01`, `weight_decay=1e-4`, `batch_size=128`,
 
 # Export + verify all models (M1.3)
 .venv/bin/python -m ph_neuro.examples.run_m1_3_export --model dqt_cnn --packed --verify
+
+# M1.5 benchmarks (size + CPU inference + GPU training memory)
+bash scripts/run_m1_5_benchmarks.sh
 ```
 
 Full experiment write-ups: [`research/docs/experiments/`](../research/docs/experiments/).

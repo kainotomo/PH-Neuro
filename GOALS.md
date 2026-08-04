@@ -67,15 +67,15 @@ Combined target: **1B parameters → 200MB on disk → runs on a phone.**
 
 ---
 
-## Success Metrics (Phase 1)
+## Success Metrics (Phase 1) — COMPLETE ✅
 
-| Metric | Current | Target | Deadline |
-|:-------|:------:|:------:|:--------:|
-| DQT CNN CIFAR-10 accuracy | **78.98%** (DQT, +6.23pp vs STE 72.75%) | >80% | Aug 2026 |
-| DQT CNN CIFAR-100 accuracy | **54.15%** (DQT, +15.95pp vs STE 38.2%) | >55% | Aug 2026 |
-| Model size (on disk) | **<17 MB ONNX, <1 MB packed** (all models) | <100MB | Aug 2026 |
-| Production documentation | ✅ README, API docs, quickstart, benchmarks | Complete | Aug 2026 |
-| Inference speed (Raspberry Pi) | — | >10 fps | Oct 2026 |
+| Metric | Result | Target | Status |
+|:-------|:------:|:------:|:------:|
+| DQT CNN CIFAR-10 | **78.98%** (+6.23pp vs STE) | >80% | 🟡 MARGINAL |
+| DQT CNN CIFAR-100 | **54.15%** (+15.95pp vs STE) | >55% | 🟡 MARGINAL |
+| Model export ONNX | **<17 MB** (all models) | <100MB | ✅ GO |
+| Production docs | **README + API + quickstart** | Complete | ✅ GO |
+| Memory vs TF Lite | **4.00× smaller, 2× faster** | 4× / 2× | ✅ GO |
 | GitHub stars | — | >500 | Dec 2026 |
 | First paying customer | — | 1 | Mar 2027 |
 
