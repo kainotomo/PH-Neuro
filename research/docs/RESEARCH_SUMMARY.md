@@ -3,7 +3,7 @@
 > **Era 1 (Hebbian):** Ternary Hebbian Networks Without Backpropagation — Why Hidden Layers Fail
 > **Era 2 (STE):** Ternary Networks for Low-Memory & Continual Learning
 >
-> **Status:** Hebbian era closed (9 experiments). STE era active (8 experiments completed). DQT era: M1.1 closed (4 experiments).
+> **Status:** Hebbian era closed (9 experiments). STE era active (8 experiments completed). DQT era: M1.1 + M1.2 closed (CONDITIONAL GO).
 > **Last updated:** 2026-08-04
 
 ---
@@ -240,6 +240,8 @@ After the Hebbian era closed, PH-Neuro pivoted to STE backpropagation. See [`ROA
 | **M1.1 E021** | DQT CNN + Annealing | CIFAR-10 | **78.42%** mean. Annealing stochastic→deterministic sign eliminates flip noise (0.18→0.0006). 256-head + anneal@85%. See [E021](experiments/E021-m1-1-retry-dqt-cnn-cifar10.md) |
 | **M1.1 E021.2** | DQT CNN + Anneal@80% | CIFAR-10 | **78.98%** mean (BEST). Anneal@80% + patience=25 + 256-head. All seeds reach deterministic tail. Ceiling ~79% for 2-conv CNN. See [E021.2](experiments/E021.2-m1-1-retry2.md) |
 | **M1.1 E021.3** | DQT CNN + 512-head + Anneal@80% | CIFAR-10 | **78.80%** mean. 512-head did not beat 256-head. Tuning closed. See [E021.3](experiments/E021.3-m1-1-retry3.md) |
+| **M1.2 E022** | DQT CNN CIFAR-100 | CIFAR-100 | **54.15%** mean (3 seeds, 150ep). 3-conv (64→128→256). DQT +15.95pp vs STE (38.2%). First DQT on CIFAR-100. See [E022](experiments/E022-m1-2-dqt-cnn-cifar100.md) |
+| **M1.2 E022.1** | DQT CNN CIFAR-100 200ep | CIFAR-100 | **53.65%** mean — 200ep worse than 150ep. Architectural ceiling ~54% confirmed. See [E022.1](experiments/E022.1-m1-2-retry.md) |
 
 ### Key STE Era Conclusions
 
@@ -258,6 +260,13 @@ After the Hebbian era closed, PH-Neuro pivoted to STE backpropagation. See [`ROA
 4. **0% sparsity in deterministic phase** — sign() pushes all weights to ±1. DQT loses its natural sparsity advantage (56% on MNIST) when combined with annealing.
 5. **Ceiling ~79% for 2-conv CNN** — architectural limit, not tuning. Larger CNN (3-conv layers) needed for M1.2 (CIFAR-100).
 6. **Head size matters less than annealing** — 256 vs 512 FC head: 0.18pp difference. Annealing schedule dominates.
+
+### Key DQT Era Conclusions — CIFAR-100 (M1.2, Aug 2026)
+
+1. **DQT generalizes to CIFAR-100** — 3-conv CNN (64→128→256) achieves 54.15%, crushing STE baseline (38.2%) by +15.95pp.
+2. **Architectural ceiling confirmed** — ~54% for 3-conv CNN. 200 epochs do NOT help (53.65%, −0.50pp). Same pattern as M1.1 (2-conv ~79% CIFAR-10).
+3. **More epochs ≠ more accuracy** — CosineAnnealing over longer schedules lowers LR too slowly, extending stochastic phase without raising peak.
+4. **4-conv (64→128→256→512) is the next scaling step** — left as future optimization.
 
 ---
 

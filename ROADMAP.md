@@ -1,7 +1,7 @@
 # PH-Neuro — Product Roadmap
 
 > **Last updated:** 2026-08-04
-> **Status:** Phase 1 — M1.1 closed (CONDITIONAL GO), M1.2 next
+> **Status:** Phase 1 — M1.1 + M1.2 closed (CONDITIONAL GO), M1.3 next
 
 ---
 
@@ -24,7 +24,7 @@ All 19 experiments completed. See [`research/`](research/).
 | Milestone | Target | Priority | Status |
 |:----------|:------:|:--------:|:------:|
 | **M1.1** DQT CNN on CIFAR-10 | >80% accuracy | 🔴 Critical | ✅ CONDITIONAL GO |
-| **M1.2** DQT CNN on CIFAR-100 | >55% accuracy | 🟡 High | ⬜ |
+| **M1.2** DQT CNN on CIFAR-100 | >55% accuracy | 🟡 High | 🟡 CONDITIONAL GO |
 | **M1.3** Model export (ONNX/C) | <100MB, runs on Raspberry Pi | 🟡 High | ⬜ |
 | **M1.4** Production README + docs | Clear quickstart + API docs | 🟡 High | ⬜ |
 | **M1.5** Memory benchmarks vs TF Lite | 4× smaller, 2× faster inference | 🟢 Medium | ⬜ |
@@ -90,7 +90,30 @@ All 19 experiments completed. See [`research/`](research/).
 
 ## Current Focus (August 2026)
 
-> **M1.2: DQT CNN on CIFAR-100 >55% accuracy.** Next milestone.
+> **M1.3: Model export ONNX/C, <100MB, Raspberry Pi.** Next milestone.
+
+### M1.2 — CLOSED (CONDITIONAL GO) 🟡
+
+**Scientific goal achieved:** DQT generalizes from CIFAR-10 to CIFAR-100.
+3-conv CNN (64→128→256), DQT **54.15%** vs STE baseline **38.2%** = **+15.95pp**.
+Annealing @80% validated, flip noise eliminated (0.0005-0.0006).
+
+**Accuracy gate missed:** Mean best 54.15% (gate: >55%), −0.85pp. Ceiling ~54%
+for 3-conv CNN. 200 epochs did NOT help (53.65%, −0.50pp — confirmed architectural).
+
+| Attempt | Config | Mean Best Acc | Result |
+|:--------|:-------|:-------------:|:------:|
+| E022 | 3-conv, 150ep, lr=0.01 | **54.15%** | 🟡 MARGINAL |
+| E022.1 | 3-conv, 200ep, lr=0.01 | 53.65% | 🟡 MARGINAL (worse) |
+
+**Key lessons:** (1) DQT >> STE on CIFAR-100 (+16pp), confirming M1.1 finding.
+(2) Architectural ceiling, not epoch-limited — more epochs don't help.
+(3) 4-conv (64→128→256→512) remains as future optimization.
+(4) CosineAnnealing over 200ep lowers LR too slowly — longer stochastic phase
+without higher peak.
+
+**Deliverables:** `dqt_cnn_cifar100()` in `dqt_models.py`, runner, shell script,
+8 integration tests, 6 result JSONs. See [E022](research/docs/experiments/).
 
 ### M1.1 — CLOSED (CONDITIONAL GO) ✅
 
