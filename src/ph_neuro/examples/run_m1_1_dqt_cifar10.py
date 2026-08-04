@@ -373,7 +373,7 @@ def main() -> None:
         "weight_decay": args.weight_decay,
         "patience": args.patience,
         "anneal_fraction": ANNEAL_FRACTION,
-        "architecture": "DQT CNN: Conv(3->64)->Pool->Conv(64->128)->Pool->FC(8192->256)->FC(256->10)",
+        "architecture": "DQT CNN: Conv(3->64)->Pool->Conv(64->128)->Pool->FC(8192->512)->FC(512->10)",
         "method": "Direct Quantized Training (DQT) with stochastic rounding annealed to deterministic sign for final 15% (conv + linear)",
         "n_parameters": n_params,
         "peak_gpu_memory_mb": peak_mem_mb,

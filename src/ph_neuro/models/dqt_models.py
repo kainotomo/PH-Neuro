@@ -27,9 +27,7 @@ def dqt_cnn(
 ) -> nn.Sequential:
     """Build a small CNN with ternary DQT layers for CIFAR-style images.
 
-    Architecture (mirrors :func:`ste_cnn` for direct comparison, except the
-    FC head is 8192→256→10 instead of 8192→512→10 — M1.1-RETRY reduces
-    classifier flip noise while the conv feature path stays identical):
+    Architecture (mirrors :func:`ste_cnn` for direct comparison):
         ``TernaryDQTConv2d → ReLU → BN → MaxPool →
          TernaryDQTConv2d → ReLU → BN → MaxPool →
          Flatten → TernaryDQTLinear → ReLU → BN → TernaryDQTLinear``
@@ -53,9 +51,9 @@ def dqt_cnn(
     # (2 * hidden_channels) * (img_size // 4) * (img_size // 4)
     flat_features = (2 * hidden_channels) * (img_size // 4) * (img_size // 4)
 
-    # Smaller FC head than ste_cnn() (8192->512) — M1.1-RETRY: halves the
-    # classifier flip noise while leaving the conv feature path untouched.
-    head_hidden = 256
+    # FC head matches ste_cnn(): 8192->512->10 (M1.1-RETRY-3 restores the
+    # 512-head from E020, keeping anneal@80% / patience=25 from E021.2).
+    head_hidden = 512
 
     layers: list[nn.Module] = [
         # Conv block 1
