@@ -67,12 +67,14 @@ for x, y in train_loader:
 ph_neuro/
 ├── layers/
 │   ├── ste_dqt.py              # TernaryDQTLinear (stochastic rounding)
+│   ├── ste_dqt_conv.py         # TernaryDQTConv2d (DQT convolution)
 │   ├── ste_dqt_moe.py          # TernaryDQTMoELayer (Mixture of Experts)
 │   ├── ste_linear.py           # TernarySTELinear (STE, fallback)
 │   ├── ste_hysteresis.py       # HysteresisSTELinear (sparsity regularizer)
 │   └── ste_conv.py             # TernarySTEConv2d
 ├── models/
 │   ├── ste_models.py           # ste_mlp, ste_cnn factories
+│   ├── dqt_models.py           # dqt_cnn factory (DQT conv + linear)
 │   └── ste_models_lora.py      # QLoRA-enabled models
 ├── training/
 │   ├── ewc.py                  # Elastic Weight Consolidation

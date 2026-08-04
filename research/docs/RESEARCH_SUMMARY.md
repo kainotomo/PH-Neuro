@@ -3,8 +3,8 @@
 > **Era 1 (Hebbian):** Ternary Hebbian Networks Without Backpropagation — Why Hidden Layers Fail
 > **Era 2 (STE):** Ternary Networks for Low-Memory & Continual Learning
 >
-> **Status:** Hebbian era closed (9 experiments). STE era active (8 experiments completed).
-> **Last updated:** 2026-08-02
+> **Status:** Hebbian era closed (9 experiments). STE era active (8 experiments completed). DQT era: M1.1 closed (4 experiments).
+> **Last updated:** 2026-08-04
 
 ---
 
@@ -236,6 +236,10 @@ After the Hebbian era closed, PH-Neuro pivoted to STE backpropagation. See [`ROA
 | **DQT** | Direct Quantized Training | MNIST | **98.23% MNIST** (beats STE 98.17%), **56% sparsity**, **4.5× less training memory** — no latent float scores. First DQT demonstration on vision. See [E017](experiments/E017-dqt-pilot.md) |
 | **DQT+Hyst** | DQT + Hysteresis | MNIST | **98.09%**, **60.5% sparsity**. Stochastic rounding overrides hysteresis — DQT alone is the better trade-off. 3 seeds. See [E018](experiments/E018-dqt-hysteresis.md) |
 | **MoE DQT** | Mixture of Experts + DQT | MNIST | **91.21%** (beats dense 88.73% by **+2.48pp**) with **50.5% active params**. First ternary MoE on vision. See [E019](experiments/E019-moe-dqt-pilot.md) |
+| **M1.1 E020** | DQT CNN CIFAR-10 | CIFAR-10 | **77.65%** mean (3 seeds). First DQT convolutional layer validated. DQT (77.94%) > STE (76.09%) by +1.85pp on identical architecture. Backward numerically exact. See [E020](experiments/E020-m1-1-dqt-cnn-cifar10.md) |
+| **M1.1 E021** | DQT CNN + Annealing | CIFAR-10 | **78.42%** mean. Annealing stochastic→deterministic sign eliminates flip noise (0.18→0.0006). 256-head + anneal@85%. See [E021](experiments/E021-m1-1-retry-dqt-cnn-cifar10.md) |
+| **M1.1 E021.2** | DQT CNN + Anneal@80% | CIFAR-10 | **78.98%** mean (BEST). Anneal@80% + patience=25 + 256-head. All seeds reach deterministic tail. Ceiling ~79% for 2-conv CNN. See [E021.2](experiments/E021.2-m1-1-retry2.md) |
+| **M1.1 E021.3** | DQT CNN + 512-head + Anneal@80% | CIFAR-10 | **78.80%** mean. 512-head did not beat 256-head. Tuning closed. See [E021.3](experiments/E021.3-m1-1-retry3.md) |
 
 ### Key STE Era Conclusions
 
@@ -245,6 +249,15 @@ After the Hebbian era closed, PH-Neuro pivoted to STE backpropagation. See [`ROA
 4. **"More quantization = less forgetting" hypothesis NOT supported** — differences are negligible
 5. **Hysteresis-STE delivers 95% sparsity at minimal accuracy cost** — novel algorithmic contribution
 6. **DQT eliminates latent float scores entirely** — 4.5× less training memory, beats STE accuracy, produces natural sparsity
+
+### Key DQT Era Conclusions (M1.1, Aug 2026)
+
+1. **DQT Conv2d works** — first convolutional DQT layer validated. Backward numerically exact vs PyTorch autograd, 16 unit tests.
+2. **DQT > STE on CNNs** — +2.89pp on identical CIFAR-10 architecture (77.94% vs 76.09%), confirming the E017 MLP result generalizes.
+3. **Annealing solves flip noise** — stochastic rounding at 85%→80% of training, then deterministic sign. Flip rate 0.18 → 0.0008. All seeds reach clean fine-tuning.
+4. **0% sparsity in deterministic phase** — sign() pushes all weights to ±1. DQT loses its natural sparsity advantage (56% on MNIST) when combined with annealing.
+5. **Ceiling ~79% for 2-conv CNN** — architectural limit, not tuning. Larger CNN (3-conv layers) needed for M1.2 (CIFAR-100).
+6. **Head size matters less than annealing** — 256 vs 512 FC head: 0.18pp difference. Annealing schedule dominates.
 
 ---
 

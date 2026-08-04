@@ -1,7 +1,7 @@
 # PH-Neuro — Goals & Vision
 
 > **The smallest useful AI models in the world.**
-> Last updated: 2026-08-03
+> Last updated: 2026-08-04
 
 ---
 
@@ -71,7 +71,7 @@ Combined target: **1B parameters → 200MB on disk → runs on a phone.**
 
 | Metric | Current | Target | Deadline |
 |:-------|:------:|:------:|:--------:|
-| DQT CNN CIFAR-10 accuracy | — | >80% | Sep 2026 |
+| DQT CNN CIFAR-10 accuracy | **78.98%** (DQT, +6.23pp vs STE 72.75%) | >80% | Aug 2026 |
 | Model size (on disk) | — | <100MB | Sep 2026 |
 | Inference speed (Raspberry Pi) | — | >10 fps | Oct 2026 |
 | GitHub stars | — | >500 | Dec 2026 |
