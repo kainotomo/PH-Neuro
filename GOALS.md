@@ -76,6 +76,11 @@ Combined target: **1B parameters → 200MB on disk → runs on a phone.**
 | Model export ONNX | **<17 MB** (all models) | <100MB | ✅ GO |
 | Production docs | **README + API + quickstart** | Complete | ✅ GO |
 | Memory vs TF Lite | **4.00× smaller, 2× faster** | 4× / 2× | ✅ GO |
+### Phase 2 (In Progress)
+
+| Metric | Result | Target | Status |
+|:-------|:------:|:------:|:------:|
+| DQT Transformer 100M | **11.35 ppl** TinyStories | <30 ppl | ✅ GO |
 | GitHub stars | — | >500 | Dec 2026 |
 | First paying customer | — | 1 | Mar 2027 |
 

@@ -13,6 +13,7 @@ never require downloading TinyStories.
 from __future__ import annotations
 
 import math
+import tempfile
 
 import torch
 import torch.nn as nn
@@ -23,6 +24,8 @@ from ph_neuro.examples.run_m2_1_dqt_transformer import (
     apply_dqt_rounding,
     compute_perplexity,
     evaluate_perplexity,
+    find_latest_checkpoint,
+    load_checkpoint,
     should_use_stochastic,
     train_dqt_transformer,
 )
@@ -276,3 +279,67 @@ class TestPerplexityCalculation:
         assert n_ternary > 0
         assert n_total > n_ternary  # float embedding + RMSNorm add to it
         assert _check_ternary_invariants(model)
+
+
+# ── 6. Pause/resume ────────────────────────────────────────────────
+
+
+class TestTransformerResume:
+    """Checkpointed training can be paused and resumed."""
+
+    def _make_runner(self, vocab=64, seq_len=32):
+        model = _build_small_model(vocab=vocab, seq_len=seq_len)
+        train_loader = make_synthetic_lm_loader(
+            vocab_size=vocab, seq_len=seq_len, batch_size=4, n_batches=10, seed=3
+        )
+        val_loader = make_synthetic_lm_loader(
+            vocab_size=vocab, seq_len=seq_len, batch_size=4, n_batches=4, seed=4
+        )
+        optimizer = torch.optim.AdamW(model.parameters(), lr=0.03)
+        scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda s: 1.0)
+        return model, train_loader, val_loader, optimizer, scheduler
+
+    def test_checkpoint_and_find_latest(self):
+        """Training writes checkpoints and find_latest picks the newest."""
+        model, train_loader, val_loader, optimizer, scheduler = self._make_runner()
+        with tempfile.TemporaryDirectory() as ckpt_dir:
+            train_dqt_transformer(
+                model, train_loader, val_loader, optimizer, scheduler, DEVICE,
+                epochs=2, max_steps=4, anneal_fraction=1.0,
+                checkpoint_every=2, checkpoint_dir=ckpt_dir, verbose=False,
+            )
+            latest = find_latest_checkpoint(ckpt_dir)
+            assert latest is not None
+            assert "ckpt_step4.pt" in latest, f"Expected step-4 checkpoint, got {latest}"
+
+    def test_resume_continues_training(self):
+        """A fresh run resumed from a checkpoint continues the step count."""
+        with tempfile.TemporaryDirectory() as ckpt_dir:
+            # Phase 1: train 4 steps (checkpoints at step 2 and step 4)
+            m1, tl, vl, o1, s1 = self._make_runner()
+            r1 = train_dqt_transformer(
+                m1, tl, vl, o1, s1, DEVICE,
+                epochs=2, max_steps=4, anneal_fraction=1.0,
+                checkpoint_every=2, checkpoint_dir=ckpt_dir, verbose=False,
+            )
+            assert r1["steps_trained"] == 4
+
+            # Phase 2: build a FRESH model, resume from the latest checkpoint
+            m2, tl, vl, o2, s2 = self._make_runner()
+            loaded = load_checkpoint(
+                "auto", ckpt_dir, m2, o2, s2, DEVICE
+            )
+            assert loaded["step"] == 4, f"Expected resume at step 4, got {loaded['step']}"
+            r2 = train_dqt_transformer(
+                m2, tl, vl, o2, s2, DEVICE,
+                epochs=3, max_steps=8, anneal_fraction=1.0,
+                checkpoint_every=2, checkpoint_dir=ckpt_dir,
+                start_step=loaded["step"],
+                start_epoch=loaded["epoch"] + 1,
+                best_val_ppl=loaded["best_val_ppl"],
+                best_step=loaded["best_step"],
+                verbose=False,
+            )
+            # Continued from step 4 to step 8 (4 more steps)
+            assert r2["steps_trained"] == 8
+            assert _check_ternary_invariants(m2)

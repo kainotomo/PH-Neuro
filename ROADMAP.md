@@ -39,13 +39,13 @@ All 19 experiments completed. See [`research/`](research/).
 
 | Milestone | Target | Priority |
 |:----------|:------:|:--------:|
-| **M2.1** DQT Transformer 100M params | Perplexity <30 on TinyStories | 🔴 Critical |
+| **M2.1** DQT Transformer 100M params | Perplexity <30 on TinyStories (**mean 11.35** ✅) | ✅ GO |
 | **M2.2** DQT Transformer 500M params | Perplexity <20 on WikiText-2 | 🟡 High |
 | **M2.3** MoE DQT Transformer | 1B total, 200M active, <250MB on disk | 🟡 High |
 | **M2.4** On-device inference demo | Token generation on smartphone | 🟡 High |
 | **M2.5** Public demo + blog post | Hacker News / Reddit launch | 🟢 Medium |
 
-**Go/No-go gate:** M2.1 must show that DQT Transformer trains stably. If perplexity <30, proceed to M2.3 (MoE scaling).
+**Go/No-go gate:** M2.1 — ✅ **GO** (mean val ppl **11.35** < 30; seeds 11.47/11.32/11.27; no NaN/divergence across 3 seeds). DQT Transformer trains stably on TinyStories. Proceeding to M2.3 (MoE scaling). See [E025](research/docs/experiments/E025-m2-1-dqt-transformer.md).
 
 ---
 

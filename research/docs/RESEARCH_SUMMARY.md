@@ -3,8 +3,8 @@
 > **Era 1 (Hebbian):** Ternary Hebbian Networks Without Backpropagation — Why Hidden Layers Fail
 > **Era 2 (STE):** Ternary Networks for Low-Memory & Continual Learning
 >
-> **Status:** Hebbian era closed (9 experiments). STE era active (8 experiments completed). DQT era: Phase 1 COMPLETE (all 5 milestones closed).
-> **Last updated:** 2026-08-04
+> **Status:** Phase 1 COMPLETE. Phase 2: M2.1 GO (DQT Transformer 102M, ppl 11.35).
+> **Last updated:** 2026-08-06
 
 ---
 
@@ -244,7 +244,11 @@ After the Hebbian era closed, PH-Neuro pivoted to STE backpropagation. See [`ROA
 | **M1.2 E022.1** | DQT CNN CIFAR-100 200ep | CIFAR-100 | **53.65%** mean — 200ep worse than 150ep. Architectural ceiling ~54% confirmed. See [E022.1](experiments/E022.1-m1-2-retry.md) |
 | **M1.3 E023** | Model Export ONNX | All models | **✅ GO**. ONNX export pipeline: torch ≡ ONNX to machine precision. 3 models exported (2-16 MB ONNX, 130 KB-1 MB packed). TF32 precision bug found & fixed. See [E023](experiments/E023-m1-3-model-export.md) |
 | **M1.4** | Production Docs | — | **✅ GO**. README (179 lines), API docs (12 layers, 880 lines), quickstart (4 runnable examples), benchmarks, README_EL. |
-| **M1.5 E024** | Memory Benchmarks vs TF Lite | All models | **✅ GO**. 4.00× smaller (2-bit vs 8-bit), ~2× faster (popcount vs INT8), 4.5× less training memory (DQT 363 MB vs STE ~1,636 MB). Phase 1 complete. See [E024](experiments/E024-m1-5-benchmarks.md) |
+| **M1.5 E024** | Memory Benchmarks vs TF Lite | All models | **✅ GO**. 4.00× smaller, ~2× faster, 4.5× less training memory. Phase 1 complete. See [E024](experiments/E024-m1-5-benchmarks.md) |
+
+### Phase 2: Tiny Transformer
+
+| **M2.1 E025** | DQT Transformer 100M | TinyStories | **✅ GO**. 102.3M ternary params, mean ppl **11.35** ≪ 30 gate. 3 seeds stable (no NaN). Output scaling 1/√d critical — BitNet finding confirmed for DQT. See [E025](experiments/E025-m2-1-dqt-transformer.md) |
 
 ### Key STE Era Conclusions
 

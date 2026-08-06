@@ -1,8 +1,8 @@
 # Experiment E025: M2.1 — DQT Transformer on TinyStories (GO/NO-GO ppl<30)
 
-- **Date:** 2026-08-04
+- **Date:** 2026-08-04 → 2026-08-06
 - **Git commit:** `TBD`
-- **Status:** 🟡 implementation + smoke ✅ — FULL run pending user execution
+- **Status:** ✅ **GO — mean val ppl 11.35 < 30 (3 seeds). COMPLETE.**
 - **Phase:** 2 (Tiny Transformer)
 
 ---
@@ -172,14 +172,28 @@ d768/L9/H12/ff3072/vocab 50257 = **140.9M total, 102.3M ternary**, RTX 4060:
 | Stability | finite, bounded logits, loss decreasing (no divergence) |
 | Estimated FULL run (150K stories × 3 epochs) | ~3.5 h/seed → ~10.5 h for 3 seeds |
 
-### FULL run (3 seeds × 3 epochs)
+### FULL run (3 seeds × 3 epochs) — ✅ GO
 
-_TBD — after user executes `bash scripts/run_m2_1_dqt_transformer.sh full`._
+Ran via `research/scripts/run_m2_1_supervisor.sh 42 43 44` (sequential, pause/resume
+with SIGINT + `--resume auto` — see the pause/resume section). 150K stories,
+lr=0.01, anneal@80%, batch 8, seq 256, **48,708 steps/seed**. Full val ppl
+histories and per-epoch metrics are in the per-seed result JSONs
+(`m2_1_results/results_m2_1_dqt_transformer_lr0.01_seed{42,43,44}.json`).
 
 | Metric | seed 42 | seed 43 | seed 44 | Mean |
 |--------|--------:|--------:|--------:|-----:|
-| Best val perplexity | — | — | — | — |
-| Verdict (<30) | — | — | — | — |
+| Best val perplexity | **11.47** | **11.32** | **11.27** | **11.35** |
+| Final val perplexity | 11.47 | 11.32 | 11.27 | **11.35** |
+| Steps trained | 48,708 | 48,708 | 48,708 | 48,708 |
+| Time | ~2.0 h* | 4.80 h | 4.79 h | — |
+| Verdict (<30) | ✅ | ✅ | ✅ | **GO ✅** |
+
+\* seed 42 ran in two segments (an interrupted launch was resumed detached), so
+its reported wall-clock covers only the second segment; steady-state is ~4.8 h/seed.
+
+**Result: mean validation perplexity 11.35 — far below the <30 gate → GO ✅** to
+M2.3 (MoE scaling). No NaN/divergence in any seed; all three trained stably and
+the annealing tail (deterministic sign after step 38,966) worked as in M1.1.
 
 ---
 
@@ -198,9 +212,54 @@ _TBD — after user executes `bash scripts/run_m2_1_dqt_transformer.sh full`._
 
 ---
 
+## Pause / resume & monitoring (GPU shared with a game)
+
+The runner supports **pause/resume** so a seed can be stopped (e.g. to free the
+GPU for a game) and continued later:
+
+- Every `--checkpoint-every` steps the runner saves `{output_dir}/checkpoints/seed{seed}/ckpt_step{N}.pt`
+  (model + optimizer + scheduler + best-ppl state). Per-seed dirs prevent seeds
+  from overwriting each other.
+- Resume with `--resume auto` (latest checkpoint in the seed dir) or
+  `--resume <path>`: `bash scripts/run_m2_1_dqt_transformer.sh resume 0.01 42`.
+  Verified: train 6 steps → checkpoint → resume → continues to step 12 with
+  loss still decreasing (ppl 63.76 → 57.74).
+- Sequential multi-seed orchestration with pause-aware halting:
+  `research/scripts/run_m2_1_supervisor.sh 42 43 44` — runs seeds one at a time
+  (8 GB can't fit two 102M models), skips seeds with a result JSON, resumes
+  (`--resume auto`) seeds with checkpoints, and **HALTS** (does not proceed) if
+  a seed is paused. The current seed's PID is in `/tmp/m2_1_train.pid`.
+- Resume of a mid-epoch checkpoint runs until the ORIGINAL step budget
+  (`--max-steps` is set to `epochs × len(train_loader)` internally), so a
+  paused+resumed seed still completes all its scheduled steps (this was a bug
+  found and fixed during the FULL run).
+
+**Monitoring** (while the run is going):
+- Progress: `tail -f logs/logs_m2_1/results_m2_1_dqt_transformer_lr0.01_seed42.log`
+  (per-epoch Train Loss / Val PPL / Flip / LR lines).
+- GPU memory/contention: `nvidia-smi -l 5` (free VRAM in the `Memory-Usage` column).
+- Final verdict: `m2_1_results/results_m2_1_dqt_transformer_lr0.01_seed42.json`.
+
+**Gaming while training (8 GB RTX 4060):** the FULL run peaks at ~4.8 GB of the
+8 GB. A game holding ~3+ GB risks CUDA OOM — in M1.2 a game holding ~6 GB killed
+a seed silently (no traceback, log froze). Practical rules:
+1. Check `nvidia-smi` free memory BEFORE starting (expect ≥ 3 GB free after the
+   run allocates).
+2. Lower the game's resolution/settings (target < 3 GB) or use the game's pause.
+3. Keep `NUM_WORKERS=0` (already the script default) — the M1.2 OOM crash came
+   from fork() workers under contention.
+4. If the game needs the VRAM, **Ctrl+C the run** (it keeps the last checkpoint)
+   and resume later with `resume` mode — no progress is lost beyond the last
+   `--checkpoint-every` interval (2000 steps ≈ ~11 min).
+
+---
+
 ## Verdict
 
 - **Gate:** mean validation perplexity (3 seeds) < 30 → GO.
-- **Status:** implementation complete, smoke ✅ (ppl 1.06 synthetic / 598 real-data
-  mini and falling), FULL config stable on GPU at 4.83 GB / 6230 tok/s.
-- **Pending:** user executes the FULL 3-seed run (`bash scripts/run_m2_1_dqt_transformer.sh full`).
+- **Result:** mean **11.35** (11.47 / 11.32 / 11.27) → **GO ✅**.
+- DQT transformers train **stably** on TinyStories (no NaN/divergence across 3 seeds)
+  with two required stabilizers: `1/sqrt(d)` projection scaling and the 80%
+  anneal-to-deterministic-sign tail. Proceeds to **M2.3 (MoE scaling)**.
+- Deliverables: layers, model factory, TinyStories loader, runner, supervisor +
+  orchestration scripts, 24 tests (11 layer + 13 integration), report E025.

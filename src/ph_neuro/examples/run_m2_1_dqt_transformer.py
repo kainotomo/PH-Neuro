@@ -33,9 +33,12 @@ Output:
 from __future__ import annotations
 
 import argparse
+import glob
 import json
 import math
 import os
+import signal
+import sys
 import time
 import warnings
 
@@ -70,6 +73,30 @@ ANNEAL_FRACTION = 0.80
 
 # GO/NO-GO gate: mean validation perplexity across 3 seeds must be < 30.
 PPL_GATE = 30.0
+
+# ── Graceful pause (SIGINT / SIGTERM) ──────────────────────────────
+# A SIGINT (Ctrl+C) or SIGTERM sets this flag instead of killing the process
+# mid-step. The training loop checks it between steps, saves a checkpoint and
+# exits cleanly, so the run can be resumed with ``--resume auto`` with only a
+# few seconds of progress lost. Installed via :func:`install_pause_handlers`.
+_PAUSE_REQUESTED = False
+
+
+def _pause_signal_handler(signum, frame):
+    """Request a graceful pause at the next step boundary."""
+    global _PAUSE_REQUESTED
+    _PAUSE_REQUESTED = True
+    print(
+        f"\n  ⏸️  Received signal {signum} — finishing current step, "
+        "then pausing and saving a checkpoint...",
+        flush=True,
+    )
+
+
+def install_pause_handlers() -> None:
+    """Install graceful-pause handlers for SIGINT and SIGTERM."""
+    signal.signal(signal.SIGINT, _pause_signal_handler)
+    signal.signal(signal.SIGTERM, _pause_signal_handler)
 
 
 # ── DQT helpers ────────────────────────────────────────────────────
@@ -165,6 +192,10 @@ def train_dqt_transformer(
     checkpoint_every: int | None = None,
     checkpoint_dir: str | None = None,
     record_steps: bool = False,
+    start_step: int = 0,
+    start_epoch: int = 1,
+    best_val_ppl: float = float("inf"),
+    best_step: int = 0,
     verbose: bool = True,
 ) -> dict:
     """Train a DQT transformer for language modeling.
@@ -191,6 +222,10 @@ def train_dqt_transformer(
         checkpoint_dir: Directory for checkpoints.
         record_steps: If True, record every step's loss in
             ``step_loss_history`` (useful for tests/short runs).
+        start_step: Step counter to continue from (resume).
+        start_epoch: First epoch to run (resume).
+        best_val_ppl: Best validation perplexity seen so far (resume).
+        best_step: Step at which ``best_val_ppl`` was reached (resume).
         verbose: Print per-epoch progress.
 
     Returns:
@@ -201,6 +236,9 @@ def train_dqt_transformer(
         - ``train_loss_history``, ``val_ppl_history``, ``lr_history``,
           ``flip_history``
     """
+    global _PAUSE_REQUESTED
+    _PAUSE_REQUESTED = False
+
     total_start = time.time()
     total_steps = (
         max_steps
@@ -208,11 +246,10 @@ def train_dqt_transformer(
         else epochs * max(len(train_loader), 1)
     )
     anneal_start_step = int(total_steps * anneal_fraction)
-    deterministic_active = False
+    # If resuming from the deterministic phase, don't re-print the switch.
+    deterministic_active = start_step >= anneal_start_step
 
-    step = 0
-    best_val_ppl = float("inf")
-    best_step = 0
+    step = start_step
     ema_loss: float | None = None
 
     history: dict[str, list] = {
@@ -226,7 +263,13 @@ def train_dqt_transformer(
     }
     os.makedirs(checkpoint_dir, exist_ok=True) if checkpoint_dir else None
 
-    for epoch in range(1, epochs + 1):
+    if verbose and start_step > 0:
+        print(
+            f"  ↩️ Resuming from step {start_step} (epoch {start_epoch}), "
+            f"best val ppl so far: {best_val_ppl:.2f}"
+        )
+
+    for epoch in range(start_epoch, epochs + 1):
         model.train()
         running_loss = 0.0
         n_tokens = 0
@@ -235,6 +278,8 @@ def train_dqt_transformer(
 
         for input_ids, targets in train_loader:
             if max_steps is not None and step >= max_steps:
+                break
+            if _PAUSE_REQUESTED:
                 break
             input_ids = input_ids.to(device)
             targets = targets.to(device)
@@ -276,7 +321,14 @@ def train_dqt_transformer(
 
             if checkpoint_every and checkpoint_dir and step % checkpoint_every == 0:
                 _save_checkpoint(
-                    model, optimizer, step, checkpoint_dir, epoch
+                    model,
+                    optimizer,
+                    scheduler,
+                    step,
+                    checkpoint_dir,
+                    epoch,
+                    best_val_ppl=best_val_ppl,
+                    best_step=best_step,
                 )
 
             if val_every and step % val_every == 0:
@@ -289,6 +341,9 @@ def train_dqt_transformer(
                 if val_ppl < best_val_ppl:
                     best_val_ppl = val_ppl
                     best_step = step
+
+        if _PAUSE_REQUESTED:
+            break  # skip epoch-end work and pause
 
         if n_steps_epoch == 0:
             break  # max_steps already reached
@@ -322,6 +377,31 @@ def train_dqt_transformer(
 
     steps_trained = step
     total_time = time.time() - total_start
+
+    # Graceful pause: save a checkpoint and exit so ``--resume`` can continue.
+    if _PAUSE_REQUESTED:
+        if checkpoint_dir:
+            _save_checkpoint(
+                model,
+                optimizer,
+                scheduler,
+                step,
+                checkpoint_dir,
+                epoch,
+                best_val_ppl=best_val_ppl,
+                best_step=best_step,
+            )
+            print(
+                f"\n  ⏸️  Paused at step {step} (epoch {epoch}). "
+                "Checkpoint saved. Resume with --resume auto."
+            )
+        else:
+            print(
+                f"\n  ⏸️  Paused at step {step} (epoch {epoch}). "
+                "No checkpoint dir set — progress since the last periodic "
+                "checkpoint is lost."
+            )
+        raise KeyboardInterrupt
 
     # Final evaluation on the val set
     final_val_ppl = evaluate_perplexity(model, val_loader, device)
@@ -375,22 +455,97 @@ def _mean_val_loss(model: nn.Module, val_loader: DataLoader, device: torch.devic
 def _save_checkpoint(
     model: nn.Module,
     optimizer: torch.optim.Optimizer,
+    scheduler: torch.optim.lr_scheduler.LRScheduler | None,
     step: int,
     checkpoint_dir: str,
     epoch: int,
+    best_val_ppl: float = float("inf"),
+    best_step: int = 0,
 ) -> None:
-    """Save a training checkpoint to ``{dir}/ckpt_step{step}.pt``."""
+    """Save a training checkpoint to ``{dir}/ckpt_step{step}.pt``.
+
+    Includes the model, optimizer and scheduler state so training can be
+    paused and later resumed with ``--resume``.
+    """
     os.makedirs(checkpoint_dir, exist_ok=True)
     path = os.path.join(checkpoint_dir, f"ckpt_step{step}.pt")
     torch.save(
         {
             "step": step,
             "epoch": epoch,
+            "best_val_ppl": float(best_val_ppl),
+            "best_step": best_step,
             "model_state_dict": model.state_dict(),
             "optimizer_state_dict": optimizer.state_dict(),
+            "scheduler_state_dict": (
+                scheduler.state_dict() if scheduler is not None else None
+            ),
         },
         path,
     )
+
+
+def find_latest_checkpoint(checkpoint_dir: str | None) -> str | None:
+    """Return the path of the highest-step checkpoint in ``checkpoint_dir``."""
+    if not checkpoint_dir or not os.path.isdir(checkpoint_dir):
+        return None
+    matches = glob.glob(os.path.join(checkpoint_dir, "ckpt_step*.pt"))
+    if not matches:
+        return None
+
+    def _step_of(path: str) -> int:
+        base = os.path.basename(path)
+        try:
+            return int(base.replace("ckpt_step", "").replace(".pt", ""))
+        except ValueError:
+            return -1
+
+    return max(matches, key=_step_of)
+
+
+def load_checkpoint(
+    resume: str,
+    checkpoint_dir: str | None,
+    model: nn.Module,
+    optimizer: torch.optim.Optimizer,
+    scheduler: torch.optim.lr_scheduler.LRScheduler | None,
+    device: torch.device,
+) -> dict:
+    """Load optimizer/model/scheduler state from a checkpoint for resume.
+
+    Args:
+        resume: Path to a checkpoint file, or ``"auto"`` to resume the
+            latest checkpoint in ``checkpoint_dir``.
+        checkpoint_dir: Default checkpoint directory (for ``"auto"``).
+        model: The (freshly built) model to restore into.
+        optimizer: The (freshly built) optimizer to restore into.
+        scheduler: The (freshly built) scheduler to restore into.
+        device: Torch device.
+
+    Returns:
+        Dict with ``step``, ``epoch``, ``best_val_ppl``, ``best_step``.
+    """
+    path = resume
+    if path == "auto":
+        path = find_latest_checkpoint(checkpoint_dir)
+        if path is None:
+            raise FileNotFoundError(
+                f"No checkpoint found in {checkpoint_dir!r} to resume from"
+            )
+    ckpt = torch.load(path, map_location=device, weights_only=False)
+
+    model.load_state_dict(ckpt["model_state_dict"])
+    optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+    if scheduler is not None and ckpt.get("scheduler_state_dict") is not None:
+        scheduler.load_state_dict(ckpt["scheduler_state_dict"])
+
+    print(f"  ↩️ Loaded checkpoint {os.path.basename(path)}")
+    return {
+        "step": int(ckpt["step"]),
+        "epoch": int(ckpt["epoch"]),
+        "best_val_ppl": float(ckpt.get("best_val_ppl", float("inf"))),
+        "best_step": int(ckpt.get("best_step", 0)),
+    }
 
 
 # ── LR schedule: warmup + cosine ───────────────────────────────────
@@ -460,6 +615,9 @@ def parse_args() -> argparse.Namespace:
                         help="Validate every N steps (default: per epoch)")
     parser.add_argument("--checkpoint-every", type=int, default=None,
                         help="Save a checkpoint every N steps")
+    parser.add_argument("--resume", default=None,
+                        help="Resume from a checkpoint path, or 'auto' for the "
+                             "latest checkpoint in --checkpoint-dir")
     # Data
     parser.add_argument("--synthetic", action="store_true",
                         help="Use synthetic learnable data (no TinyStories download)")
@@ -474,6 +632,9 @@ def parse_args() -> argparse.Namespace:
                         help="Torch device (default: cuda if available)")
     parser.add_argument("--output-dir", default="m2_1_results")
     parser.add_argument("--checkpoint-dir", default=None)
+    parser.add_argument("--pid-file", default=None,
+                        help="Write this process's PID to a file at startup "
+                             "(for external pause/resume control)")
     return parser.parse_args()
 
 
@@ -486,6 +647,11 @@ def main() -> None:
         torch.cuda.manual_seed(args.seed)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
+
+    # Record our PID so an external supervisor can send SIGINT to pause.
+    if args.pid_file:
+        with open(args.pid_file, "w") as f:
+            f.write(str(os.getpid()))
 
     # ── Architecture ───────────────────────────────────────────────
     if args.smoke:
@@ -591,25 +757,78 @@ def main() -> None:
         optimizer, warmup_steps=args.warmup_steps, total_steps=total_steps
     )
 
+    # ── Checkpoint dir (per-seed so seeds don't overwrite each other) ──
+    checkpoint_dir = args.checkpoint_dir or os.path.join(
+        args.output_dir, "checkpoints", f"seed{args.seed}"
+    )
+
+    # ── Resume (pause/resume support) ──────────────────────────────
+    orig_epochs = args.epochs
+    start_step, start_epoch = 0, 1
+    best_val_ppl, best_step = float("inf"), 0
+    if args.resume:
+        try:
+            r = load_checkpoint(
+                args.resume, checkpoint_dir, model, optimizer, scheduler, device
+            )
+        except FileNotFoundError as exc:
+            print(f"ERROR: {exc}")
+            sys.exit(1)
+        start_step, start_epoch = r["step"], r["epoch"] + 1
+        best_val_ppl, best_step = r["best_val_ppl"], r["best_step"]
+        if start_step >= total_steps:
+            print(
+                f"Checkpoint is already at/past the step budget "
+                f"({total_steps} steps). Nothing to do."
+            )
+            sys.exit(0)
+        # Resume must run until the ORIGINAL step budget — the checkpoint may
+        # be mid-epoch, so bounding training with max_steps is what keeps the
+        # total training length correct. The epoch label becomes cosmetic; the
+        # outer epoch loop gets enough passes to reach the budget.
+        args.max_steps = total_steps
+        args.epochs = max(orig_epochs, start_epoch + 2)
+        print(
+            f"  ↩️ Resume: continuing from step {start_step} towards the step "
+            f"budget of {total_steps} ({total_steps - start_step} steps "
+            f"remaining, anneal at step {int(total_steps * args.anneal_fraction)})."
+        )
+
     # ── Train ──────────────────────────────────────────────────────
     print("Training...")
     print()
-    checkpoint_dir = args.checkpoint_dir or os.path.join(args.output_dir, "checkpoints")
-    results = train_dqt_transformer(
-        model,
-        train_loader,
-        val_loader,
-        optimizer,
-        scheduler,
-        device,
-        epochs=args.epochs,
-        max_steps=args.max_steps,
-        anneal_fraction=args.anneal_fraction,
-        grad_clip=args.grad_clip,
-        val_every=args.val_every,
-        checkpoint_every=args.checkpoint_every,
-        checkpoint_dir=checkpoint_dir,
-    )
+    install_pause_handlers()  # Ctrl+C / SIGTERM -> graceful checkpointed pause
+    try:
+        results = train_dqt_transformer(
+            model,
+            train_loader,
+            val_loader,
+            optimizer,
+            scheduler,
+            device,
+            epochs=args.epochs,
+            max_steps=args.max_steps,
+            anneal_fraction=args.anneal_fraction,
+            grad_clip=args.grad_clip,
+            val_every=args.val_every,
+            checkpoint_every=args.checkpoint_every,
+            checkpoint_dir=checkpoint_dir,
+            start_step=start_step,
+            start_epoch=start_epoch,
+            best_val_ppl=best_val_ppl,
+            best_step=best_step,
+        )
+    except KeyboardInterrupt:
+        # Pause requested (SIGINT/SIGTERM). The checkpoint was already saved
+        # inside train_dqt_transformer; do NOT write a (partial) result JSON,
+        # so the run can be resumed cleanly with --resume auto.
+        print("\n⏹️  Training paused by request — no result JSON written.")
+        print(
+            f"  Resume: bash scripts/run_m2_1_dqt_transformer.sh "
+            f"resume {args.lr} {args.seed}"
+        )
+        print(f"  Checkpoints: {checkpoint_dir}")
+        sys.exit(130)
 
     # ── Peak GPU memory ────────────────────────────────────────────
     peak_mem_mb = 0.0
@@ -626,7 +845,7 @@ def main() -> None:
         "device": str(device),
         "config": cfg,
         "learning_rate": args.lr,
-        "epochs": args.epochs,
+        "epochs": orig_epochs,
         "batch_size": args.batch_size,
         "seq_len": seq_len,
         "weight_decay": args.weight_decay,
@@ -648,6 +867,8 @@ def main() -> None:
         "n_total_params": n_total,
         "perplexity_gate": PPL_GATE,
         "peak_gpu_memory_mb": peak_mem_mb,
+        "resumed": args.resume is not None,
+        "resume_step": start_step if args.resume else 0,
         **results,
     }
 

@@ -23,6 +23,8 @@
 #   bash scripts/run_m2_1_dqt_transformer.sh sweep              # LR sweep {0.01,0.005,0.003}
 #   bash scripts/run_m2_1_dqt_transformer.sh full 0.005         # full run, custom LR
 #   bash scripts/run_m2_1_dqt_transformer.sh full 0.01 42 43 44 # custom seeds
+#   bash scripts/run_m2_1_dqt_transformer.sh resume 0.01 42     # pause/resume a seed
+#                                                                 (from latest checkpoint)
 #
 # Output:
 #   Results: m2_1_results/results_m2_1_dqt_transformer_lr{lr}_seed{seed}.json
@@ -198,8 +200,18 @@ case "$MODE" in
             run_one "$BEST_LR" "$seed" "--d-model $D_MODEL --n-layers $N_LAYERS --n-heads $N_HEADS --d-ff $D_FF --checkpoint-every $CHECKPOINT_EVERY"
         done
         ;;
+    resume)
+        # Pause/resume: continue a seed from its latest checkpoint in
+        # m2_1_results/checkpoints/seed{seed}/ (runner --resume auto).
+        # The result JSON does not exist yet (run was interrupted), so the
+        # skip-if-exists guard does not block us.
+        BEST_LR="${2:-$DEFAULT_LR}"
+        SEED="${3:-42}"
+        log "Resume: seed ${SEED} × lr=${BEST_LR} (auto-resume from latest checkpoint)"
+        run_one "$BEST_LR" "$SEED" "--d-model $D_MODEL --n-layers $N_LAYERS --n-heads $N_HEADS --d-ff $D_FF --checkpoint-every $CHECKPOINT_EVERY --resume auto"
+        ;;
     *)
-        echo "ERROR: unknown mode '$MODE' (expected 'full [lr] [seeds...]', 'smoke' or 'sweep')" >&2
+        echo "ERROR: unknown mode '$MODE' (expected 'full [lr] [seeds...]', 'smoke', 'sweep' or 'resume [lr] [seed]')" >&2
         exit 1
         ;;
 esac
