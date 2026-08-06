@@ -248,6 +248,8 @@ After the Hebbian era closed, PH-Neuro pivoted to STE backpropagation. See [`ROA
 
 ### Phase 2: Tiny Transformer
 
+> ⚠️ **VRAM Constraint (Aug 2026):** M2.1 measured 7.3/8.0 GB → DQT training = ~13 bytes/param. Max trainable ~300M ternary on RTX 4060 8GB. Original 500M/1B targets adjusted: M2.2 → 250M, M2.3 → 400M total.
+
 | **M2.1 E025** | DQT Transformer 100M | TinyStories | **✅ GO**. 102.3M ternary params, mean ppl **11.35** ≪ 30 gate. 3 seeds stable (no NaN). Output scaling 1/√d critical — BitNet finding confirmed for DQT. See [E025](experiments/E025-m2-1-dqt-transformer.md) |
 
 ### Key STE Era Conclusions

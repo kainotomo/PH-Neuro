@@ -37,15 +37,23 @@ All 19 experiments completed. See [`research/`](research/).
 
 **Goal:** First ternary language model — the smallest useful LLM.
 
-| Milestone | Target | Priority |
-|:----------|:------:|:--------:|
-| **M2.1** DQT Transformer 100M params | Perplexity <30 on TinyStories (**mean 11.35** ✅) | ✅ GO |
-| **M2.2** DQT Transformer 500M params | Perplexity <20 on WikiText-2 | 🟡 High |
-| **M2.3** MoE DQT Transformer | 1B total, 200M active, <250MB on disk | 🟡 High |
-| **M2.4** On-device inference demo | Token generation on smartphone | 🟡 High |
-| **M2.5** Public demo + blog post | Hacker News / Reddit launch | 🟢 Medium |
+> ⚠️ **VRAM CONSTRAINT (Aug 2026):** M2.1 measured 7.3/8.0 GB on RTX 4060 for 141M total params.
+> DQT training state = ~13 bytes/param (weight_float 4B + AdamW 8B + ternary 1B).
+> **Max trainable on 8GB: ~300M ternary params.** Original 500M/1B targets adjusted accordingly.
 
-**Go/No-go gate:** M2.1 — ✅ **GO** (mean val ppl **11.35** < 30; seeds 11.47/11.32/11.27; no NaN/divergence across 3 seeds). DQT Transformer trains stably on TinyStories. Proceeding to M2.3 (MoE scaling). See [E025](research/docs/experiments/E025-m2-1-dqt-transformer.md).
+| Milestone | Target | Priority | Status |
+|:----------|:------:|:--------:|:------:|
+| **M2.1** DQT Transformer 100M params | Perplexity <30 on TinyStories (**mean 11.35** ✅) | 🔴 Critical | ✅ GO |
+| **M2.2** DQT Transformer 250M params | Perplexity <20 on WikiText-2 | 🟡 High | ⬜ |
+| **M2.3** MoE DQT Transformer | **400M total, 150M active**, <250MB on disk | 🟡 High | ⬜ |
+| **M2.4** On-device inference demo | Token generation on smartphone | 🟡 High | ⬜ |
+| **M2.5** Public demo + blog post | Hacker News / Reddit launch | 🟢 Medium | ⬜ |
+
+**Go/No-go gate:** M2.1 — ✅ **GO** (mean val ppl **11.35** < 30; seeds 11.47/11.32/11.27;
+no NaN/divergence across 3 seeds). DQT Transformer trains stably.
+Proceeding to M2.2 (250M WikiText-2 scaling test), then M2.3 (MoE scaling).
+M2.2 validates scaling from 102M→250M; M2.3 proves MoE+DQT on transformers
+(already validated on MLP vision — E019).
 
 ---
 
