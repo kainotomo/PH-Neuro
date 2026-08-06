@@ -38,6 +38,7 @@ __all__ = [
     "dqt_gpt2",
     "SMOKE_CONFIG",
     "FULL_CONFIG",
+    "M2_2_CONFIG",
     "count_ternary_weights",
     "count_parameters",
     "count_float_parameters",
@@ -65,6 +66,21 @@ FULL_CONFIG: dict = {
     "n_layers": 9,
     "d_ff": 3072,
     "max_seq_len": 512,
+}
+
+# Phase M2.2 (scaling test 102M → 250M): ~252.8M ternary weights + ~51.5M
+# float embedding ≈ 304M total. Per block: 4·1024² + 2·1024·4096 =
+# 12,582,912 ternary; 16 blocks = 201,326,592; LM Head 1024·50257 =
+# 51,463,168 → total ternary 252,789,760. n_heads=16 keeps d_head = 64.
+# Trained on WikiText-2 (GPT-2 BPE). Gradient checkpointing is REQUIRED at
+# batch 8 / seq 256 to fit 8 GB (see the E026 memory budget).
+M2_2_CONFIG: dict = {
+    "vocab_size": 50257,  # GPT-2 BPE
+    "d_model": 1024,
+    "n_heads": 16,
+    "n_layers": 16,
+    "d_ff": 4096,
+    "max_seq_len": 256,
 }
 
 
@@ -102,6 +118,12 @@ class DQTTransformer(nn.Module):
         max_seq_len: Maximum sequence length (RoPE tables).
         dropout: Dropout probability (default 0.0).
         theta_base: RoPE base (default 10000).
+        use_grad_checkpointing: If True, wrap each block in
+            ``torch.utils.checkpoint.checkpoint(..., use_reentrant=False)``
+            so activations are recomputed during backward instead of stored.
+            This trades ~30-40% compute for a large activation-memory cut —
+            REQUIRED for the 250M M2.2 config on 8 GB. Blocks are pure
+            (no in-place ops, no side effects) so checkpointing is safe.
         device: Torch device.
         dtype: Float dtype for the DQT accumulation buffers.
     """
@@ -116,6 +138,7 @@ class DQTTransformer(nn.Module):
         max_seq_len: int,
         dropout: float = 0.0,
         theta_base: float = 10000.0,
+        use_grad_checkpointing: bool = False,
         device: torch.device | str | None = None,
         dtype: torch.dtype = torch.float32,
     ):
@@ -126,6 +149,7 @@ class DQTTransformer(nn.Module):
         self.n_layers = n_layers
         self.d_ff = d_ff
         self.max_seq_len = max_seq_len
+        self.use_grad_checkpointing = use_grad_checkpointing
 
         # Float token embedding (lookup table — NOT ternary)
         self.token_embedding = nn.Embedding(vocab_size, d_model, device=device)
@@ -153,6 +177,12 @@ class DQTTransformer(nn.Module):
             d_model, vocab_size, bias=False, device=device, dtype=dtype
         )
 
+    def _checkpoint_block(
+        self, x: torch.Tensor, block: nn.Module
+    ) -> torch.Tensor:
+        """Run a single block through gradient checkpointing."""
+        return block(x)
+
     def forward(self, tokens: torch.Tensor) -> torch.Tensor:
         """Language-model forward pass.
 
@@ -164,8 +194,14 @@ class DQTTransformer(nn.Module):
         """
         x = self.token_embedding(tokens)  # (B, T, d_model)
         x = self.pos_dropout(x)
-        for block in self.blocks:
-            x = block(x)
+        if self.use_grad_checkpointing:
+            for block in self.blocks:
+                x = torch.utils.checkpoint.checkpoint(
+                    self._checkpoint_block, x, block, use_reentrant=False
+                )
+        else:
+            for block in self.blocks:
+                x = block(x)
         x = self.final_norm(x)
         return self.lm_head(x)  # (B, T, vocab_size)
 
@@ -179,6 +215,7 @@ def dqt_gpt2(
     max_seq_len: int,
     dropout: float = 0.0,
     theta_base: float = 10000.0,
+    use_grad_checkpointing: bool = False,
     device: torch.device | str | None = None,
     dtype: torch.dtype = torch.float32,
 ) -> DQTTransformer:
@@ -193,6 +230,9 @@ def dqt_gpt2(
         max_seq_len: Maximum sequence length.
         dropout: Dropout probability (default 0.0).
         theta_base: RoPE base (default 10000).
+        use_grad_checkpointing: If True, wrap each block in gradient
+            checkpointing (recompute activations in backward) — see
+            :class:`DQTTransformer` for details.
         device: Torch device.
         dtype: Float dtype for the DQT accumulation buffers.
 
@@ -208,6 +248,7 @@ def dqt_gpt2(
         max_seq_len,
         dropout=dropout,
         theta_base=theta_base,
+        use_grad_checkpointing=use_grad_checkpointing,
         device=device,
         dtype=dtype,
     )

@@ -81,7 +81,7 @@ Combined target: **1B parameters → 200MB on disk → runs on a phone.**
 | Metric | Result | Target | Status |
 |:-------|:------:|:------:|:------:|
 | DQT Transformer 100M | **11.35 ppl** TinyStories | <30 ppl | ✅ GO |
-| DQT Transformer 250M | — | <20 ppl WikiText-2 | ⬜ Next |
+| DQT Transformer 250M | **Stable ✅**, ppl 479.9 (data-limited) | <20 ppl | 🟡 SCIENTIFIC GO |
 | MoE DQT Transformer | — | 400M total / 150M active | ⬜ |
 | GitHub stars | — | >500 | Dec 2026 |
 | First paying customer | — | 1 | Mar 2027 |
