@@ -191,6 +191,7 @@ def train_dqt_transformer(
     val_every: int | None = None,
     checkpoint_every: int | None = None,
     checkpoint_dir: str | None = None,
+    config: dict | None = None,
     record_steps: bool = False,
     start_step: int = 0,
     start_epoch: int = 1,
@@ -220,6 +221,9 @@ def train_dqt_transformer(
         val_every: Validate every N steps (default: every epoch).
         checkpoint_every: Save a checkpoint every N steps (None = off).
         checkpoint_dir: Directory for checkpoints.
+        config: Architecture config dict stored alongside the best model in
+            ``best.pt`` (so the checkpoint can be rebuilt without the
+            trainer). None = omit.
         record_steps: If True, record every step's loss in
             ``step_loss_history`` (useful for tests/short runs).
         start_step: Step counter to continue from (resume).
@@ -341,6 +345,10 @@ def train_dqt_transformer(
                 if val_ppl < best_val_ppl:
                     best_val_ppl = val_ppl
                     best_step = step
+                    if checkpoint_dir:
+                        _save_best_checkpoint(
+                            model, checkpoint_dir, step, epoch, best_val_ppl, config
+                        )
 
         if _PAUSE_REQUESTED:
             break  # skip epoch-end work and pause
@@ -363,6 +371,10 @@ def train_dqt_transformer(
             if val_ppl < best_val_ppl:
                 best_val_ppl = val_ppl
                 best_step = step
+                if checkpoint_dir:
+                    _save_best_checkpoint(
+                        model, checkpoint_dir, step, epoch, best_val_ppl, config
+                    )
         else:
             val_ppl = history["val_ppl"][-1] if history["val_ppl"] else float("inf")
 
@@ -408,6 +420,10 @@ def train_dqt_transformer(
     if final_val_ppl < best_val_ppl:
         best_val_ppl = final_val_ppl
         best_step = steps_trained
+        if checkpoint_dir:
+            _save_best_checkpoint(
+                model, checkpoint_dir, steps_trained, epochs, best_val_ppl, config
+            )
 
     return {
         "best_val_ppl": float(best_val_ppl),
@@ -450,6 +466,41 @@ def _mean_val_loss(model: nn.Module, val_loader: DataLoader, device: torch.devic
         n_tokens += targets.numel()
     model.train()
     return total_loss / max(n_tokens, 1)
+
+
+def _save_best_checkpoint(
+    model: nn.Module,
+    checkpoint_dir: str,
+    step: int,
+    epoch: int,
+    best_val_ppl: float,
+    config: dict | None = None,
+) -> str:
+    """Save the best-so-far model to ``{dir}/best.pt``.
+
+    Unlike the periodic ``ckpt_step*.pt`` files (full optimizer/scheduler
+    training state for pause/resume), ``best.pt`` stores ONLY the inference
+    artifacts needed to rebuild and deploy the best model: the
+    ``model_state_dict`` plus the architecture ``config`` (so the model can
+    be reconstructed from the checkpoint alone, without the trainer). It is
+    written in-place every time a new best validation perplexity is reached.
+
+    Returns:
+        Path of the written ``best.pt`` file.
+    """
+    os.makedirs(checkpoint_dir, exist_ok=True)
+    path = os.path.join(checkpoint_dir, "best.pt")
+    torch.save(
+        {
+            "step": int(step),
+            "epoch": int(epoch),
+            "best_val_ppl": float(best_val_ppl),
+            "config": dict(config) if config is not None else None,
+            "model_state_dict": model.state_dict(),
+        },
+        path,
+    )
+    return path
 
 
 def _save_checkpoint(
@@ -813,6 +864,7 @@ def main() -> None:
             val_every=args.val_every,
             checkpoint_every=args.checkpoint_every,
             checkpoint_dir=checkpoint_dir,
+            config=cfg,
             start_step=start_step,
             start_epoch=start_epoch,
             best_val_ppl=best_val_ppl,

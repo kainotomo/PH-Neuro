@@ -1,0 +1,65 @@
+{
+  "experiment": "m2_1_dqt_transformer",
+  "dataset": "tinystories",
+  "tokenizer": "gpt2",
+  "seed": 42,
+  "device": "cuda",
+  "config": {
+    "vocab_size": 50257,
+    "d_model": 512,
+    "n_heads": 8,
+    "n_layers": 6,
+    "d_ff": 2048,
+    "max_seq_len": 256
+  },
+  "learning_rate": 0.01,
+  "epochs": 4,
+  "batch_size": 8,
+  "seq_len": 256,
+  "weight_decay": 0.1,
+  "warmup_steps": 100,
+  "grad_clip": 1.0,
+  "anneal_fraction": 0.8,
+  "architecture": "DQT Transformer: emb(50257->512) + 6x[Attn(8h, RoPE) + FFN(2048)] + RMSNorm + DQT LM Head",
+  "method": "Direct Quantized Training (DQT): int8 ternary weights + stochastic rounding annealed to deterministic sign for final 19% of steps",
+  "n_float_params": 25738240,
+  "n_ternary_weights": 44605952,
+  "n_total_params": 70344192,
+  "perplexity_gate": 30.0,
+  "peak_gpu_memory_mb": 3018.708984375,
+  "resumed": true,
+  "resume_step": 16000,
+  "best_val_ppl": 13.156647656639565,
+  "best_step": 32236,
+  "final_val_ppl": 13.186136715602586,
+  "final_train_loss": 2.5600275468018094,
+  "anneal_start_step": 25977,
+  "steps_trained": 32472,
+  "training_time_seconds": 2894.799357175827,
+  "final_flip_rate": 0.0009364890583660085,
+  "train_loss_history": [
+    2.9007355302946705,
+    2.5600275468018094
+  ],
+  "step_loss_history": [],
+  "val_loss_history": [
+    2.5769271561086855,
+    2.5791660288765956
+  ],
+  "val_ppl_history": [
+    13.156647656639565,
+    13.186136715602586
+  ],
+  "lr_history": [
+    0.0010011801799221446,
+    0.001
+  ],
+  "flip_history": [
+    0.12123279830204305,
+    0.0009364890583660085
+  ],
+  "step_history": [
+    32236,
+    32472
+  ]
+}

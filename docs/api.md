@@ -878,3 +878,103 @@ print(summary["onnx_size_mb"], summary["packed_size_mb"], summary["verified"])
 
 > 📦 Full deployment guide (Raspberry Pi, C API, packing): see
 > [`docs/export_guide.md`](export_guide.md).
+
+---
+
+## 13. Transformer export & inference (M2.4 on-device demo)
+
+DQT **Transformer** models (M2.1/M2.4) are not `nn.Sequential`, so they need
+their own inference conversion before ONNX export. Module
+`ph_neuro.models.export_transformer`.
+
+```python
+from ph_neuro.models.export_transformer import (
+    DQTTransformerInference,
+    dqt_transformer_to_inference_model,
+    export_transformer_to_onnx,
+    export_transformer_packed_ternary,
+    infer_transformer_config_from_state_dict,
+    load_dqt_transformer_checkpoint,
+)
+```
+
+### `dqt_transformer_to_inference_model()`
+
+Convert a trained `DQTTransformer` into a frozen, standard-layer inference
+model on CPU. Every DQT ternary projection becomes an `nn.Linear` with the
+ternary weights **and** the DQT `1/sqrt(in_features)` output scale baked in
+(`(x @ W_ternaryᵀ) · scale ≡ x @ (W_ternary · scale)ᵀ`); RMSNorm/RoPE stay
+float. Output is identical to the DQT model to machine precision.
+
+```python
+inference = dqt_transformer_to_inference_model(dqt_model, ctx_len=None)
+# ctx_len defaults to dqt_model.max_seq_len; input is (batch, ctx_len) int64
+logits = inference(torch.zeros(1, 256, dtype=torch.long))  # (1, 256, vocab)
+```
+
+### `export_transformer_to_onnx()`
+
+Export an inference transformer to ONNX with a **fixed `ctx_len`** int64 token
+input (dynamic batch axis) and verify with onnxruntime.
+
+```python
+summary = export_transformer_to_onnx(inference, "models/dqt_transformer.onnx", verify=True)
+# {'onnx_path', 'onnx_size_mb', 'ctx_len', 'n_ternary_weights', 'packed_bytes', 'verified', 'max_abs_diff'}
+```
+
+### `export_transformer_packed_ternary()`
+
+Write the model's ternary weights to a 2-bit `.ternary` file (4 weights/byte),
+reusing the M1.3 PHN3 format so `load_packed_ternary()` can restore them.
+
+```python
+export_transformer_packed_ternary(dqt_model, "models/dqt_transformer.ternary")
+```
+
+### `infer_transformer_config_from_state_dict()`
+
+Recover `{vocab_size, d_model, n_heads, n_layers, d_ff, max_seq_len}` from a
+checkpoint's state_dict shapes alone (RoPE buffers encode `max_seq_len`/`d_head`).
+Used as a fallback when a checkpoint has no stored `config`.
+
+### `load_dqt_transformer_checkpoint()`
+
+Load a transformer checkpoint (either `best.pt`/`ckpt_step*.pt` with
+`model_state_dict` + optional `config`, or a bare state_dict) and return
+`(config, state_dict, best_val_ppl, step)`.
+
+### CLI: `generate_text.py`
+
+Standalone text-generation script (no trainer dependency). Autoregressive
+sampling (temperature → top-k → softmax) on CPU; PyTorch and/or ONNX backend.
+
+```bash
+# PyTorch CPU (smartphone simulation)
+python -m ph_neuro.examples.generate_text \
+    --checkpoint m2_4_demo/checkpoints/seed42/best.pt \
+    --prompt "Once upon a time" --max-tokens 100 --temperature 0.8 --top-k 50
+
+# ONNX Runtime + PyTorch-vs-ONNX speed comparison
+python -m ph_neuro.examples.generate_text \
+    --checkpoint m2_4_demo/checkpoints/seed42/best.pt \
+    --onnx models/dqt_transformer_demo.onnx --compare
+
+# Export ONNX from a checkpoint, then generate with it
+python -m ph_neuro.examples.generate_text \
+    --checkpoint m2_4_demo/checkpoints/seed42/best.pt \
+    --export-onnx models/dqt_transformer_demo.onnx --compare
+```
+
+Key flags: `--checkpoint` (required), `--prompt`, `--max-tokens`, `--temperature`,
+`--top-k`, `--ctx-len` (default = `max_seq_len`), `--seed`, `--onnx PATH`,
+`--export-onnx PATH`, `--compare`, `--device` (default `cpu`), `--output-dir`
+(writes a results JSON).
+
+### Full M2.4 demo
+
+```bash
+bash scripts/run_m2_4_demo.sh            # train → export ONNX → generate (PyTorch) → generate (ONNX)
+bash scripts/run_m2_4_demo.sh "Lily was a fox"   # custom prompt
+```
+
+> 📓 Experiment report: `research/docs/experiments/E028-m2-4-inference-demo.md`.
