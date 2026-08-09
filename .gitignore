@@ -70,6 +70,12 @@ env/
 # Model checkpoints / saved models
 *.phn
 
+# M2.4 on-device demo — large reproducible artifacts
+# (regenerate with `bash scripts/run_m2_4_demo.sh`; keep the result JSONs)
+m2_4_demo/checkpoints/
+models/dqt_transformer_demo.onnx
+models/dqt_transformer_demo.ternary
+
 # Experiment outputs / logs
 docs/experiments/*.json
 docs/experiments/*.csv

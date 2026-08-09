@@ -36,16 +36,21 @@ import time
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F  # noqa: N812
 from torch.utils.data import DataLoader
 
 from ph_neuro.examples._utils import print_header
 from ph_neuro.models.dqt_models import dqt_cnn, dqt_cnn_cifar100
+from ph_neuro.models.dqt_transformer import dqt_gpt2
 from ph_neuro.models.export import (
     dqt_to_inference_model,
-    estimate_packed_size,
     export_model_to_onnx,
-    get_model_params_count,
+)
+from ph_neuro.models.export_transformer import (
+    count_ternary_weights_inference,
+    dqt_transformer_to_inference_model,
+    export_transformer_packed_ternary,
+    export_transformer_to_onnx,
+    load_dqt_transformer_checkpoint,
 )
 from ph_neuro.models.fuse_bn import fuse_bn_layers
 from ph_neuro.models.ste_models import ste_mlp
@@ -235,6 +240,97 @@ def _print_summary(summary: dict) -> None:
         )
 
 
+# ── Transformer export (M2.4 demo) ────────────────────────────────
+
+
+def _main_transformer(args) -> None:
+    """Export a DQT Transformer (dqt_gpt2) to ONNX + packed ternary.
+
+    A transformer cannot be quick-trained, so ``--checkpoint`` is
+    required. The checkpoint is rebuilt from its stored (or inferred)
+    config, converted to the standard-layer inference model
+    (:func:`dqt_transformer_to_inference_model`), exported to ONNX with a
+    fixed ``ctx_len`` context (dynamic batch) and verified with
+    onnxruntime.
+    """
+    if not args.checkpoint:
+        print(
+            "ERROR: --checkpoint is required for --model dqt_gpt2 "
+            "(a transformer cannot be quick-trained in this runner)."
+        )
+        raise SystemExit(2)
+
+    config, state_dict, best_val_ppl, step = load_dqt_transformer_checkpoint(
+        args.checkpoint
+    )
+    print(
+        f"Loaded checkpoint: {args.checkpoint}  (best val ppl "
+        f"{best_val_ppl:.2f} at step {step})"
+    )
+    print(
+        f"Config: d_model={config['d_model']} n_layers={config['n_layers']} "
+        f"n_heads={config['n_heads']} d_ff={config['d_ff']} "
+        f"vocab={config['vocab_size']} max_seq_len={config['max_seq_len']}"
+    )
+
+    model = dqt_gpt2(
+        vocab_size=config["vocab_size"],
+        d_model=config["d_model"],
+        n_heads=config["n_heads"],
+        n_layers=config["n_layers"],
+        d_ff=config["d_ff"],
+        max_seq_len=config["max_seq_len"],
+        device="cpu",
+    )
+    missing, unexpected = model.load_state_dict(state_dict, strict=False)
+    if missing:
+        print(f"  [warn] missing keys: {missing}")
+    if unexpected:
+        print(f"  [warn] unexpected keys: {unexpected}")
+    model.eval()
+
+    ctx_len = min(args.ctx_len or config["max_seq_len"], config["max_seq_len"])
+    inference = dqt_transformer_to_inference_model(model, ctx_len=ctx_len)
+
+    output = args.output or "models/dqt_transformer.onnx"
+    summary = export_transformer_to_onnx(
+        inference, output, opset_version=args.opset, verify=args.verify
+    )
+
+    packed_path = None
+    if args.packed:
+        packed_path = (
+            output[:-5] + ".ternary" if output.endswith(".onnx") else output + ".ternary"
+        )
+        export_transformer_packed_ternary(model, packed_path)
+
+    n_ternary = count_ternary_weights_inference(inference)
+    print_header("M1.3 EXPORT — DQT Transformer (M2.4 demo)")
+    print(f"  model           : dqt_gpt2 (d={config['d_model']} L={config['n_layers']}"
+          f" H={config['n_heads']} ff={config['d_ff']})")
+    print(f"  input shape     : (batch, {ctx_len}) int64 tokens")
+    print(f"  ONNX file       : {output}")
+    print(f"  ONNX size       : {summary['onnx_size_mb']:.2f} MB")
+    print(f"  Ternary weights : {n_ternary:,}")
+    print(f"  Packed (2-bit)  : {summary['packed_bytes'] / 1024:,.1f} KB")
+    if packed_path:
+        print(
+            f"  Packed file     : {packed_path} "
+            f"({os.path.getsize(packed_path) / (1024 * 1024):.2f} MB)"
+        )
+    if summary.get("verified") is not None:
+        print(
+            f"  ONNX verified   : {'YES' if summary['verified'] else 'NO'}  "
+            f"(max|Δ| = {summary.get('max_abs_diff', float('nan')):.2e})"
+        )
+    ok = (not args.verify) or summary.get("verified", False)
+    print_header("GO/NO-GO: GO" if ok else "GO/NO-GO: NO-GO")
+    print(
+        "  Note: the float32 .onnx is the standard M1.3 artifact; the 2-bit "
+        "packed size (4x smaller) is the deployable on-device metric for M2.4."
+    )
+
+
 # ── CLI ─────────────────────────────────────────────────────────────
 
 
@@ -245,7 +341,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--model",
-        choices=["dqt_cnn", "dqt_cnn_cifar100", "ste_mlp"],
+        choices=["dqt_cnn", "dqt_cnn_cifar100", "ste_mlp", "dqt_gpt2"],
         default="dqt_cnn",
         help="Model architecture to export.",
     )
@@ -288,7 +384,17 @@ def main() -> None:
         default="cpu",
         help="Device for the PyTorch reference (export itself is CPU).",
     )
+    parser.add_argument(
+        "--ctx-len",
+        type=int,
+        default=None,
+        help="Fixed context length for transformer export (default: model max_seq_len).",
+    )
     args = parser.parse_args()
+
+    if args.model == "dqt_gpt2":
+        _main_transformer(args)
+        return
 
     device = torch.device(args.device)
     torch.manual_seed(42)

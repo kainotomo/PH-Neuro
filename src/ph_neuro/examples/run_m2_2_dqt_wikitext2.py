@@ -1,33 +1,41 @@
 #!/usr/bin/env python3
-"""Milestone M2.1 — DQT Transformer on TinyStories (GO/NO-GO perplexity <30).
+"""Milestone M2.2 — DQT Transformer 250M params on WikiText-2 (GO/NO-GO ppl<20).
 
-First demonstration of Direct Quantized Training (DQT) on a Transformer
-language model. The model is a GPT-2-style decoder-only transformer whose
-Q/K/V/O and FFN projections (plus the LM head) use ternary int8 DQT weights
-(:class:`TernaryDQTLinear` + stochastic rounding). This is the language
-counterpart of the M1.1/M1.2 vision validation, and the CRITICAL GO/NO-GO
-for the whole project: if a DQT transformer trains stably on TinyStories
-and reaches mean validation perplexity < 30 (3 seeds), we GO to MoE scaling
-(M2.3); otherwise the plan pivots.
+Scaling test: 102M → 250M ternary params. The M2.1 GPT-2-style DQT
+transformer (int8 ternary weights + stochastic rounding + annealing) is
+scaled up (d_model 768→1024, n_layers 9→16, d_ff 3072→4096 → ~252.8M ternary
+weights + ~51.5M float embedding ≈ 304M total) and trained on WikiText-2.
+GO if the mean validation perplexity across 3 seeds is < 20.
 
-The critical DQT mechanic (validated in M1.1): after EVERY
-``optimizer.step()`` we discretize the float accumulation buffer into int8
-ternary weights. For the first ``ANNEAL_FRACTION`` (80%) of steps this uses
-stochastic rounding (exploration); the final 20% anneals to deterministic
-``sign()`` so the ternary weights stop jittering and the network settles
-into a clean fine-tuning regime (this removed the M1.1 flip noise).
+The M2.2 config (~252.8M ternary) does NOT fit 8 GB with activations kept
+in memory (≈8.2 GB est.), so the runner builds the model with gradient
+checkpointing enabled (default): each transformer block's forward is
+recomputed in backward (``torch.utils.checkpoint``), cutting activation
+memory to ~1.3 GB and bringing the total to ~5.3 GB torch / ~6.5-7.0 GB
+nvidia-smi — see the E026 memory budget.
+
+Pause/resume (kept from M2.1 + the M2.2 brief):
+    - ``--resume auto`` resumes from the latest checkpoint
+    - SIGINT / SIGTERM / **SIGUSR1** → graceful pause: finish the step,
+      save a checkpoint, print the resume command, exit 130
+    - ``--pause-file PATH`` → external pause control: while the file exists,
+      the loop pauses at the next step boundary
+    - ``--checkpoint-every N`` → periodic checkpoints
+    - writes ``status.json`` (step / loss / ppl / tok/s / GPU mem) into the
+      checkpoint dir every ``--progress-every`` steps for the ``status``
+      command in ``scripts/run_m2_2_dqt_wikitext2.sh``
 
 Usage::
 
-    python -m ph_neuro.examples.run_m2_1_dqt_transformer \\
-        --d-model 768 --n-layers 9 --n-heads 12 --d-ff 3072 \\
+    python -m ph_neuro.examples.run_m2_2_dqt_wikitext2 \\
         --lr 0.01 --epochs 3 --batch-size 8 --seq-len 256 --seed 42
 
-    # Smoke test (no TinyStories download — synthetic learnable corpus):
-    python -m ph_neuro.examples.run_m2_1_dqt_transformer --smoke --synthetic
+    # Smoke test (10 steps, no WikiText-2 download — synthetic corpus):
+    python -m ph_neuro.examples.run_m2_2_dqt_wikitext2 \\
+        --max-steps 10 --seed 42 --synthetic
 
 Output:
-    JSON file: ``{output_dir}/results_m2_1_dqt_transformer_lr{lr}_seed{seed}.json``
+    JSON file: ``{output_dir}/results_m2_2_dqt_wikitext2_lr{lr}_seed{seed}.json``
 """
 
 from __future__ import annotations
@@ -51,16 +59,15 @@ from ph_neuro.examples._utils import print_header
 from ph_neuro.layers.ste_dqt import TernaryDQTLinear
 from ph_neuro.models.dqt_transformer import (
     FULL_CONFIG,
+    M2_2_CONFIG,
     SMOKE_CONFIG,
     build_config,
     count_parameters,
     count_ternary_weights,
     dqt_gpt2,
 )
-from ph_neuro.training.tinystories import (
-    get_tinystories_data,
-    make_synthetic_lm_loader,
-)
+from ph_neuro.training.tinystories import make_synthetic_lm_loader
+from ph_neuro.training.wikitext2 import get_wikitext2_data
 
 warnings.filterwarnings("ignore", category=UserWarning, module="torch.quantization")
 
@@ -71,14 +78,16 @@ DQT_LAYERS = (TernaryDQTLinear,)
 # (1 - ANNEAL_FRACTION) of steps run in a clean deterministic tail.
 ANNEAL_FRACTION = 0.80
 
-# GO/NO-GO gate: mean validation perplexity across 3 seeds must be < 30.
-PPL_GATE = 30.0
+# GO/NO-GO gate: mean validation perplexity across 3 seeds must be < 20.
+PPL_GATE = 20.0
 
-# ── Graceful pause (SIGINT / SIGTERM) ──────────────────────────────
-# A SIGINT (Ctrl+C) or SIGTERM sets this flag instead of killing the process
-# mid-step. The training loop checks it between steps, saves a checkpoint and
-# exits cleanly, so the run can be resumed with ``--resume auto`` with only a
-# few seconds of progress lost. Installed via :func:`install_pause_handlers`.
+# ── Graceful pause (SIGINT / SIGTERM / SIGUSR1 / pause file) ───────
+# A SIGINT (Ctrl+C), SIGTERM or SIGUSR1 sets this flag instead of killing
+# the process mid-step. The training loop checks it between steps, saves a
+# checkpoint and exits cleanly, so the run can be resumed with
+# ``--resume auto`` with only a few seconds of progress lost. The M2.2
+# external-pause flow uses SIGUSR1 (the gaming co-use pause signal) — see
+# the pause/resume section of the M2.2 brief.
 _PAUSE_REQUESTED = False
 
 
@@ -94,9 +103,11 @@ def _pause_signal_handler(signum, frame):
 
 
 def install_pause_handlers() -> None:
-    """Install graceful-pause handlers for SIGINT and SIGTERM."""
+    """Install graceful-pause handlers for SIGINT, SIGTERM and SIGUSR1."""
     signal.signal(signal.SIGINT, _pause_signal_handler)
     signal.signal(signal.SIGTERM, _pause_signal_handler)
+    if hasattr(signal, "SIGUSR1"):
+        signal.signal(signal.SIGUSR1, _pause_signal_handler)
 
 
 # ── DQT helpers ────────────────────────────────────────────────────
@@ -174,6 +185,59 @@ def evaluate_perplexity(
     return compute_perplexity(total_loss / max(n_tokens, 1))
 
 
+# ── Status file (for the ``status`` shell command) ──────────────────
+
+
+def _gpu_mem_gb(device: torch.device) -> float:
+    """Current GPU memory used in GB (0.0 on CPU)."""
+    if device.type != "cuda":
+        return 0.0
+    return torch.cuda.memory_allocated(device) / (1024**3)
+
+
+def write_status_file(
+    status_file: str | None,
+    *,
+    seed: int,
+    lr: float,
+    step: int,
+    total_steps: int,
+    epoch: int,
+    loss: float,
+    ppl: float,
+    tok_per_s: float,
+    gpu_mem_gb: float,
+    status: str,
+) -> None:
+    """Write the M2.2 progress status JSON for ``run_m2_2_dqt_wikitext2.sh status``."""
+    if status_file is None:
+        return
+    payload = {
+        "experiment": "m2_2_dqt_wikitext2",
+        "seed": seed,
+        "lr": lr,
+        "step": int(step),
+        "total_steps": int(total_steps),
+        "epoch": int(epoch),
+        "loss": float(loss),
+        "ppl": float(ppl),
+        "tok_per_s": float(tok_per_s),
+        "gpu_mem_gb": float(gpu_mem_gb),
+        "gpu_total_gb": (
+            float(torch.cuda.get_device_properties(0).total_memory / (1024**3))
+            if torch.cuda.is_available()
+            else 0.0
+        ),
+        "status": status,
+        "updated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+    }
+    os.makedirs(os.path.dirname(status_file), exist_ok=True)
+    tmp = status_file + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(payload, f)
+    os.replace(tmp, status_file)
+
+
 # ── Training loop ──────────────────────────────────────────────────
 
 
@@ -191,7 +255,12 @@ def train_dqt_transformer(
     val_every: int | None = None,
     checkpoint_every: int | None = None,
     checkpoint_dir: str | None = None,
-    config: dict | None = None,
+    status_file: str | None = None,
+    progress_every: int = 50,
+    pause_file: str | None = None,
+    seed: int = 0,
+    emb_optimizer: torch.optim.Optimizer | None = None,
+    emb_scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
     record_steps: bool = False,
     start_step: int = 0,
     start_epoch: int = 1,
@@ -221,9 +290,17 @@ def train_dqt_transformer(
         val_every: Validate every N steps (default: every epoch).
         checkpoint_every: Save a checkpoint every N steps (None = off).
         checkpoint_dir: Directory for checkpoints.
-        config: Architecture config dict stored alongside the best model in
-            ``best.pt`` (so the checkpoint can be rebuilt without the
-            trainer). None = omit.
+        status_file: Path to write progress ``status.json`` every
+            ``progress_every`` steps (for the ``status`` shell command).
+        progress_every: Steps between status writes / progress prints.
+        pause_file: If set, the loop pauses gracefully (saves a checkpoint)
+            as soon as this file exists — external pause control.
+        seed: Experiment seed (recorded in the status file).
+        emb_optimizer: Optional SGD optimizer for the float token embedding
+            (trained WITHOUT AdamW moments — the M2.2 memory budget saves
+            ~0.4 GB this way). Stepped once per step like the main one.
+        emb_scheduler: Optional LR scheduler for ``emb_optimizer`` (same
+            cosine+warmup schedule as the main optimizer).
         record_steps: If True, record every step's loss in
             ``step_loss_history`` (useful for tests/short runs).
         start_step: Step counter to continue from (resume).
@@ -255,6 +332,8 @@ def train_dqt_transformer(
 
     step = start_step
     ema_loss: float | None = None
+    step_t0 = time.time()
+    tokens_this_step = 0
 
     history: dict[str, list] = {
         "train_loss": [],
@@ -285,8 +364,17 @@ def train_dqt_transformer(
                 break
             if _PAUSE_REQUESTED:
                 break
+            if pause_file and os.path.exists(pause_file):
+                print(
+                    f"\n  ⏸️  Pause file detected ({pause_file}) — pausing at "
+                    "next step boundary...",
+                    flush=True,
+                )
+                _PAUSE_REQUESTED = True
+                break
             input_ids = input_ids.to(device)
             targets = targets.to(device)
+            tokens_this_step = targets.numel()
 
             optimizer.zero_grad()
             logits = model(input_ids)  # (B, T, V)
@@ -298,6 +386,8 @@ def train_dqt_transformer(
             # stochastic rounding can inject spikes into the optimization).
             torch.nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
             optimizer.step()
+            if emb_optimizer is not None:
+                emb_optimizer.step()
 
             # ── DQT: rounding after EVERY optimizer step ──
             use_stochastic = should_use_stochastic(step, total_steps, anneal_fraction)
@@ -311,8 +401,8 @@ def train_dqt_transformer(
             mean_flip = apply_dqt_rounding(model, use_stochastic=use_stochastic)
 
             ema_loss = loss.item() if ema_loss is None else 0.9 * ema_loss + 0.1 * loss.item()
-            running_loss += loss.item() * targets.numel()
-            n_tokens += targets.numel()
+            running_loss += loss.item() * tokens_this_step
+            n_tokens += tokens_this_step
             running_flip += mean_flip
             n_steps_epoch += 1
             step += 1
@@ -322,6 +412,37 @@ def train_dqt_transformer(
 
             if scheduler is not None:
                 scheduler.step()
+            if emb_scheduler is not None:
+                emb_scheduler.step()
+
+            # ── Periodic progress + status file (for `status` cmd) ──
+            if progress_every and step % progress_every == 0:
+                elapsed = time.time() - total_start
+                tok_per_s = step * tokens_this_step / max(elapsed, 1e-6)
+                eta_s = (total_steps - step) * (elapsed / max(step, 1))
+                cur_ppl = compute_perplexity(ema_loss or 0.0)
+                gpu_gb = _gpu_mem_gb(device)
+                write_status_file(
+                    status_file,
+                    seed=seed,
+                    lr=float(optimizer.param_groups[0]["lr"]),
+                    step=step,
+                    total_steps=total_steps,
+                    epoch=epoch,
+                    loss=ema_loss or 0.0,
+                    ppl=cur_ppl,
+                    tok_per_s=tok_per_s,
+                    gpu_mem_gb=gpu_gb,
+                    status="RUNNING",
+                )
+                if verbose:
+                    print(
+                        f"  Step {step:6d}/{total_steps}  loss {ema_loss:.4f}  "
+                        f"ppl {cur_ppl:7.1f}  {tok_per_s:6.0f} tok/s  "
+                        f"flip {mean_flip:.4f}  ETA {eta_s/60:5.1f} min  "
+                        f"GPU {gpu_gb:.1f} GB",
+                        flush=True,
+                    )
 
             if checkpoint_every and checkpoint_dir and step % checkpoint_every == 0:
                 _save_checkpoint(
@@ -333,6 +454,8 @@ def train_dqt_transformer(
                     epoch,
                     best_val_ppl=best_val_ppl,
                     best_step=best_step,
+                    emb_optimizer=emb_optimizer,
+                    emb_scheduler=emb_scheduler,
                 )
 
             if val_every and step % val_every == 0:
@@ -345,10 +468,6 @@ def train_dqt_transformer(
                 if val_ppl < best_val_ppl:
                     best_val_ppl = val_ppl
                     best_step = step
-                    if checkpoint_dir:
-                        _save_best_checkpoint(
-                            model, checkpoint_dir, step, epoch, best_val_ppl, config
-                        )
 
         if _PAUSE_REQUESTED:
             break  # skip epoch-end work and pause
@@ -371,10 +490,6 @@ def train_dqt_transformer(
             if val_ppl < best_val_ppl:
                 best_val_ppl = val_ppl
                 best_step = step
-                if checkpoint_dir:
-                    _save_best_checkpoint(
-                        model, checkpoint_dir, step, epoch, best_val_ppl, config
-                    )
         else:
             val_ppl = history["val_ppl"][-1] if history["val_ppl"] else float("inf")
 
@@ -402,6 +517,21 @@ def train_dqt_transformer(
                 epoch,
                 best_val_ppl=best_val_ppl,
                 best_step=best_step,
+                emb_optimizer=emb_optimizer,
+                emb_scheduler=emb_scheduler,
+            )
+            write_status_file(
+                status_file,
+                seed=seed,
+                lr=float(optimizer.param_groups[0]["lr"]),
+                step=step,
+                total_steps=total_steps,
+                epoch=epoch,
+                loss=ema_loss or 0.0,
+                ppl=compute_perplexity(ema_loss or 0.0),
+                tok_per_s=0.0,
+                gpu_mem_gb=_gpu_mem_gb(device),
+                status="PAUSED",
             )
             print(
                 f"\n  ⏸️  Paused at step {step} (epoch {epoch}). "
@@ -420,10 +550,6 @@ def train_dqt_transformer(
     if final_val_ppl < best_val_ppl:
         best_val_ppl = final_val_ppl
         best_step = steps_trained
-        if checkpoint_dir:
-            _save_best_checkpoint(
-                model, checkpoint_dir, steps_trained, epochs, best_val_ppl, config
-            )
 
     return {
         "best_val_ppl": float(best_val_ppl),
@@ -468,41 +594,6 @@ def _mean_val_loss(model: nn.Module, val_loader: DataLoader, device: torch.devic
     return total_loss / max(n_tokens, 1)
 
 
-def _save_best_checkpoint(
-    model: nn.Module,
-    checkpoint_dir: str,
-    step: int,
-    epoch: int,
-    best_val_ppl: float,
-    config: dict | None = None,
-) -> str:
-    """Save the best-so-far model to ``{dir}/best.pt``.
-
-    Unlike the periodic ``ckpt_step*.pt`` files (full optimizer/scheduler
-    training state for pause/resume), ``best.pt`` stores ONLY the inference
-    artifacts needed to rebuild and deploy the best model: the
-    ``model_state_dict`` plus the architecture ``config`` (so the model can
-    be reconstructed from the checkpoint alone, without the trainer). It is
-    written in-place every time a new best validation perplexity is reached.
-
-    Returns:
-        Path of the written ``best.pt`` file.
-    """
-    os.makedirs(checkpoint_dir, exist_ok=True)
-    path = os.path.join(checkpoint_dir, "best.pt")
-    torch.save(
-        {
-            "step": int(step),
-            "epoch": int(epoch),
-            "best_val_ppl": float(best_val_ppl),
-            "config": dict(config) if config is not None else None,
-            "model_state_dict": model.state_dict(),
-        },
-        path,
-    )
-    return path
-
-
 def _save_checkpoint(
     model: nn.Module,
     optimizer: torch.optim.Optimizer,
@@ -512,11 +603,14 @@ def _save_checkpoint(
     epoch: int,
     best_val_ppl: float = float("inf"),
     best_step: int = 0,
+    emb_optimizer: torch.optim.Optimizer | None = None,
+    emb_scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
 ) -> None:
     """Save a training checkpoint to ``{dir}/ckpt_step{step}.pt``.
 
-    Includes the model, optimizer and scheduler state so training can be
-    paused and later resumed with ``--resume``.
+    Includes the model, optimizer and scheduler state (main + optional
+    embedding optimizer) so training can be paused and later resumed with
+    ``--resume``.
     """
     os.makedirs(checkpoint_dir, exist_ok=True)
     path = os.path.join(checkpoint_dir, f"ckpt_step{step}.pt")
@@ -530,6 +624,12 @@ def _save_checkpoint(
             "optimizer_state_dict": optimizer.state_dict(),
             "scheduler_state_dict": (
                 scheduler.state_dict() if scheduler is not None else None
+            ),
+            "emb_optimizer_state_dict": (
+                emb_optimizer.state_dict() if emb_optimizer is not None else None
+            ),
+            "emb_scheduler_state_dict": (
+                emb_scheduler.state_dict() if emb_scheduler is not None else None
             ),
         },
         path,
@@ -561,6 +661,8 @@ def load_checkpoint(
     optimizer: torch.optim.Optimizer,
     scheduler: torch.optim.lr_scheduler.LRScheduler | None,
     device: torch.device,
+    emb_optimizer: torch.optim.Optimizer | None = None,
+    emb_scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
 ) -> dict:
     """Load optimizer/model/scheduler state from a checkpoint for resume.
 
@@ -572,6 +674,8 @@ def load_checkpoint(
         optimizer: The (freshly built) optimizer to restore into.
         scheduler: The (freshly built) scheduler to restore into.
         device: Torch device.
+        emb_optimizer: The (freshly built) embedding optimizer to restore.
+        emb_scheduler: The (freshly built) embedding scheduler to restore.
 
     Returns:
         Dict with ``step``, ``epoch``, ``best_val_ppl``, ``best_step``.
@@ -589,6 +693,10 @@ def load_checkpoint(
     optimizer.load_state_dict(ckpt["optimizer_state_dict"])
     if scheduler is not None and ckpt.get("scheduler_state_dict") is not None:
         scheduler.load_state_dict(ckpt["scheduler_state_dict"])
+    if emb_optimizer is not None and ckpt.get("emb_optimizer_state_dict") is not None:
+        emb_optimizer.load_state_dict(ckpt["emb_optimizer_state_dict"])
+    if emb_scheduler is not None and ckpt.get("emb_scheduler_state_dict") is not None:
+        emb_scheduler.load_state_dict(ckpt["emb_scheduler_state_dict"])
 
     print(f"  ↩️ Loaded checkpoint {os.path.basename(path)}")
     return {
@@ -636,23 +744,33 @@ def make_cosine_warmup_scheduler(
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Milestone M2.1: DQT Transformer on TinyStories (GO/NO-GO ppl<30)"
+        description="Milestone M2.2: DQT Transformer 250M on WikiText-2 (GO/NO-GO ppl<20)"
     )
-    # Architecture (defaults = FULL_CONFIG → ~102M ternary weights)
-    parser.add_argument("--d-model", type=int, default=FULL_CONFIG["d_model"])
-    parser.add_argument("--n-heads", type=int, default=FULL_CONFIG["n_heads"])
-    parser.add_argument("--n-layers", type=int, default=FULL_CONFIG["n_layers"])
-    parser.add_argument("--d-ff", type=int, default=FULL_CONFIG["d_ff"])
-    parser.add_argument("--vocab-size", type=int, default=FULL_CONFIG["vocab_size"])
+    # Architecture (defaults = M2_2_CONFIG → ~252.8M ternary weights)
+    parser.add_argument("--d-model", type=int, default=M2_2_CONFIG["d_model"])
+    parser.add_argument("--n-heads", type=int, default=M2_2_CONFIG["n_heads"])
+    parser.add_argument("--n-layers", type=int, default=M2_2_CONFIG["n_layers"])
+    parser.add_argument("--d-ff", type=int, default=M2_2_CONFIG["d_ff"])
+    parser.add_argument("--vocab-size", type=int, default=M2_2_CONFIG["vocab_size"])
     parser.add_argument("--max-seq-len", type=int, default=None,
                         help="RoPE max seq len (default: seq-len)")
     parser.add_argument("--smoke", action="store_true",
                         help="Use the SMOKE_CONFIG architecture (~16M ternary)")
+    parser.add_argument("--m2-1-config", action="store_true",
+                        help="Use the M2.1 FULL_CONFIG architecture (~102M ternary)")
+    parser.add_argument("--grad-checkpoint", action="store_true", default=True,
+                        help="Gradient checkpointing (recompute block activations in "
+                             "backward) — REQUIRED to fit 250M on 8 GB (default on)")
+    parser.add_argument("--no-grad-checkpoint", dest="grad_checkpoint", action="store_false",
+                        help="Disable gradient checkpointing (faster, more VRAM)")
     # Training
     parser.add_argument("--lr", type=float, default=0.01,
                         help="Learning rate (DQT best: 0.01)")
     parser.add_argument("--epochs", type=int, default=3)
-    parser.add_argument("--batch-size", type=int, default=8)
+    # batch 4 (not 8): the 250M config's nvidia-smi footprint is ~7.2 GB at
+    # batch 4 vs ~7.6 GB at batch 8 — the brief's 7.5 GB hard limit, so 4 is
+    # the verified default (expandable_segments also helps; see the E026 doc).
+    parser.add_argument("--batch-size", type=int, default=4)
     parser.add_argument("--seq-len", type=int, default=256)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--weight-decay", type=float, default=0.1)
@@ -660,28 +778,35 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--grad-clip", type=float, default=1.0)
     parser.add_argument("--anneal-fraction", type=float, default=ANNEAL_FRACTION)
     parser.add_argument("--dropout", type=float, default=0.0)
+    parser.add_argument("--embed-adamw", action="store_true",
+                        help="Opt-in: train the float token embedding with AdamW too "
+                             "(M2.1 behavior, ~0.4 GB more VRAM). Default: the embedding "
+                             "uses plain SGD (no AdamW moments) to fit 250M in 8 GB.")
     parser.add_argument("--max-steps", type=int, default=None,
                         help="Cap total training steps (tests/smoke)")
     parser.add_argument("--val-every", type=int, default=None,
                         help="Validate every N steps (default: per epoch)")
     parser.add_argument("--checkpoint-every", type=int, default=None,
                         help="Save a checkpoint every N steps")
+    parser.add_argument("--progress-every", type=int, default=50,
+                        help="Write status.json + print progress every N steps")
+    parser.add_argument("--pause-file", default=None,
+                        help="External pause control: while this file exists, "
+                             "the loop pauses gracefully at the next step boundary")
     parser.add_argument("--resume", default=None,
                         help="Resume from a checkpoint path, or 'auto' for the "
                              "latest checkpoint in --checkpoint-dir")
     # Data
     parser.add_argument("--synthetic", action="store_true",
-                        help="Use synthetic learnable data (no TinyStories download)")
+                        help="Use synthetic learnable data (no WikiText-2 download)")
     parser.add_argument("--synthetic-vocab", type=int, default=64)
     parser.add_argument("--synthetic-batches", type=int, default=8)
-    parser.add_argument("--data-dir", default="data/tinystories")
-    parser.add_argument("--max-samples", type=int, default=50000,
-                        help="Cap TinyStories stories downloaded (None=all)")
+    parser.add_argument("--data-dir", default="data/wikitext2")
     parser.add_argument("--num-workers", type=int, default=0)
     # Output
     parser.add_argument("--device", default=None,
                         help="Torch device (default: cuda if available)")
-    parser.add_argument("--output-dir", default="m2_1_results")
+    parser.add_argument("--output-dir", default="m2_2_results")
     parser.add_argument("--checkpoint-dir", default=None)
     parser.add_argument("--pid-file", default=None,
                         help="Write this process's PID to a file at startup "
@@ -699,7 +824,7 @@ def main() -> None:
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
 
-    # Record our PID so an external supervisor can send SIGINT to pause.
+    # Record our PID so an external supervisor can send SIGUSR1/SIGINT to pause.
     if args.pid_file:
         with open(args.pid_file, "w") as f:
             f.write(str(os.getpid()))
@@ -714,6 +839,15 @@ def main() -> None:
             d_ff=SMOKE_CONFIG["d_ff"],
             max_seq_len=args.max_seq_len or args.seq_len,
         )
+    elif args.m2_1_config:
+        cfg = build_config(
+            vocab_size=args.vocab_size,
+            d_model=FULL_CONFIG["d_model"],
+            n_heads=FULL_CONFIG["n_heads"],
+            n_layers=FULL_CONFIG["n_layers"],
+            d_ff=FULL_CONFIG["d_ff"],
+            max_seq_len=args.max_seq_len or args.seq_len,
+        )
     else:
         cfg = build_config(
             vocab_size=args.vocab_size,
@@ -725,10 +859,11 @@ def main() -> None:
         )
 
     print_header(
-        f"M2.1 DQT Transformer TinyStories (GO/NO-GO ppl<30): "
+        f"M2.2 DQT Transformer WikiText-2 (GO/NO-GO ppl<20): "
         f"d={cfg['d_model']} L={cfg['n_layers']} H={cfg['n_heads']} "
         f"ff={cfg['d_ff']} lr={args.lr}, {args.epochs}ep, seed={args.seed}, "
-        f"anneal@{int(100 * args.anneal_fraction)}%"
+        f"anneal@{int(100 * args.anneal_fraction)}%, "
+        f"grad_ckpt={args.grad_checkpoint}"
     )
     print(f"Device: {device}")
     if device.type == "cuda":
@@ -760,20 +895,22 @@ def main() -> None:
             "n_train_batches": args.synthetic_batches,
         }
     else:
-        train_loader, val_loader, data_meta = get_tinystories_data(
+        train_loader, val_loader, _test_loader, data_meta = get_wikitext2_data(
             data_dir=args.data_dir,
             seq_len=args.seq_len,
             batch_size=args.batch_size,
-            # 0 or None => download the whole dataset (no cap)
-            max_samples=args.max_samples or None,
             num_workers=args.num_workers,
             seed=args.seed,
         )
-        data_meta["mode"] = "tinystories"
+        data_meta["mode"] = "wikitext2"
         cfg["vocab_size"] = data_meta["vocab_size"]
         seq_len = args.seq_len
     print(f"Data: {data_meta['mode']} | vocab={cfg['vocab_size']} | seq_len={seq_len}")
     print(f"  Train batches: {len(train_loader)} | Val batches: {len(val_loader)}")
+    if "n_train_tokens" in data_meta:
+        print(f"  Tokens: train={data_meta['n_train_tokens']:,} "
+              f"val={data_meta['n_val_tokens']:,} "
+              f"test={data_meta['n_test_tokens']:,}")
     print()
 
     # ── Model ──────────────────────────────────────────────────────
@@ -785,6 +922,7 @@ def main() -> None:
         d_ff=cfg["d_ff"],
         max_seq_len=cfg["max_seq_len"],
         dropout=args.dropout,
+        use_grad_checkpointing=args.grad_checkpoint,
         device=device,
     )
     n_total = count_parameters(model)
@@ -794,24 +932,51 @@ def main() -> None:
     print(f"  Float parameters:  {n_total - n_ternary:,}")
     print(f"  Ternary weights:   {n_ternary:,}  (int8)")
     print(f"  Total:             {n_total:,}")
+    if device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats()
     print()
 
     # ── Optimizer + scheduler ──────────────────────────────────────
-    optimizer = torch.optim.AdamW(
-        model.parameters(),
-        lr=args.lr,
-        betas=(0.9, 0.95),
-        weight_decay=args.weight_decay,
-    )
+    # M2.2 memory design: the float token embedding is trained with plain
+    # SGD (no AdamW moments — the brief's "embedding χωρίς AdamW" budget,
+    # saves ~0.4 GB at d=1024). Everything else (DQT float buffers, RMSNorm
+    # scales) uses AdamW exactly like M2.1. ``--embed-adamw`` opts back in.
+    if args.embed_adamw:
+        optimizer = torch.optim.AdamW(
+            model.parameters(),
+            lr=args.lr,
+            betas=(0.9, 0.95),
+            weight_decay=args.weight_decay,
+        )
+        emb_optimizer = None
+    else:
+        emb_params = [model.token_embedding.weight]
+        main_params = [
+            p for n, p in model.named_parameters() if n != "token_embedding.weight"
+        ]
+        optimizer = torch.optim.AdamW(
+            main_params,
+            lr=args.lr,
+            betas=(0.9, 0.95),
+            weight_decay=args.weight_decay,
+        )
+        emb_optimizer = torch.optim.SGD(emb_params, lr=args.lr)
+    emb_scheduler = None
     total_steps = args.max_steps or args.epochs * len(train_loader)
     scheduler = make_cosine_warmup_scheduler(
         optimizer, warmup_steps=args.warmup_steps, total_steps=total_steps
     )
+    if emb_optimizer is not None:
+        emb_scheduler = make_cosine_warmup_scheduler(
+            emb_optimizer, warmup_steps=args.warmup_steps, total_steps=total_steps
+        )
 
     # ── Checkpoint dir (per-seed so seeds don't overwrite each other) ──
     checkpoint_dir = args.checkpoint_dir or os.path.join(
         args.output_dir, "checkpoints", f"seed{args.seed}"
     )
+    # Status file for the `status` shell command.
+    status_file = os.path.join(checkpoint_dir, "status.json")
 
     # ── Resume (pause/resume support) ──────────────────────────────
     orig_epochs = args.epochs
@@ -820,7 +985,14 @@ def main() -> None:
     if args.resume:
         try:
             r = load_checkpoint(
-                args.resume, checkpoint_dir, model, optimizer, scheduler, device
+                args.resume,
+                checkpoint_dir,
+                model,
+                optimizer,
+                scheduler,
+                device,
+                emb_optimizer=emb_optimizer,
+                emb_scheduler=emb_scheduler,
             )
         except FileNotFoundError as exc:
             print(f"ERROR: {exc}")
@@ -848,7 +1020,7 @@ def main() -> None:
     # ── Train ──────────────────────────────────────────────────────
     print("Training...")
     print()
-    install_pause_handlers()  # Ctrl+C / SIGTERM -> graceful checkpointed pause
+    install_pause_handlers()  # Ctrl+C / SIGTERM / SIGUSR1 -> graceful checkpointed pause
     try:
         results = train_dqt_transformer(
             model,
@@ -864,19 +1036,24 @@ def main() -> None:
             val_every=args.val_every,
             checkpoint_every=args.checkpoint_every,
             checkpoint_dir=checkpoint_dir,
-            config=cfg,
+            status_file=status_file,
+            progress_every=args.progress_every,
+            pause_file=args.pause_file,
+            seed=args.seed,
+            emb_optimizer=emb_optimizer,
+            emb_scheduler=emb_scheduler,
             start_step=start_step,
             start_epoch=start_epoch,
             best_val_ppl=best_val_ppl,
             best_step=best_step,
         )
     except KeyboardInterrupt:
-        # Pause requested (SIGINT/SIGTERM). The checkpoint was already saved
-        # inside train_dqt_transformer; do NOT write a (partial) result JSON,
-        # so the run can be resumed cleanly with --resume auto.
+        # Pause requested (SIGINT/SIGTERM/SIGUSR1). The checkpoint was already
+        # saved inside train_dqt_transformer; do NOT write a (partial) result
+        # JSON, so the run can be resumed cleanly with --resume auto.
         print("\n⏹️  Training paused by request — no result JSON written.")
         print(
-            f"  Resume: bash scripts/run_m2_1_dqt_transformer.sh "
+            f"  Resume: bash scripts/run_m2_2_dqt_wikitext2.sh "
             f"resume {args.lr} {args.seed}"
         )
         print(f"  Checkpoints: {checkpoint_dir}")
@@ -890,7 +1067,7 @@ def main() -> None:
 
     # ── Result dict ────────────────────────────────────────────────
     result = {
-        "experiment": "m2_1_dqt_transformer",
+        "experiment": "m2_2_dqt_wikitext2",
         "dataset": data_meta["mode"],
         "tokenizer": data_meta.get("tokenizer", "synthetic"),
         "seed": args.seed,
@@ -904,6 +1081,8 @@ def main() -> None:
         "warmup_steps": args.warmup_steps,
         "grad_clip": args.grad_clip,
         "anneal_fraction": args.anneal_fraction,
+        "embed_adamw": bool(args.embed_adamw),
+        "grad_checkpointing": bool(args.grad_checkpoint),
         "architecture": (
             f"DQT Transformer: emb({cfg['vocab_size']}->{cfg['d_model']}) "
             f"+ {cfg['n_layers']}x[Attn({cfg['n_heads']}h, RoPE) + FFN({cfg['d_ff']})] "
@@ -924,14 +1103,28 @@ def main() -> None:
         **results,
     }
 
-    # ── Save ───────────────────────────────────────────────────────
+    # ── Save result JSON + mark COMPLETED in the status file ──────
     os.makedirs(args.output_dir, exist_ok=True)
     output_path = os.path.join(
         args.output_dir,
-        f"results_m2_1_dqt_transformer_lr{args.lr}_seed{args.seed}.json",
+        f"results_m2_2_dqt_wikitext2_lr{args.lr}_seed{args.seed}.json",
     )
     with open(output_path, "w") as f:
         json.dump(result, f, indent=2)
+
+    write_status_file(
+        status_file,
+        seed=args.seed,
+        lr=args.lr,
+        step=int(results["steps_trained"]),
+        total_steps=total_steps,
+        epoch=orig_epochs,
+        loss=float(results["final_train_loss"]),
+        ppl=float(results["final_val_ppl"]),
+        tok_per_s=0.0,
+        gpu_mem_gb=_gpu_mem_gb(device),
+        status="COMPLETED",
+    )
 
     # ── Summary ────────────────────────────────────────────────────
     print()
@@ -951,7 +1144,7 @@ def main() -> None:
         if results["best_val_ppl"] < PPL_GATE
         else f"NO-GO 🔴 (ppl >= {PPL_GATE})"
     )
-    print(f"  M2.1 Verdict:          ppl={results['best_val_ppl']:.2f}  →  {verdict}")
+    print(f"  M2.2 Verdict:          ppl={results['best_val_ppl']:.2f}  →  {verdict}")
     print()
     print(f"Results saved to: {output_path}")
 

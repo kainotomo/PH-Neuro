@@ -98,11 +98,12 @@ class TestDqtCnnBuild:
         assert _count_dqt_layers(model) == 4, (
             "Expected 2 DQT conv + 2 DQT linear layers"
         )
-        # Architecture sanity: 8192 -> 256 classifier (M1.1-RETRY head)
+        # Architecture sanity: 8192 -> 512 classifier (E021.3 final head —
+        # E021/E021.2 temporarily used 256, reverted to 512 in E021.3)
         linear = model[9]  # index 8 is Flatten
         assert isinstance(linear, TernaryDQTLinear)
         assert linear.in_features == 8192
-        assert linear.out_features == 256
+        assert linear.out_features == 512
 
     def test_dqt_cnn_forward(self):
         """Forward pass with dummy CIFAR-shaped data should produce logits."""

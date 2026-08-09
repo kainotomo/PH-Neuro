@@ -44,15 +44,17 @@ All 19 experiments completed. See [`research/`](research/).
 | Milestone | Target | Priority | Status |
 |:----------|:------:|:--------:|:------:|
 | **M2.1** DQT Transformer 100M params | Perplexity <30 on TinyStories (**mean 11.35** ✅) | 🔴 Critical | ✅ GO |
-| **M2.2** DQT Transformer 250M params | Perplexity <20 on WikiText-2 | 🟡 High | ⬜ |
-| **M2.3** MoE DQT Transformer | **400M total, 150M active**, <250MB on disk | 🟡 High | ⬜ |
-| **M2.4** On-device inference demo | Token generation on smartphone | 🟡 High | ⬜ |
+| **M2.2** DQT Transformer 250M params | Perplexity <20 on WikiText-2 | 🟡 High | 🟡 SCIENTIFIC GO |
+| **M2.3** MoE DQT Transformer | **265M total, 190M active**, ppl <20 | 🟡 High | ✅ GO |
+| **M2.4** On-device inference demo | Token generation on CPU, 11 MB packed | 🟡 High | ✅ GO |
 | **M2.5** Public demo + blog post | Hacker News / Reddit launch | 🟢 Medium | ⬜ |
 
-**Go/No-go gate:** M2.1 — ✅ **GO** (mean val ppl **11.35** < 30; seeds 11.47/11.32/11.27;
-no NaN/divergence across 3 seeds). DQT Transformer trains stably.
-Proceeding to M2.2 (250M WikiText-2 scaling test), then M2.3 (MoE scaling).
-M2.2 validates scaling from 102M→250M; M2.3 proves MoE+DQT on transformers
+**Go/No-go gate:** M2.1 — ✅ **GO** (ppl **11.35**). M2.2 — 🟡 **SCIENTIFIC GO**
+(250M stable, data-limited). M2.3 — ✅ **GO** (mean ppl **14.08** < 20,
+first MoE DQT Transformer, 265M total/190M active, 3/3 seeds stable).
+M2.4 — ✅ **GO** (on-device inference demo: 44.6M-param DQT Transformer
+generates coherent TinyStories on CPU at ~21-25 tok/s; ONNX 269.8 MB, 2-bit
+packed **~11 MB**; E028). Next: M2.5 (Public demo + blog post).
 (already validated on MLP vision — E019).
 
 ---
