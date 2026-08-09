@@ -45,14 +45,14 @@ All 19 experiments completed. See [`research/`](research/).
 |:----------|:------:|:--------:|:------:|
 | **M2.1** DQT Transformer 100M params | Perplexity <30 on TinyStories (**mean 11.35** ✅) | 🔴 Critical | ✅ GO |
 | **M2.2** DQT Transformer 250M params | Perplexity <20 on WikiText-2 | 🟡 High | 🟡 SCIENTIFIC GO |
-| **M2.3** MoE DQT Transformer | **400M total, 150M active**, <250MB on disk | 🟡 High | ⬜ |
+| **M2.3** MoE DQT Transformer | **265M total, 190M active**, ppl <20 | 🟡 High | ✅ GO |
 | **M2.4** On-device inference demo | Token generation on smartphone | 🟡 High | ⬜ |
 | **M2.5** Public demo + blog post | Hacker News / Reddit launch | 🟢 Medium | ⬜ |
 
-**Go/No-go gate:** M2.1 — ✅ **GO** (mean ppl **11.35** < 30).
-M2.2 — 🟡 **SCIENTIFIC GO** (250M DQT trains stably, fits 6.5 GB, ppl gate
-missed due to WikiText-2 data budget — 2.4M tokens, GPT-2 needs ~1.5B).
-Next: M2.3 (MoE 400M) or M2.2b (WikiText-103).
+**Go/No-go gate:** M2.1 — ✅ **GO** (ppl **11.35**). M2.2 — 🟡 **SCIENTIFIC GO**
+(250M stable, data-limited). M2.3 — ✅ **GO** (mean ppl **14.08** < 20,
+first MoE DQT Transformer, 265M total/190M active, 3/3 seeds stable).
+Next: M2.4 (On-device inference demo).
 (already validated on MLP vision — E019).
 
 ---

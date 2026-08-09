@@ -4,7 +4,7 @@
 > **Era 2 (STE):** Ternary Networks for Low-Memory & Continual Learning
 >
 > **Status:** Phase 1 COMPLETE. Phase 2: M2.1 GO (DQT Transformer 102M, ppl 11.35).
-> **Last updated:** 2026-08-06
+> **Last updated:** 2026-08-09
 
 ---
 

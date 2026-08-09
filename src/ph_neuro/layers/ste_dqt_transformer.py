@@ -43,6 +43,8 @@ __all__ = [
     "TernaryDQTMultiheadAttention",
     "TernaryDQTFeedForward",
     "TernaryDQTTransformerBlock",
+    "TernaryDQTMoEFeedForward",
+    "TernaryDQTMoETransformerBlock",
 ]
 
 
@@ -469,3 +471,327 @@ class TernaryDQTTransformerBlock(nn.Module):
         x = x + self.attention(self.attn_norm(x))
         x = x + self.feed_forward(self.ffn_norm(x))
         return x
+
+
+# ── Mixture-of-Experts feed-forward (M2.3) ─────────────────────────
+
+
+class TernaryDQTMoEFeedForward(nn.Module):
+    """Sparse Mixture-of-Experts feed-forward with DQT ternary experts.
+
+    A switch of ``n_experts`` identical feed-forward networks, each an
+    ``TernaryDQTLinear3D(d_model, d_ff) -> GELU -> TernaryDQTLinear3D(d_ff,
+    d_model)`` (the same FFN shape as :class:`TernaryDQTFeedForward`,
+    replicated per expert, each with the 1/sqrt(in) output scaling that is
+    REQUIRED for DQT transformers — the M2.1 finding). A tiny FLOAT router
+    (``nn.Linear(d_model, n_experts)``) selects the ``top_k`` experts per
+    token and the experts' outputs are combined as a weighted
+    (re-normalized softmax) sum. Only the selected experts run in the
+    forward pass (grouped per-expert execution), so the active parameter
+    count is ``top_k / n_experts`` of the full expert stack.
+
+    Key M2.3 design rules:
+        - The router is FLOAT (``nn.Linear``) — never ternary, never DQT.
+          It is a tiny fraction of the params (``d_model * n_experts``)
+          and needs full precision for stable top-K selection. The training
+          runner gives it its own (0.1×) learning rate.
+        - Load balancing: Switch-Transformer auxiliary loss
+          ``n_experts * sum_i(f_i * P_i)`` (scaled by ``lb_coef=0.1`` in
+          the runner), which discourages expert collapse.
+        - Per-expert execution: tokens are grouped by their top-K expert
+          choice and each expert runs only on its own tokens, so expert
+          FLOPs scale with ``top_k / n_experts``.
+
+    Args:
+        d_model: Model (embedding) dimension.
+        d_ff: Hidden feed-forward dimension (per expert).
+        n_experts: Number of experts.
+        top_k: Active experts per token (``1 <= top_k <= n_experts``).
+        router_init_std: Init std of the (float) router weights.
+        device: Torch device.
+        dtype: Float dtype for the DQT accumulation buffers.
+
+    Attributes:
+        router: Float ``nn.Linear(d_model, n_experts)`` — the router.
+        experts: ``ModuleList`` of ``n_experts`` FFN ``nn.Sequential``s.
+        selection_counts / n_selections / coverage_counts / n_samples:
+            Load-balancing tracking buffers (usage metrics).
+    """
+
+    def __init__(
+        self,
+        d_model: int,
+        d_ff: int,
+        n_experts: int = 6,
+        top_k: int = 2,
+        router_init_std: float = 0.02,
+        device: torch.device | str | None = None,
+        dtype: torch.dtype = torch.float32,
+    ):
+        super().__init__()
+        if not 1 <= top_k <= n_experts:
+            raise ValueError(
+                f"top_k ({top_k}) must be in [1, n_experts={n_experts}]"
+            )
+        self.d_model = d_model
+        self.d_ff = d_ff
+        self.n_experts = n_experts
+        self.top_k = top_k
+
+        # Tiny FLOAT router (not quantized — needs full precision for
+        # stable top-K selection, same as E019).
+        self.router = nn.Linear(d_model, n_experts, bias=False, device=device)
+        nn.init.normal_(self.router.weight, mean=0.0, std=router_init_std)
+
+        # DQT ternary experts — each an FFN identical in shape to the
+        # dense TernaryDQTFeedForward (with the 1/sqrt(in) scaling).
+        self.experts = nn.ModuleList(
+            nn.Sequential(
+                TernaryDQTLinear3D(d_model, d_ff, device=device, dtype=dtype),
+                nn.GELU(),
+                TernaryDQTLinear3D(d_ff, d_model, device=device, dtype=dtype),
+            )
+            for _ in range(n_experts)
+        )
+
+        # Load balancing tracking buffers (usage metrics) — registered on
+        # the same device as the model so the CUDA/CPU indices match.
+        self.register_buffer("selection_counts", torch.zeros(n_experts, device=device))
+        self.register_buffer("n_selections", torch.zeros(1, device=device))
+        self.register_buffer("coverage_counts", torch.zeros(n_experts, device=device))
+        self.register_buffer("n_samples", torch.zeros(1, device=device))
+
+    # ── Forward ─────────────────────────────────────────────────────
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Sparse MoE forward with top-K routing and grouped execution.
+
+        Only the selected experts run: tokens are grouped per expert and
+        each expert is invoked on exactly the tokens that selected it, so
+        the FLOPs and memory of the expert stack scale with
+        ``top_k / n_experts``.
+
+        Args:
+            x: Input, shape ``(batch, seq, d_model)``.
+
+        Returns:
+            Tuple ``(output, aux_loss)`` where ``output`` is the weighted
+            (re-normalized softmax) sum of the top-K expert outputs with
+            shape ``(batch, seq, d_model)`` and ``aux_loss`` is the
+            Switch-Transformer load balancing loss (part of the graph).
+        """
+        batch, seq, _ = x.shape
+        flat = x.reshape(-1, self.d_model)  # (B*T, d_model)
+        n_tokens = flat.shape[0]
+
+        # Router: top-K selection per token (softmax, top-K, re-normalize)
+        logits = self.router(flat)  # (N, n_experts)
+        probs = torch.softmax(logits, dim=-1)  # (N, n_experts)
+        topk_probs, indices = torch.topk(probs, self.top_k, dim=-1)  # (N, K)
+        weights = topk_probs / (topk_probs.sum(dim=-1, keepdim=True) + 1e-8)
+
+        # Load balancing bookkeeping — only during real training forwards
+        # (NOT eval — is_grad_enabled is False under @torch.no_grad — and
+        # NOT gradient-checkpoint recomputation, which re-runs this forward
+        # inside backward). Keeps the metrics honest.
+        if torch.is_grad_enabled():
+            self._update_usage_stats(indices)
+
+        # Grouped expert execution — only run experts that were selected.
+        out = torch.zeros(n_tokens, self.d_model, device=x.device, dtype=x.dtype)
+        for e in range(self.n_experts):
+            rows, k_pos = (indices == e).nonzero(as_tuple=True)
+            if rows.numel() == 0:
+                continue
+            expert_out = self.experts[e](flat[rows])  # (n, d_model)
+            w = weights[rows, k_pos].unsqueeze(-1)  # (n, 1)
+            out = out.index_add(0, rows, expert_out * w)
+
+        # Switch-Transformer auxiliary load balancing loss (part of graph).
+        aux_loss = self._aux_load_balance_loss(logits, indices)
+
+        return out.reshape(batch, seq, self.d_model), aux_loss
+
+    # ── Load balancing helpers ──────────────────────────────────────
+
+    @torch.no_grad()
+    def _update_usage_stats(self, indices: torch.Tensor) -> None:
+        """Accumulate selection/coverage counters for one forward pass."""
+        self.selection_counts += torch.bincount(
+            indices.flatten(), minlength=self.n_experts
+        ).float()
+        self.n_selections += indices.numel()
+        sel_mask = (
+            indices.unsqueeze(-1)
+            == torch.arange(self.n_experts, device=indices.device)
+        ).any(dim=1)  # (N, E) — which experts each token picked
+        self.coverage_counts += sel_mask.float().sum(dim=0)
+        self.n_samples += indices.shape[0]
+
+    @torch.no_grad()
+    def selection_fractions(self) -> torch.Tensor:
+        """Share of all selections that went to each expert (sums to 1)."""
+        if self.n_selections.item() <= 0:
+            return torch.full((self.n_experts,), 1.0 / self.n_experts)
+        return self.selection_counts / self.n_selections
+
+    @torch.no_grad()
+    def coverage_fractions(self) -> torch.Tensor:
+        """Fraction of tokens where each expert was among the top-K."""
+        if self.n_samples.item() <= 0:
+            return torch.full((self.n_experts,), float(self.top_k) / self.n_experts)
+        return self.coverage_counts / self.n_samples
+
+    def _aux_load_balance_loss(
+        self, logits: torch.Tensor, indices: torch.Tensor
+    ) -> torch.Tensor:
+        """Switch-Transformer auxiliary load balancing loss.
+
+        ``L = n_experts * sum_i(f_i * P_i)`` where ``f_i`` is the fraction
+        of selections dispatched to expert ``i`` and ``P_i`` is the mean
+        router probability of expert ``i``. Minimized (value 1.0) when
+        routing is perfectly uniform. Part of the computation graph so the
+        optimizer can reduce it (scaled by ``lb_coef`` in the runner).
+        """
+        probs = torch.softmax(logits, dim=-1)  # (N, n_experts)
+        f = (
+            torch.bincount(indices.flatten(), minlength=self.n_experts).float()
+            / indices.numel()
+        )
+        p = probs.mean(dim=0)
+        return self.n_experts * (f * p).sum()
+
+    # ── Utilities ───────────────────────────────────────────────────
+
+    @torch.no_grad()
+    def reset_usage_stats(self) -> None:
+        """Reset the load balancing counters (e.g. between training/eval)."""
+        self.selection_counts.zero_()
+        self.n_selections.zero_()
+        self.coverage_counts.zero_()
+        self.n_samples.zero_()
+
+    @torch.no_grad()
+    def get_weight_stats(self) -> dict[str, float]:
+        """Aggregate ternary weight stats across all experts."""
+        total = zeros = pos = neg = 0
+        for expert in self.experts:
+            for m in expert.modules():
+                if isinstance(m, TernaryDQTLinear):
+                    w = m.weight_ternary
+                    n = w.numel()
+                    total += n
+                    zeros += int((w == 0).sum())
+                    pos += int((w == 1).sum())
+                    neg += int((w == -1).sum())
+        if total == 0:
+            return {"pos_pct": 0.0, "neg_pct": 0.0, "zero_pct": 0.0}
+        return {
+            "pos_pct": 100.0 * pos / total,
+            "neg_pct": 100.0 * neg / total,
+            "zero_pct": 100.0 * zeros / total,
+        }
+
+    @torch.no_grad()
+    def balance_report(self) -> dict[str, float]:
+        """Per-expert utilization for monitoring (dead-expert detector).
+
+        Returns a dict with ``balance_ratio`` (max/min selection share —
+        1.0 is perfectly balanced, ``inf`` means a dead expert) and
+        ``min_share`` (the smallest expert's selection share — ``~0``
+        flags expert collapse).
+        """
+        fracs = self.selection_fractions()
+        mn, mx = float(fracs.min()), float(fracs.max())
+        return {
+            "balance_ratio": float(mx / mn) if mn > 0 else float("inf"),
+            "min_share": mn,
+            "max_share": mx,
+        }
+
+    def count_parameters(self) -> dict[str, int]:
+        """Count router (float) vs expert (ternary buffers) parameters."""
+        router_params = sum(p.numel() for p in self.router.parameters())
+        expert_params = sum(
+            p.numel() for p in self.experts.parameters()
+        )  # includes the int8 ternary buffers
+        return {
+            "router": router_params,
+            "experts": expert_params,
+            "total": router_params + expert_params,
+        }
+
+    def extra_repr(self) -> str:
+        return (
+            f"d_model={self.d_model}, d_ff={self.d_ff}, "
+            f"n_experts={self.n_experts}, top_k={self.top_k}"
+        )
+
+
+class TernaryDQTMoETransformerBlock(nn.Module):
+    """Pre-norm transformer block with a sparse MoE feed-forward (M2.3).
+
+    ``x = x + attention(RMSNorm(x))`` then ``x = x + moe_ffn(RMSNorm(x))`` —
+    identical to :class:`TernaryDQTTransformerBlock` except the dense FFN is
+    replaced by :class:`TernaryDQTMoEFeedForward`. Returns the block output
+    AND the MoE auxiliary load-balancing loss so the training loop can add
+    ``lb_coef * aux_loss`` to the LM loss.
+
+    Args:
+        d_model: Model (embedding) dimension.
+        n_heads: Number of attention heads.
+        d_ff: Feed-forward hidden dimension (per expert).
+        n_experts: Number of MoE experts.
+        top_k: Active experts per token.
+        max_seq_len: Maximum sequence length (RoPE tables).
+        dropout: Dropout probability (default 0.0).
+        theta_base: RoPE base (default 10000).
+        device: Torch device.
+        dtype: Float dtype for the DQT accumulation buffers.
+    """
+
+    def __init__(
+        self,
+        d_model: int,
+        n_heads: int,
+        d_ff: int,
+        n_experts: int = 6,
+        top_k: int = 2,
+        max_seq_len: int = 512,
+        dropout: float = 0.0,
+        theta_base: float = 10000.0,
+        device: torch.device | str | None = None,
+        dtype: torch.dtype = torch.float32,
+    ):
+        super().__init__()
+        self.attn_norm = TernaryDQTRMSNorm(d_model, device=device)
+        self.ffn_norm = TernaryDQTRMSNorm(d_model, device=device)
+        self.attention = TernaryDQTMultiheadAttention(
+            d_model,
+            n_heads,
+            max_seq_len=max_seq_len,
+            dropout=dropout,
+            theta_base=theta_base,
+            device=device,
+            dtype=dtype,
+        )
+        self.moe_ffn = TernaryDQTMoEFeedForward(
+            d_model, d_ff, n_experts=n_experts, top_k=top_k, device=device, dtype=dtype
+        )
+
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        """Pre-norm residual block with a sparse MoE FFN.
+
+        Args:
+            x: Input, shape ``(batch, seq, d_model)``.
+
+        Returns:
+            Tuple ``(output, aux_loss)`` where ``output`` has shape
+            ``(batch, seq, d_model)`` and ``aux_loss`` is the block's MoE
+            load balancing loss (0 for the dense variant — here it is the
+            MoE FFN's aux loss).
+        """
+        x = x + self.attention(self.attn_norm(x))
+        h, aux_loss = self.moe_ffn(self.ffn_norm(x))
+        x = x + h
+        return x, aux_loss

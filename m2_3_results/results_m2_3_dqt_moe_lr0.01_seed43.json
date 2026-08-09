@@ -1,0 +1,205 @@
+{
+  "experiment": "m2_3_dqt_moe",
+  "dataset": "tinystories",
+  "tokenizer": "gpt2",
+  "seed": 43,
+  "device": "cuda",
+  "config": {
+    "vocab_size": 50257,
+    "d_model": 768,
+    "n_heads": 12,
+    "n_layers": 12,
+    "dense_layers": 6,
+    "moe_layers": 6,
+    "d_ff": 3072,
+    "n_experts": 6,
+    "top_k": 2,
+    "max_seq_len": 256,
+    "lb_coef": 0.1,
+    "router_lr_ratio": 0.1
+  },
+  "learning_rate": 0.01,
+  "router_lr_ratio": 0.1,
+  "lb_coef": 0.1,
+  "epochs": 6,
+  "batch_size": 4,
+  "seq_len": 256,
+  "weight_decay": 0.1,
+  "warmup_steps": 100,
+  "grad_clip": 1.0,
+  "anneal_fraction": 0.8,
+  "embed_adamw": false,
+  "grad_checkpointing": false,
+  "architecture": "MoE DQT Transformer: emb(50257->768) + 6x[dense Attn+FFN] + 6x[Attn + MoE(6e, top-2)] + RMSNorm + DQT LM Head",
+  "method": "Direct Quantized Training (DQT): int8 ternary weights + stochastic rounding annealed to deterministic sign for final 19% of steps; MoE routers float @ 0.1x lr; Switch-Transformer aux loss @ lb_coef=0.1",
+  "n_float_params": 38644224,
+  "n_ternary_weights": 265089792,
+  "n_total_params": 303734016,
+  "n_active_params": 190487808,
+  "active_fraction": 0.627153357758915,
+  "perplexity_gate": 20.0,
+  "expert_utilization": [
+    {
+      "layer": 6,
+      "selection_fractions": [
+        0.16713346540927887,
+        0.16633208096027374,
+        0.16624508798122406,
+        0.16663460433483124,
+        0.16684919595718384,
+        0.16680823266506195
+      ],
+      "coverage_fractions": [
+        0.33426693081855774,
+        0.3326641619205475,
+        0.3324901759624481,
+        0.3332692086696625,
+        0.3336983919143677,
+        0.3336164653301239
+      ],
+      "balance_ratio": 1.0053437815146462,
+      "min_share": 0.16624508798122406,
+      "max_share": 0.16713346540927887
+    },
+    {
+      "layer": 7,
+      "selection_fractions": [
+        0.16629092395305634,
+        0.1667601317167282,
+        0.1668337881565094,
+        0.16666243970394135,
+        0.16698071360588074,
+        0.1664712131023407
+      ],
+      "coverage_fractions": [
+        0.33258184790611267,
+        0.3335202634334564,
+        0.3336675763130188,
+        0.3333248794078827,
+        0.3339614272117615,
+        0.3329424262046814
+      ],
+      "balance_ratio": 1.0041480896036101,
+      "min_share": 0.16629092395305634,
+      "max_share": 0.16698071360588074
+    },
+    {
+      "layer": 8,
+      "selection_fractions": [
+        0.16652140021324158,
+        0.16706840693950653,
+        0.16672857105731964,
+        0.16662152111530304,
+        0.16570401191711426,
+        0.16735652089118958
+      ],
+      "coverage_fractions": [
+        0.33304280042648315,
+        0.33413681387901306,
+        0.3334571421146393,
+        0.3332430422306061,
+        0.3314080238342285,
+        0.33471304178237915
+      ],
+      "balance_ratio": 1.0099726551877446,
+      "min_share": 0.16570401191711426,
+      "max_share": 0.16735652089118958
+    },
+    {
+      "layer": 9,
+      "selection_fractions": [
+        0.16579270362854004,
+        0.16654519736766815,
+        0.16723190248012543,
+        0.16669270396232605,
+        0.16761980950832367,
+        0.16611966490745544
+      ],
+      "coverage_fractions": [
+        0.3315854072570801,
+        0.3330903947353363,
+        0.33446380496025085,
+        0.3333854079246521,
+        0.33523961901664734,
+        0.3322393298149109
+      ],
+      "balance_ratio": 1.0110204239378187,
+      "min_share": 0.16579270362854004,
+      "max_share": 0.16761980950832367
+    },
+    {
+      "layer": 10,
+      "selection_fractions": [
+        0.16727876663208008,
+        0.1686072200536728,
+        0.16554604470729828,
+        0.16622450947761536,
+        0.16620519757270813,
+        0.1661401391029358
+      ],
+      "coverage_fractions": [
+        0.33455753326416016,
+        0.3372144401073456,
+        0.33109208941459656,
+        0.3324490189552307,
+        0.33241039514541626,
+        0.3322802782058716
+      ],
+      "balance_ratio": 1.018491383178541,
+      "min_share": 0.16554604470729828,
+      "max_share": 0.1686072200536728
+    },
+    {
+      "layer": 11,
+      "selection_fractions": [
+        0.16803918778896332,
+        0.1703261137008667,
+        0.17127743363380432,
+        0.167959064245224,
+        0.16059479117393494,
+        0.16180168092250824
+      ],
+      "coverage_fractions": [
+        0.33607837557792664,
+        0.3406522274017334,
+        0.34255486726760864,
+        0.335918128490448,
+        0.3211895823478699,
+        0.3236033618450165
+      ],
+      "balance_ratio": 1.0665192337919562,
+      "min_share": 0.16059479117393494,
+      "max_share": 0.17127743363380432
+    }
+  ],
+  "peak_gpu_memory_mb": 6071.2431640625,
+  "resumed": true,
+  "resume_step": 79866,
+  "best_val_ppl": 14.124494906122589,
+  "best_step": 97419,
+  "final_val_ppl": 14.124494906122589,
+  "final_train_loss": 3.34208233578011,
+  "anneal_start_step": 77935,
+  "steps_trained": 97419,
+  "training_time_seconds": 6690.215507030487,
+  "final_flip_rate": 0.0011579712792905814,
+  "train_loss_history": [
+    3.34208233578011
+  ],
+  "step_loss_history": [],
+  "val_loss_history": [
+    2.6479105175345636
+  ],
+  "val_ppl_history": [
+    14.124494906122589
+  ],
+  "lr_history": [
+    0.001
+  ],
+  "flip_history": [
+    0.0011579712792905814
+  ],
+  "step_history": [
+    97419
+  ]
+}
