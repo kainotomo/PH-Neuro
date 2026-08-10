@@ -55,6 +55,34 @@ That is the whole DQT training loop — **98.23% on MNIST**. Full examples
 
 ---
 
+## 🎮 Public Demo (M2.5)
+
+> **3 models, <30 MB total, running in your browser on CPU.** No GPU. No cloud.
+
+```bash
+pip install -e . gradio onnxruntime
+python scripts/run_m2_5_demo.py            # → http://localhost:7860
+```
+
+Three tabs: 📝 **Text Generation** (DQT Transformer 102M — TinyStories,
+live token streaming, temperature / top-k) · 🖼️ **Image Classification**
+(DQT CNNs, CIFAR-10 & CIFAR-100, upload or webcam, top-3 with confidence) ·
+📊 **Benchmarks** (all models vs GPT-2 / TF-Lite).
+
+The 102M-parameter transformer ships as a **25 MB** 2-bit packed file and
+generates ~20+ tokens/sec on CPU. Retrain + export everything yourself:
+
+```bash
+bash scripts/run_m2_5_demo.sh              # full: train → export → demo
+bash scripts/run_m2_5_demo.sh train        # 3 models (~2 h on RTX 4060)
+bash scripts/run_m2_5_demo.sh export       # ONNX + 2-bit packed
+bash scripts/run_m2_5_demo.sh demo         # gradio @ :7860
+```
+
+Launch blog post: [docs/blog.md](docs/blog.md).
+
+---
+
 ## 🧠 Core Technology
 
 | Pillar | What it does | Status | Metric |

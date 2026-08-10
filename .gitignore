@@ -76,6 +76,11 @@ m2_4_demo/checkpoints/
 models/dqt_transformer_demo.onnx
 models/dqt_transformer_demo.ternary
 
+# M2.5 public demo — bulky reproducible training checkpoints
+# (regenerate with `bash scripts/run_m2_5_demo.sh`; keep the ONNX + 2-bit
+# packed + result JSONs, which are the deployable demo artifacts)
+results/phase2/m2_5/*/checkpoints/
+
 # Experiment outputs / logs
 docs/experiments/*.json
 docs/experiments/*.csv

@@ -137,6 +137,7 @@ def train_dqt_cnn(
     epochs: int,
     max_patience: int = 15,
     verbose: bool = True,
+    checkpoint_dir: str | None = None,
 ) -> dict:
     """Train a DQT CNN on CIFAR-10.
 
@@ -229,6 +230,22 @@ def train_dqt_cnn(
             best_acc = test_acc
             best_epoch = epoch
             patience = 0
+            # Save the best-so-far model (deployment artifact) whenever the
+            # validation accuracy improves. Only the state_dict + metadata is
+            # stored (no optimizer state) so it can be rebuilt with the model
+            # factory alone, e.g. for M1.3 ONNX export.
+            if checkpoint_dir:
+                os.makedirs(checkpoint_dir, exist_ok=True)
+                torch.save(
+                    {
+                        "model": "dqt_cnn",
+                        "dataset": "cifar10",
+                        "epoch": int(epoch),
+                        "best_accuracy": float(best_acc),
+                        "model_state_dict": model.state_dict(),
+                    },
+                    os.path.join(checkpoint_dir, "best.pt"),
+                )
         else:
             patience += 1
         final_acc = test_acc
@@ -301,6 +318,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", default=None,
                         help="Torch device (default: cuda if available)")
     parser.add_argument("--output-dir", default="m1_1_results")
+    parser.add_argument(
+        "--checkpoint-dir", default=None,
+        help="Directory for best.pt (default: {output_dir}/checkpoints/seed{seed})",
+    )
     return parser.parse_args()
 
 
@@ -346,6 +367,11 @@ def main() -> None:
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
 
+    # ── Checkpoint dir (per-seed so seeds don't overwrite each other) ──
+    checkpoint_dir = args.checkpoint_dir or os.path.join(
+        args.output_dir, "checkpoints", f"seed{args.seed}"
+    )
+
     # ── Train ───────────────────────────────────────────────────────
     print("Training...")
     print()
@@ -353,7 +379,9 @@ def main() -> None:
         model, train_loader, test_loader,
         optimizer, scheduler, device,
         epochs=args.epochs, max_patience=args.patience,
+        checkpoint_dir=checkpoint_dir,
     )
+    print(f"  Best model checkpoint: {os.path.join(checkpoint_dir, 'best.pt')}")
 
     # ── Peak GPU memory ─────────────────────────────────────────────
     peak_mem_mb = 0.0

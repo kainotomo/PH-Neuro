@@ -404,8 +404,12 @@ def main() -> None:
 
     if args.checkpoint:
         state = torch.load(args.checkpoint, map_location=str(device))
+        # Accept either wrapping convention: the classic ``state_dict`` key or
+        # the M2.x ``model_state_dict`` key used by best.pt checkpoints.
         if isinstance(state, dict) and "state_dict" in state:
             state = state["state_dict"]
+        elif isinstance(state, dict) and "model_state_dict" in state:
+            state = state["model_state_dict"]
         missing, unexpected = model.load_state_dict(state, strict=False)
         if missing:
             print(f"  [warn] missing keys in checkpoint: {missing}")
