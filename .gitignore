@@ -70,6 +70,15 @@ env/
 # Model checkpoints / saved models
 *.phn
 
+# ── Checkpoint files (large; regenerate, never commit) ──────────
+# All training checkpoints live under `checkpoints/` dirs — ignore every
+# such dir (m1_*/m2_* results, smokes, phase-2.5 m2_8, etc.). A single
+# 250M/1B transformer checkpoint is 1.8–3.8 GB (> GitHub's 100 MB limit).
+**/checkpoints/
+*.ckpt
+# B2 QLoRA adapter checkpoints (regenerable via `bash scripts/run_b2_qlora.sh`)
+research/b2_results/lora/
+
 # M2.4 on-device demo — large reproducible artifacts
 # (regenerate with `bash scripts/run_m2_4_demo.sh`; keep the result JSONs)
 m2_4_demo/checkpoints/
