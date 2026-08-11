@@ -20,11 +20,15 @@ scores (**DQT**) — 4.5× λιγότερη μνήμη εκπαίδευσης α
 | **M2.3** — MoE DQT Transformer | **ppl 14.08**, 265M/190M ενεργές | ✅ GO | [E027](research/docs/RESEARCH_SUMMARY.md) |
 | **M2.4** — On-device demo | **21-25 tok/s CPU**, 11 MB packed | ✅ GO | [E028](research/docs/RESEARCH_SUMMARY.md) |
 | **M2.5** — Δημόσιο demo | **Gradio app**, 3 μοντέλα, 26 MB | ✅ GO | [E029](research/docs/RESEARCH_SUMMARY.md) |
-| **M2.6** — 🚧 Memory Sprint | **1B+ στόχος**, 8-bit Adam + bf16 | ⬜ ΣΕ ΕΞΕΛΙΞΗ | [ROADMAP §2.5](ROADMAP.md) |
+| **M2.6** — 8-bit AdamW + bf16 | 10 scripts, MNIST smoke OK | ✅ ΕΤΟΙΜΟ | [ROADMAP §2.5](ROADMAP.md) |
+| **M2.7** — Flash Attention / SDPA | Transformer attention | ✅ ΕΤΟΙΜΟ | [ROADMAP §2.5](ROADMAP.md) |
+| **M2.8** — 1B DQT Transformer | **1.02B τριαδικές, σταθερό, 8.04 GB** | ✅ GO | [E030](research/docs/experiments/E030-m2-9-memory-benchmark.md) |
 
-**Phase 2 ΟΛΟΚΛΗΡΩΘΗΚΕ ✅** — 5/5 milestones. Το Phase 2.5 (Memory
-Optimization Sprint) στοχεύει **5× κλιμάκωση** (300M → 1.5B παράμετροι)
-στην ίδια RTX 4060 μέσω 8-bit AdamW + bf16 + Flash Attention.
+**Phase 2 ΟΛΟΚΛΗΡΩΘΗΚΕ ✅** — 5/5 milestones. Το **Phase 2.5 (Memory
+Optimization Sprint) ΟΛΟΚΛΗΡΩΘΗΚΕ ✅** — 8-bit AdamW + bf16 + Flash
+Attention έκοψαν τη μνήμη εκπαίδευσης ~22–31% (253M: 6.5 → 5.0 GB) και
+έφεραν το πρώτο **μοντέλο 1B παραμέτρων στην RTX 4060 8 GB** (8.04 GB κορυφή)
+— 3.4× το παλιό όριο των 300M, χωρίς αλλαγές στο DQT autograd.
 
 ---
 
@@ -118,7 +122,7 @@ assert verify_onnx(inf, "models/dqt_cnn_cifar10.onnx", torch.randn(2, 3, 32, 32)
 ```
 
 Φάσεις: **0** Research ✅ · **1** Production DQT ✅ (M1.1–M1.5) ·
-**2** Tiny Transformer ✅ (M2.1–M2.5) · **2.5** Memory Sprint 🚧 ·
+**2** Tiny Transformer ✅ (M2.1–M2.5) · **2.5** Memory Sprint ✅ (1B στην 8 GB) ·
 **3** MVP ⬜ · **4** Scale ⬜ · **5** Platform ⬜.
 Αναλυτικό roadmap: [ROADMAP.md](ROADMAP.md) · Όραμα: [GOALS.md](GOALS.md).
 

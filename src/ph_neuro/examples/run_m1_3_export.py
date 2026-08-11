@@ -39,6 +39,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from ph_neuro.examples._utils import print_header
+from ph_neuro.utils.optimizers import make_adamw
 from ph_neuro.models.dqt_models import dqt_cnn, dqt_cnn_cifar100
 from ph_neuro.models.dqt_transformer import dqt_gpt2
 from ph_neuro.models.export import (
@@ -150,7 +151,8 @@ def _train_quick(
         apply_dqt_rounding = None
 
     train_loader, test_loader = _get_loaders(model_name)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
+    # OPT-2: 8-bit AdamW (states 8→2 B/param) for the brief demo retrain.
+    optimizer = make_adamw(model.parameters(), lr=lr, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
     criterion = nn.CrossEntropyLoss()
 

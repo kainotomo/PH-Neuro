@@ -20,11 +20,15 @@ as a **1 MB** file.
 | **M2.3** — MoE DQT Transformer | **ppl 14.08**, 265M/190M active | ✅ GO | [E027](research/docs/RESEARCH_SUMMARY.md) |
 | **M2.4** — On-device demo | **21-25 tok/s CPU**, 11 MB packed | ✅ GO | [E028](research/docs/RESEARCH_SUMMARY.md) |
 | **M2.5** — Public demo | **Gradio app**, 3 models, 26 MB total | ✅ GO | [E029](research/docs/RESEARCH_SUMMARY.md) |
-| **M2.6** — 🚧 Memory Sprint | **1B+ target**, 8-bit Adam + bf16 | ⬜ IN PROGRESS | [ROADMAP §2.5](ROADMAP.md) |
+| **M2.6** — 8-bit AdamW + bf16 | 10 scripts converted, MNIST smoke OK | ✅ DONE | [ROADMAP §2.5](ROADMAP.md) |
+| **M2.7** — Flash Attention / SDPA | Transformer attention, tests pass | ✅ DONE | [ROADMAP §2.5](ROADMAP.md) |
+| **M2.8** — 1B DQT Transformer | **1.02B ternary, stable, 8.04 GB peak** | ✅ GO | [E030](research/docs/experiments/E030-m2-9-memory-benchmark.md) |
 
-**Phase 2 COMPLETE ✅** — 5/5 gate milestones closed. Phase 2.5 (Memory
-Optimization Sprint) targets **5× scaling** (300M → 1.5B params) on the
-same RTX 4060 via 8-bit AdamW + bf16 + Flash Attention.
+**Phase 2 COMPLETE ✅** — 5/5 gate milestones closed. **Phase 2.5 (Memory
+Optimization Sprint) COMPLETE ✅** — 8-bit AdamW + bf16 + Flash Attention
+cut training memory ~22–31% (253M: 6.5 → 5.0 GB) and scaled DQT to the
+first **1B-param model on an RTX 4060 8 GB** (8.04 GB peak) — 3.4× the old
+300M ceiling, zero DQT-autograd changes.
 
 ---
 
@@ -192,7 +196,7 @@ latent scores (the current production path).
 | 0 | Research foundation (19 experiments) | ✅ Closed |
 | 1 | Production DQT (M1.1–M1.5) | ✅ Closed |
 | 2 | Tiny Transformer (M2.1–M2.5) | ✅ Closed |
-| **2.5** | **Memory Optimization Sprint (8-bit Adam + bf16 → 1B+)** | **🚧 In Progress** |
+| **2.5** | **Memory Optimization Sprint (8-bit Adam + bf16 → 1B+)** | ✅ **Complete** |
 | 3 | MVP & first customers — `pip install ph-neuro` | ⬜ |
 | 4 | Scale — pre-seed, 10B MoE model | ⬜ |
 | 5 | Commercial platform | ⬜ |

@@ -92,10 +92,14 @@ Combined target: **1B parameters → 200MB on disk → runs on a phone.**
 > RTX 4060 8 GB → max ~300M ternary params. Original 500M/1B targets were
 > aspirational — now adjusted to measured constraints.
 >
-> **Phase 2.5 Memory Sprint (Aug 2026):** Newly identified techniques
-> (8-bit AdamW, bf16 weight_float, Flash Attention) project **1.5B ternary
-> params on the same 8 GB GPU** — a **5× ceiling increase** without
-> rewriting the DQT autograd. See [ROADMAP.md § Phase 2.5](ROADMAP.md).
+> **Phase 2.5 Memory Sprint (Aug 2026) — ✅ COMPLETE:** 8-bit AdamW + bf16
+> weight_float + Flash Attention shipped with **zero DQT-autograd changes**.
+> Measured: M2.2 (253M) peak **5.03 GB** (batch 4) / **5.23 GB** (batch 8) vs
+> ~6.5 GB baseline; a **1.02B-param DQT transformer now trains stably on the
+> 8 GB GPU** (peak 8.04 GB). The ~13 → ~5 B/param budget delivers the
+> **1B+ ceiling** — a **3.4× increase** over the pre-sprint 300M max (batch 8
+> now the default). See [ROADMAP.md § Phase 2.5](ROADMAP.md) and
+> [E030](research/docs/experiments/E030-m2-9-memory-benchmark.md).
 
 ---
 

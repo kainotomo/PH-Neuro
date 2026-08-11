@@ -40,6 +40,7 @@ import torch.nn.functional as F  # noqa: N812
 from torch.utils.data import DataLoader
 
 from ph_neuro.examples._utils import print_header
+from ph_neuro.utils.optimizers import make_adamw
 
 warnings.filterwarnings("ignore", category=UserWarning, module="torch.quantization")
 
@@ -439,7 +440,8 @@ def main() -> None:
     print()
 
     # ── Optimizer ───────────────────────────────────────────────────
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    # OPT-2: 8-bit AdamW (states 8→2 B/param), falls back to fp32.
+    optimizer = make_adamw(model.parameters(), lr=lr, weight_decay=weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
 
     # ── Train ───────────────────────────────────────────────────────

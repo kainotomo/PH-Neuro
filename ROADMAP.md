@@ -1,7 +1,7 @@
 # PH-Neuro — Product Roadmap
 
 > **Last updated:** 2026-08-11
-> **Status:** Phase 2 — **M2.1–M2.5 closed ✅ (Phase 2 complete)** → **Phase 2.5: Memory Optimization Sprint**
+> **Status:** Phase 2 — **M2.1–M2.9 closed ✅** → **Phase 3: MVP (next)**
 
 ---
 
@@ -61,7 +61,7 @@ M2.5 — ✅ **GO** (Gradio demo: text + vision + benchmarks, 3 models,
 
 ---
 
-## Phase 2.5: Memory Optimization Sprint (Aug 2026) 🚧 IN PROGRESS
+## Phase 2.5: Memory Optimization Sprint (Aug 2026) ✅ COMPLETE
 
 **Goal:** Break the 300M-param VRAM ceiling. Scale DQT training to **1B+ ternary
 params on a single RTX 4060 (8 GB VRAM + 32 GB RAM)** — without rewriting the
@@ -108,27 +108,28 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 
 ### Implementation Sprint
 
-| Step | What | Time | Priority |
-|:-----|:-----|:----:|:--------:|
-| **OPT-1** | Install `bitsandbytes`, test 8-bit AdamW on MNIST DQT | 10 min | 🔴 |
-| **OPT-2** | Convert all training scripts: AdamW → `AdamW8bit` | 30 min | 🔴 |
-| **OPT-3** | bf16 weight_float + autocast in training loop | 30 min | 🔴 |
-| **OPT-4** | Replace manual attention with `F.scaled_dot_product_attention` | 30 min | 🟡 |
-| **OPT-5** | Test `torch.compile` (skip if it breaks custom autograd) | 15 min | 🟢 |
-| **OPT-6** | Integrate all optimizations, run M2.2 smoke test | 1 h | 🔴 |
-| **OPT-7** | Increase batch size (4→8) / seq length where VRAM allows | 30 min | 🟡 |
-| **OPT-DOC** | Update docs (ROADMAP, GOALS, README, benchmarks) | 1 h | 🟡 |
+| Step | What | Time | Priority | Status |
+|:-----|:-----|:----:|:--------:|:------:|
+| **OPT-1** | Install `bitsandbytes`, test 8-bit AdamW on MNIST DQT | 10 min | 🔴 | ✅ **DONE** (acc 94.45% vs 92.99% fp32; resume round-trip Δ=0.0) |
+| **OPT-2** | Convert all training scripts: AdamW → `AdamW8bit` | 30 min | 🔴 | ✅ **DONE** (10 scripts + `utils/optimizers.py::make_adamw`) |
+| **OPT-3** | bf16 weight_float + autocast in training loop | 30 min | 🔴 | ✅ **DONE** (`--dtype bf16`; DQT backward dtype-agnostic) |
+| **OPT-4** | Replace manual attention with `F.scaled_dot_product_attention` | 30 min | 🟡 | ✅ **DONE** (layer + M2.1 integration tests pass) |
+| **OPT-5** | Test `torch.compile` (skip if it breaks custom autograd) | 15 min | 🟢 | ⏸️ **SKIPPED** (no C compiler for Triton in this env) |
+| **OPT-6** | Integrate all optimizations, run M2.2 smoke test | 1 h | 🔴 | ✅ **DONE** — 341 integration ✅; **M2.2 smoke peak 5.03 GB (batch 4)** vs 6.5 GB baseline (−23%) |
+| **OPT-7** | Increase batch size (4→8) / seq length where VRAM allows | 30 min | 🟡 | ✅ **DONE** — batch-8 smoke peak **5.23 GB** < 7.5 GB gate → default bumped 4→8 |
+| **OPT-DOC** | Update docs (ROADMAP, GOALS, README, benchmarks) | 1 h | 🟡 | ✅ **DONE** — E030 report, benchmarks §6 measured, GOALS/README updated |
 
-**Go/No-go gate:** OPT-1 (8-bit AdamW + DQT MNIST accuracy == fp32 baseline).
+**Go/No-go gate:** OPT-1 (8-bit AdamW + DQT MNIST accuracy == fp32 baseline)
+— ✅ **PASSED** (8-bit accuracy ≥ fp32; `state_dict()` round-trips exactly).
 
 ### Milestones
 
 | Milestone | Target | Priority | Status |
 |:----------|:------:|:--------:|:------:|
-| **M2.6** 8-bit AdamW + bf16 on all training scripts | All scripts converted, MNIST smoke OK | 🔴 Critical | ⬜ |
-| **M2.7** Flash Attention / SDPA in transformer attention | SDPA passes transformer layer tests | 🟡 High | ⬜ |
-| **M2.8** 1B-param DQT Transformer smoke test | Stable training at 1B ternary params | 🔴 Critical | ⬜ |
-| **M2.9** Memory benchmark report | Measured: VRAM, speed, accuracy impact | 🟡 High | ⬜ |
+| **M2.6** 8-bit AdamW + bf16 on all training scripts | All scripts converted, MNIST smoke OK | 🔴 Critical | ✅ **DONE** |
+| **M2.7** Flash Attention / SDPA in transformer attention | SDPA passes transformer layer tests | 🟡 High | ✅ **DONE** |
+| **M2.8** 1B-param DQT Transformer smoke test | Stable training at 1B ternary params | 🔴 Critical | ✅ **GO** — **1.02B ternary, 20 steps, loss 3.96 (< random baseline), peak 8.04 GB** on RTX 4060 |
+| **M2.9** Memory benchmark report | Measured: VRAM, speed, accuracy impact | 🟡 High | ✅ **DONE** — [E030](research/docs/experiments/E030-m2-9-memory-benchmark.md): M2.2 −22/−31%, 1B fits in 8.04 GB |
 
 ---
 

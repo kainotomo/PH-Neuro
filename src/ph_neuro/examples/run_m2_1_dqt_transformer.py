@@ -49,6 +49,7 @@ from torch.utils.data import DataLoader
 
 from ph_neuro.examples._utils import print_header
 from ph_neuro.layers.ste_dqt import TernaryDQTLinear
+from ph_neuro.utils.optimizers import make_adamw
 from ph_neuro.models.dqt_transformer import (
     FULL_CONFIG,
     SMOKE_CONFIG,
@@ -198,6 +199,7 @@ def train_dqt_transformer(
     best_val_ppl: float = float("inf"),
     best_step: int = 0,
     verbose: bool = True,
+    use_autocast: bool = False,
 ) -> dict:
     """Train a DQT transformer for language modeling.
 
@@ -289,10 +291,15 @@ def train_dqt_transformer(
             targets = targets.to(device)
 
             optimizer.zero_grad()
-            logits = model(input_ids)  # (B, T, V)
-            loss = F.cross_entropy(
-                logits.reshape(-1, model.vocab_size), targets.reshape(-1)
-            )
+            # OPT-3: bf16 autocast (enabled only when weight_float is bf16 —
+            # halves activation memory + ~1.2x faster via tensor cores).
+            with torch.autocast(
+                device_type="cuda", dtype=torch.bfloat16, enabled=use_autocast
+            ):
+                logits = model(input_ids)  # (B, T, V)
+                loss = F.cross_entropy(
+                    logits.reshape(-1, model.vocab_size), targets.reshape(-1)
+                )
             loss.backward()
             # Gradient clipping is CRITICAL for DQT transformers (the
             # stochastic rounding can inject spikes into the optimization).
@@ -660,6 +667,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--grad-clip", type=float, default=1.0)
     parser.add_argument("--anneal-fraction", type=float, default=ANNEAL_FRACTION)
     parser.add_argument("--dropout", type=float, default=0.0)
+    parser.add_argument(
+        "--dtype", choices=["fp32", "bf16"], default="fp32",
+        help="DQT weight-buffer dtype: fp32 (default) or bf16 (OPT-3: halves "
+             "weight_float memory 4→2 B/param, pairs with autocast)",
+    )
     parser.add_argument("--max-steps", type=int, default=None,
                         help="Cap total training steps (tests/smoke)")
     parser.add_argument("--val-every", type=int, default=None,
@@ -777,6 +789,8 @@ def main() -> None:
     print()
 
     # ── Model ──────────────────────────────────────────────────────
+    # OPT-3: bf16 weight_float buffers when --dtype bf16 (4→2 B/param).
+    dtype = torch.float32 if args.dtype == "fp32" else torch.bfloat16
     model = dqt_gpt2(
         vocab_size=cfg["vocab_size"],
         d_model=cfg["d_model"],
@@ -786,6 +800,7 @@ def main() -> None:
         max_seq_len=cfg["max_seq_len"],
         dropout=args.dropout,
         device=device,
+        dtype=dtype,
     )
     n_total = count_parameters(model)
     n_ternary = count_ternary_weights(model)
@@ -797,7 +812,9 @@ def main() -> None:
     print()
 
     # ── Optimizer + scheduler ──────────────────────────────────────
-    optimizer = torch.optim.AdamW(
+    # OPT-2: 8-bit AdamW (bitsandbytes) — optimizer states 8→2 B/param
+    # (-75%). Validated OPT-1: accuracy == fp32, state_dict round-trips.
+    optimizer = make_adamw(
         model.parameters(),
         lr=args.lr,
         betas=(0.9, 0.95),
@@ -849,6 +866,7 @@ def main() -> None:
     print("Training...")
     print()
     install_pause_handlers()  # Ctrl+C / SIGTERM -> graceful checkpointed pause
+    use_autocast = args.dtype == "bf16" and device.type == "cuda"
     try:
         results = train_dqt_transformer(
             model,
@@ -869,6 +887,7 @@ def main() -> None:
             start_epoch=start_epoch,
             best_val_ppl=best_val_ppl,
             best_step=best_step,
+            use_autocast=use_autocast,
         )
     except KeyboardInterrupt:
         # Pause requested (SIGINT/SIGTERM). The checkpoint was already saved

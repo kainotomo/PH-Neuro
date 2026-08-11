@@ -143,7 +143,13 @@ class _DQTConvGradFn(torch.autograd.Function):
         input, weight_ternary = ctx.saved_tensors
         stride, padding, dilation = ctx.stride, ctx.padding, ctx.dilation
 
-        w = weight_ternary.float()
+        # Match every tensor to grad_output's dtype. Under bf16 autocast the
+        # forward output (and hence grad_output) is bf16, while the saved
+        # input stays fp32 (autocast does not cast custom-Function inputs) —
+        # so we cast explicitly to keep the backward dtype-consistent.
+        dt = grad_output.dtype
+        input = input.to(dt)
+        w = weight_ternary.to(dt)
 
         # Gradient w.r.t. input (adjoint of conv2d — exact, any stride/padding)
         grad_input = torch.nn.grad.conv2d_input(

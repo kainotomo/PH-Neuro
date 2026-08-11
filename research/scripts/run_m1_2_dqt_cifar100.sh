@@ -31,6 +31,24 @@ set -euo pipefail
 # because Python's block-buffered stdout froze the log file).
 export PYTHONUNBUFFERED=1
 
+# ── GPU wait gate (shared GPU with gaming) ─────────────────────────
+# `--wait-gpu` blocks until GPU_WAIT_THRESHOLD GB are free via
+# scripts/gpu_wait.py before launching. Default: ON for `full`/`sweep`
+# runs, OFF for smoke/status/resume. `--no-wait-gpu` forces it off.
+WAIT_GPU=""                            # "" = mode default, 1 = on, 0 = off
+GPU_WAIT_THRESHOLD="${GPU_WAIT_THRESHOLD:-7.0}"
+GPU_WAIT_TIMEOUT="${GPU_WAIT_TIMEOUT:-120}"
+_POS_ARGS=()
+for _arg in "$@"; do
+    case "$_arg" in
+        --wait-gpu)   WAIT_GPU=1 ;;
+        --no-wait-gpu) WAIT_GPU=0 ;;
+        *) _POS_ARGS+=("$_arg") ;;
+    esac
+done
+if [ ${#_POS_ARGS[@]} -gt 0 ]; then set -- "${_POS_ARGS[@]}"; else set --; fi
+unset _POS_ARGS
+
 # ── Resolve project root (works from anywhere) ─────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$SCRIPT_DIR"
@@ -81,6 +99,22 @@ fi
 
 log() {
     echo "[$(date '+%H:%M:%S')] $*"
+}
+
+# Block until the GPU is free before launching (shared GPU with gaming).
+gpu_wait() {
+    local default_on="$1"   # 1 = this mode waits by default
+    local want="$default_on"
+    if [ -n "$WAIT_GPU" ]; then
+        want="$WAIT_GPU"
+    fi
+    if [ "$want" = "1" ]; then
+        log "⏳ Waiting for GPU (need >=${GPU_WAIT_THRESHOLD} GB free, timeout ${GPU_WAIT_TIMEOUT} min)..."
+        if ! "$PYTHON" scripts/gpu_wait.py --threshold "$GPU_WAIT_THRESHOLD" --timeout "$GPU_WAIT_TIMEOUT"; then
+            log "❌ GPU not free in time — retry later (e.g. bash scripts/train.sh ...)"
+            exit 1
+        fi
+    fi
 }
 
 print_config() {
@@ -142,6 +176,7 @@ echo ""
 
 FAILED_RUNS=()
 
+gpu_wait 1
 if [ "$MODE" = "sweep" ]; then
     log "LR sweep (1 seed = 42) over ${SWEEP_LRS[*]} to pick the best LR"
     for lr in "${SWEEP_LRS[@]}"; do

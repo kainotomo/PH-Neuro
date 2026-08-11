@@ -44,6 +44,24 @@ export PYTHONUNBUFFERED=1
 # 8.1 GB → 6.8 GB; keeps nvidia-smi ~7.2 GB at batch 4). E026-verified.
 export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 
+# ── GPU wait gate (shared GPU with gaming) ─────────────────────────
+# `--wait-gpu` blocks until GPU_WAIT_THRESHOLD GB are free via
+# scripts/gpu_wait.py before launching. Default: ON for `full`/`sweep`
+# runs, OFF for smoke/status/resume. `--no-wait-gpu` forces it off.
+WAIT_GPU=""                            # "" = mode default, 1 = on, 0 = off
+GPU_WAIT_THRESHOLD="${GPU_WAIT_THRESHOLD:-7.0}"
+GPU_WAIT_TIMEOUT="${GPU_WAIT_TIMEOUT:-120}"
+_POS_ARGS=()
+for _arg in "$@"; do
+    case "$_arg" in
+        --wait-gpu)   WAIT_GPU=1 ;;
+        --no-wait-gpu) WAIT_GPU=0 ;;
+        *) _POS_ARGS+=("$_arg") ;;
+    esac
+done
+if [ ${#_POS_ARGS[@]} -gt 0 ]; then set -- "${_POS_ARGS[@]}"; else set --; fi
+unset _POS_ARGS
+
 # ── Resolve project root (works from anywhere) ─────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$SCRIPT_DIR"
@@ -57,8 +75,9 @@ fi
 cd "$PROJECT_ROOT"
 
 RESULTS_DIR="m2_2_results"
+SMOKE_RESULTS_DIR="m2_2_smoke_results"
 LOG_DIR="logs/logs_m2_2"
-mkdir -p "$RESULTS_DIR" "$LOG_DIR"
+mkdir -p "$RESULTS_DIR" "$SMOKE_RESULTS_DIR" "$LOG_DIR"
 
 # ── Configuration ───────────────────────────────────────────────────
 
@@ -69,9 +88,12 @@ N_HEADS=16
 D_FF=4096
 
 EPOCHS=3
-# batch 4 is the VERIFIED memory-safe default (~7.2 GB nvidia-smi). batch 8
-# gives ~30% more throughput but ~7.6 GB — over the 7.5 GB hard limit.
-BATCH_SIZE="${BATCH_SIZE:-4}"
+# ── OPT-7 (Phase 2.5) — batch bumped 4 → 8 ────────────────────────
+# Verified 2026-08-11: with 8-bit AdamW (OPT-2) + bf16/autocast (OPT-3) +
+# SDPA (OPT-4) the 10-step smoke at batch 8 peaks at ~5.2 GB torch
+# (nvidia-smi ~6.3 GB) — well under the 7.5 GB limit (was ~7.6 GB before
+# the sprint). ~30% more throughput than the old batch-4 default.
+BATCH_SIZE="${BATCH_SIZE:-8}"
 SEQ_LEN=256
 LR=0.01
 WEIGHT_DECAY=0.1
@@ -104,6 +126,22 @@ fi
 # ── Helper ─────────────────────────────────────────────────────────
 
 log() { echo "[$(date '+%H:%M:%S')] $*"; }
+
+# Block until the GPU is free before launching (shared GPU with gaming).
+gpu_wait() {
+    local default_on="$1"   # 1 = this mode waits by default
+    local want="$default_on"
+    if [ -n "$WAIT_GPU" ]; then
+        want="$WAIT_GPU"
+    fi
+    if [ "$want" = "1" ]; then
+        log "⏳ Waiting for GPU (need >=${GPU_WAIT_THRESHOLD} GB free, timeout ${GPU_WAIT_TIMEOUT} min)..."
+        if ! "$PYTHON" scripts/gpu_wait.py --threshold "$GPU_WAIT_THRESHOLD" --timeout "$GPU_WAIT_TIMEOUT"; then
+            log "❌ GPU not free in time — retry later (e.g. bash scripts/train.sh ...)"
+            exit 1
+        fi
+    fi
+}
 
 print_config() {
     log "═══════════════════════════════════════════════════════════════"
@@ -204,17 +242,20 @@ FAILED_RUNS=()
 
 case "$MODE" in
     smoke)
+        gpu_wait 0
         # 10-step GPU smoke — VERIFIES the memory budget (<7.5 GB) and that
         # the loss decreases with no NaN, then evaluates on the val split.
+        # Writes to SMOKE_RESULTS_DIR so it never overwrites real results.
         log "SMOKE: 10 steps, M2_2_CONFIG, batch ${BATCH_SIZE}, real WikiText-2"
         "$PYTHON" -m ph_neuro.examples.run_m2_2_dqt_wikitext2 \
             --max-steps 10 --seed 42 \
             --batch-size "$BATCH_SIZE" --seq-len "$SEQ_LEN" \
             --anneal-fraction "$ANNEAL_FRACTION" \
             --checkpoint-every 5 --progress-every 2 \
-            --output-dir "$RESULTS_DIR" 2>&1 | tee "$LOG_DIR/smoke.log"
+            --output-dir "$SMOKE_RESULTS_DIR" 2>&1 | tee "$LOG_DIR/smoke.log"
         ;;
     full)
+        gpu_wait 1
         BEST_LR="${2:-$DEFAULT_LR}"
         SEED_ARGS=()
         for s in "${@:3}"; do
@@ -229,6 +270,7 @@ case "$MODE" in
         done
         ;;
     resume)
+        gpu_wait 0
         # Pause/resume: continue a seed from its latest checkpoint in
         # m2_2_results/checkpoints/seed{seed}/ (runner --resume auto).
         # The result JSON does not exist yet (run was interrupted), so the

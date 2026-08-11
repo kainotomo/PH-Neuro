@@ -56,6 +56,24 @@ export PYTHONUNBUFFERED=1
 # Shrink PyTorch's caching-allocator reserved pool on 8 GB (M2.2-verified).
 export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 
+# ── GPU wait gate (shared GPU with gaming) ─────────────────────────
+# `--wait-gpu` blocks until GPU_WAIT_THRESHOLD GB are free via
+# scripts/gpu_wait.py before launching. Default: ON for `full`/`sweep`
+# runs, OFF for smoke/status/resume. `--no-wait-gpu` forces it off.
+WAIT_GPU=""                            # "" = mode default, 1 = on, 0 = off
+GPU_WAIT_THRESHOLD="${GPU_WAIT_THRESHOLD:-7.0}"
+GPU_WAIT_TIMEOUT="${GPU_WAIT_TIMEOUT:-120}"
+_POS_ARGS=()
+for _arg in "$@"; do
+    case "$_arg" in
+        --wait-gpu)   WAIT_GPU=1 ;;
+        --no-wait-gpu) WAIT_GPU=0 ;;
+        *) _POS_ARGS+=("$_arg") ;;
+    esac
+done
+if [ ${#_POS_ARGS[@]} -gt 0 ]; then set -- "${_POS_ARGS[@]}"; else set --; fi
+unset _POS_ARGS
+
 # ── Resolve project root (works from anywhere) ─────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$SCRIPT_DIR"
@@ -69,8 +87,9 @@ fi
 cd "$PROJECT_ROOT"
 
 RESULTS_DIR="m2_3_results"
+SMOKE_RESULTS_DIR="m2_3_smoke_results"
 LOG_DIR="logs/logs_m2_3"
-mkdir -p "$RESULTS_DIR" "$LOG_DIR"
+mkdir -p "$RESULTS_DIR" "$SMOKE_RESULTS_DIR" "$LOG_DIR"
 
 # ── Configuration ───────────────────────────────────────────────────
 
@@ -87,9 +106,13 @@ N_EXPERTS=6
 TOP_K=2
 
 EPOCHS=3
-# batch 4 is the VERIFIED memory-safe default (nvidia-smi ~7.2 GB of 8.2 GB
-# → ~1 GB headroom, torch peak ~6.5 GB). batch 8 exceeds the 8 GB card.
-BATCH_SIZE="${BATCH_SIZE:-4}"
+# ── OPT-7 (Phase 2.5) — batch bumped 4 → 8 ────────────────────────
+# Verified 2026-08-11 (M2.2 batch-8 smoke): 8-bit AdamW + bf16 + SDPA cut
+# peak torch ~6.5 → ~5.2 GB at batch 8, nvidia-smi ~7.6 → ~6.3 GB — under
+# the 7.5 GB limit. MoE has higher fixed cost than dense (routers + grouped
+# experts) but the same savings apply; batch 8 is the default, drop to 4
+# (BATCH_SIZE=4) if the M2.3 smoke ever exceeds ~7.5 GB under contention.
+BATCH_SIZE="${BATCH_SIZE:-8}"
 SEQ_LEN=256
 LR=0.01
 WEIGHT_DECAY=0.1
@@ -125,6 +148,22 @@ fi
 # ── Helper ─────────────────────────────────────────────────────────
 
 log() { echo "[$(date '+%H:%M:%S')] $*"; }
+
+# Block until the GPU is free before launching (shared GPU with gaming).
+gpu_wait() {
+    local default_on="$1"   # 1 = this mode waits by default
+    local want="$default_on"
+    if [ -n "$WAIT_GPU" ]; then
+        want="$WAIT_GPU"
+    fi
+    if [ "$want" = "1" ]; then
+        log "⏳ Waiting for GPU (need >=${GPU_WAIT_THRESHOLD} GB free, timeout ${GPU_WAIT_TIMEOUT} min)..."
+        if ! "$PYTHON" scripts/gpu_wait.py --threshold "$GPU_WAIT_THRESHOLD" --timeout "$GPU_WAIT_TIMEOUT"; then
+            log "❌ GPU not free in time — retry later (e.g. bash scripts/train.sh ...)"
+            exit 1
+        fi
+    fi
+}
 
 print_config() {
     log "═══════════════════════════════════════════════════════════════"
@@ -234,8 +273,10 @@ FAILED_RUNS=()
 
 case "$MODE" in
     smoke)
+        gpu_wait 0
         # 12-step GPU smoke — VERIFIES the memory budget (<7.5 GB torch),
         # no NaN, and that expert routing is balanced (no dead experts).
+        # Writes to SMOKE_RESULTS_DIR so it never overwrites real results.
         log "SMOKE: 12 steps, M2_3_CONFIG, batch ${BATCH_SIZE}, real TinyStories"
         "$PYTHON" -m ph_neuro.examples.run_m2_3_dqt_moe \
             --max-steps 12 --seed 42 \
@@ -244,9 +285,10 @@ case "$MODE" in
             --lb-coef "$LB_COEF" --router-lr-ratio "$ROUTER_LR_RATIO" \
             --max-samples "$MAX_SAMPLES" \
             --checkpoint-every 6 --progress-every 3 \
-            --output-dir "$RESULTS_DIR" 2>&1 | tee "$LOG_DIR/smoke.log"
+            --output-dir "$SMOKE_RESULTS_DIR" 2>&1 | tee "$LOG_DIR/smoke.log"
         ;;
     full)
+        gpu_wait 1
         BEST_LR="${2:-$DEFAULT_LR}"
         SEED_ARGS=()
         for s in "${@:3}"; do
@@ -274,6 +316,7 @@ case "$MODE" in
         done
         ;;
     resume)
+        gpu_wait 0
         # Pause/resume: continue a seed from its latest checkpoint in
         # m2_3_results/checkpoints/seed{seed}/ (runner --resume auto).
         BEST_LR="${2:-$DEFAULT_LR}"

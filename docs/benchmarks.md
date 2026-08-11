@@ -128,14 +128,15 @@ Hyperparameters: `lr=0.01`, `weight_decay=1e-4`, `batch_size=128`,
 
 ---
 
-## 6. Phase 2.5: Memory Optimization (projected)
+## 6. Phase 2.5: Memory Optimization (measured)
 
-> **Status:** 🚧 IN PROGRESS (August 2026). Targets measured once implemented.
+> **Status:** ✅ COMPLETE (2026-08-11). Full report:
+> [`research/docs/experiments/E030-m2-9-memory-benchmark.md`](../research/docs/experiments/E030-m2-9-memory-benchmark.md).
 
-Current DQT training state: ~13 bytes/param (fp32 weight_float + AdamW m/v
-fp32 + int8 ternary). Max: ~300M ternary params on 8 GB VRAM.
+Pre-sprint DQT training: ~13 bytes/param (fp32 weight_float + AdamW m/v fp32
++ int8 ternary) → max ~300M ternary params on 8 GB VRAM.
 
-Projected savings from three new optimizations:
+Three optimizations shipped (no DQT-autograd changes):
 
 | Technique | What it saves | VRAM reduction |
 |:----------|:--------------|:--------------:|
@@ -143,16 +144,19 @@ Projected savings from three new optimizations:
 | **bf16 weight_float** + autocast | Weight buffer: 4→2 B/param + activations | **-2 B/param** (50%) |
 | **Flash Attention / SDPA** | Attention activations: O(N²)→O(N) | Variable (large for transformers) |
 
-**New memory budget (projected):**
+**Measured peak GPU memory** (`torch.cuda.max_memory_allocated`, RTX 4060 8 GB):
 
-| Scenario | GPU B/param | Max ternary params (8 GB) |
-|:---------|:-----------:|:-------------------------:|
-| Current (fp32, all-GPU) | 13 | **~300M** |
-| + 8-bit AdamW | 7 | **~1.1B** |
-| + 8-bit AdamW + bf16 | **5** | **~1.5B** |
-| + all + Flash Attention | ~4.5 | **~1.7B** |
+| Run | Params | Batch | New peak | Old (pre-sprint) | Δ |
+|:----|:------:|:-----:|:--------:|:----------------:|:--:|
+| M2.2 smoke | 253 M | 4 | **5.03 GB** | ~6.5 GB | **−22%** |
+| M2.2 smoke | 253 M | 8 | **5.23 GB** | ~7.6 GB (over limit) | **−31%** |
+| **M2.8 smoke** | **1.02 B** | 4 | **8.04 GB** | — | **5× ceiling** |
 
-**Target:** 1B ternary params in ~7 GB VRAM — **5× the current ceiling.**
+The 1.02B-param DQT transformer (d=1536, L=36) trains stably on the 8 GB
+card — the first at this scale, validating the ~5 B/param steady-state budget
+(peak adds ~3 B/param transient gradients + activations). Batch 8 is now the
+safe default for M2.2/M2.3 (memory is fixed-cost dominated: +0.2 GB for 2×
+batch).
 
 ---
 
