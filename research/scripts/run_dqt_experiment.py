@@ -325,7 +325,17 @@ def main() -> None:
 
     # ── Optimizer ────────────────────────────────────────────────────
     # Only weight_float and bias are nn.Parameters
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    # OPT-2: 8-bit AdamW (states 8→2 B/param) with an fp32 fallback.
+    try:
+        import bitsandbytes as bnb
+
+        optimizer = bnb.optim.AdamW8bit(
+            model.parameters(), lr=lr, weight_decay=weight_decay
+        )
+    except ImportError:
+        optimizer = torch.optim.AdamW(
+            model.parameters(), lr=lr, weight_decay=weight_decay
+        )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
 
     # ── Train ────────────────────────────────────────────────────────

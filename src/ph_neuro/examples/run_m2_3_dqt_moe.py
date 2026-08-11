@@ -75,6 +75,7 @@ from torch.utils.data import DataLoader
 from ph_neuro.examples._utils import print_header
 from ph_neuro.layers.ste_dqt import TernaryDQTLinear
 from ph_neuro.layers.ste_dqt_transformer import TernaryDQTMoETransformerBlock
+from ph_neuro.utils.optimizers import make_adamw
 from ph_neuro.models.dqt_transformer import (
     M2_2_CONFIG,
     M2_3_CONFIG,
@@ -342,6 +343,7 @@ def train_dqt_transformer(
     best_val_ppl: float = float("inf"),
     best_step: int = 0,
     verbose: bool = True,
+    use_autocast: bool = False,
 ) -> dict:
     """Train a DQT transformer for language modeling.
 
@@ -463,15 +465,20 @@ def train_dqt_transformer(
             tokens_this_step = targets.numel()
 
             optimizer.zero_grad()
-            logits, aux_loss = model(input_ids)  # (B, T, V), scalar
-            loss = F.cross_entropy(
-                logits.reshape(-1, model.vocab_size), targets.reshape(-1)
-            )
-            # MoE: add the Switch-Transformer load balancing loss so the
-            # router learns a uniform dispatch (E019: without it, expert
-            # collapse in the first epoch). lb_coef=0.1 by default.
-            if lb_coef > 0.0 and aux_loss is not None:
-                loss = loss + lb_coef * aux_loss
+            # OPT-3: bf16 autocast (enabled only when weight_float is bf16 —
+            # halves activation memory + ~1.2x faster via tensor cores).
+            with torch.autocast(
+                device_type="cuda", dtype=torch.bfloat16, enabled=use_autocast
+            ):
+                logits, aux_loss = model(input_ids)  # (B, T, V), scalar
+                loss = F.cross_entropy(
+                    logits.reshape(-1, model.vocab_size), targets.reshape(-1)
+                )
+                # MoE: add the Switch-Transformer load balancing loss so the
+                # router learns a uniform dispatch (E019: without it, expert
+                # collapse in the first epoch). lb_coef=0.1 by default.
+                if lb_coef > 0.0 and aux_loss is not None:
+                    loss = loss + lb_coef * aux_loss
             loss.backward()
             # Gradient clipping is CRITICAL for DQT transformers (the
             # stochastic rounding can inject spikes into the optimization).
@@ -1042,6 +1049,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--grad-clip", type=float, default=1.0)
     parser.add_argument("--anneal-fraction", type=float, default=ANNEAL_FRACTION)
     parser.add_argument("--dropout", type=float, default=0.0)
+    parser.add_argument(
+        "--dtype", choices=["fp32", "bf16"], default="fp32",
+        help="DQT weight-buffer dtype: fp32 (default) or bf16 (OPT-3: halves "
+             "weight_float memory 4→2 B/param, pairs with autocast)",
+    )
     parser.add_argument("--embed-adamw", action="store_true",
                         help="Opt-in: train the float token embedding with AdamW too "
                              "(M2.1 behavior, ~0.4 GB more VRAM). Default: the embedding "
@@ -1204,6 +1216,8 @@ def main() -> None:
     print()
 
     # ── Model ──────────────────────────────────────────────────────
+    # OPT-3: bf16 weight_float buffers when --dtype bf16 (4→2 B/param).
+    dtype = torch.float32 if args.dtype == "fp32" else torch.bfloat16
     model = dqt_gpt2_moe(
         vocab_size=cfg["vocab_size"],
         d_model=cfg["d_model"],
@@ -1217,6 +1231,7 @@ def main() -> None:
         dropout=args.dropout,
         use_grad_checkpointing=args.grad_checkpoint,
         device=device,
+        dtype=dtype,
     )
     n_total = count_parameters(model)
     n_ternary = count_ternary_weights(model)
@@ -1254,7 +1269,8 @@ def main() -> None:
     #   3. Everything else (DQT float buffers, RMSNorm scales, LM head) is
     #      AdamW at the base lr.
     if args.embed_adamw:
-        optimizer = torch.optim.AdamW(
+        # OPT-2: 8-bit AdamW (states 8→2 B/param). Falls back to fp32.
+        optimizer = make_adamw(
             model.parameters(),
             lr=args.lr,
             betas=(0.9, 0.95),
@@ -1271,7 +1287,9 @@ def main() -> None:
             for n, p in model.named_parameters()
             if "router" not in n and n != "token_embedding.weight"
         ]
-        optimizer = torch.optim.AdamW(
+        # OPT-2: 8-bit AdamW for DQT params + float routers (two param
+        # groups, slow router 0.1x); embedding stays plain SGD.
+        optimizer = make_adamw(
             [
                 {"params": main_params, "lr": args.lr},
                 {
@@ -1370,6 +1388,7 @@ def main() -> None:
             start_epoch=start_epoch,
             best_val_ppl=best_val_ppl,
             best_step=best_step,
+            use_autocast=args.dtype == "bf16" and device.type == "cuda",
         )
     except KeyboardInterrupt:
         # Pause requested (SIGINT/SIGTERM/SIGUSR1). The checkpoint was already

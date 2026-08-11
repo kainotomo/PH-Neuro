@@ -123,8 +123,16 @@ class _DQTGradFn(torch.autograd.Function):
     def backward(ctx, grad_output: torch.Tensor):
         input, weight_ternary = ctx.saved_tensors
 
+        # Match every tensor to grad_output's dtype. Under bf16 autocast the
+        # forward output (and hence grad_output) is bf16, while the saved
+        # input stays fp32 (autocast does not cast custom-Function inputs) —
+        # so we cast explicitly to keep the backward dtype-consistent.
+        dt = grad_output.dtype
+        input = input.to(dt)
+        w = weight_ternary.to(dt)
+
         # Gradient w.r.t. input: grad_output @ W
-        grad_input = grad_output.mm(weight_ternary.float())
+        grad_input = grad_output.mm(w)
 
         # STE gradient w.r.t. weight_float: grad_output^T @ input
         # (same shape as weight_float — optimizer will use this)

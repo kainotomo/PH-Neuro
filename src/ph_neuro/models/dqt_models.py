@@ -12,6 +12,7 @@ weights + stochastic rounding, no latent float scores).
 
 from __future__ import annotations
 
+import torch
 import torch.nn as nn
 
 from ph_neuro.layers.ste_dqt import TernaryDQTLinear
@@ -24,6 +25,7 @@ def dqt_cnn(
     hidden_channels: int = 64,
     n_classes: int = 10,
     device: torch.device | str | None = None,
+    dtype: torch.dtype = torch.float32,
 ) -> nn.Sequential:
     """Build a small CNN with ternary DQT layers for CIFAR-style images.
 
@@ -42,6 +44,8 @@ def dqt_cnn(
             The second conv gets ``2 * hidden_channels``.
         n_classes: Number of output classes.
         device: Torch device.
+        dtype: Dtype for the DQT float accumulation buffers
+            (``torch.bfloat16`` halves the buffer from 4→2 B/param — OPT-3).
 
     Returns:
         ``nn.Sequential`` with ternary DQT conv and linear layers.
@@ -57,23 +61,23 @@ def dqt_cnn(
 
     layers: list[nn.Module] = [
         # Conv block 1
-        TernaryDQTConv2d(in_channels, hidden_channels, kernel_size=3, padding=1),
+        TernaryDQTConv2d(in_channels, hidden_channels, kernel_size=3, padding=1, dtype=dtype),
         nn.ReLU(inplace=True),
         nn.BatchNorm2d(hidden_channels),
         nn.MaxPool2d(2),
         # Conv block 2
-        TernaryDQTConv2d(hidden_channels, 2 * hidden_channels, kernel_size=3, padding=1),
+        TernaryDQTConv2d(hidden_channels, 2 * hidden_channels, kernel_size=3, padding=1, dtype=dtype),
         nn.ReLU(inplace=True),
         nn.BatchNorm2d(2 * hidden_channels),
         nn.MaxPool2d(2),
         # Flatten
         nn.Flatten(),
         # Linear block
-        TernaryDQTLinear(flat_features, head_hidden),
+        TernaryDQTLinear(flat_features, head_hidden, dtype=dtype),
         nn.ReLU(inplace=True),
         nn.BatchNorm1d(head_hidden),
         # Output layer (no activation — raw logits)
-        TernaryDQTLinear(head_hidden, n_classes),
+        TernaryDQTLinear(head_hidden, n_classes, dtype=dtype),
     ]
 
     model = nn.Sequential(*layers)
@@ -87,6 +91,7 @@ def dqt_cnn_cifar100(
     img_size: int = 32,
     n_classes: int = 100,
     device: torch.device | str | None = None,
+    dtype: torch.dtype = torch.float32,
 ) -> nn.Sequential:
     """Build a larger 3-conv ternary DQT CNN for CIFAR-100 (M1.2).
 
@@ -108,6 +113,8 @@ def dqt_cnn_cifar100(
             is derived dynamically from ``img_size`` after three ``MaxPool2d(2)``.
         n_classes: Number of output classes (default 100 for CIFAR-100).
         device: Torch device.
+        dtype: Dtype for the DQT float accumulation buffers
+            (``torch.bfloat16`` halves the buffer from 4→2 B/param — OPT-3).
 
     Returns:
         ``nn.Sequential`` with ternary DQT conv and linear layers.
@@ -122,28 +129,28 @@ def dqt_cnn_cifar100(
 
     layers: list[nn.Module] = [
         # Conv block 1
-        TernaryDQTConv2d(in_channels, 64, kernel_size=3, padding=1),
+        TernaryDQTConv2d(in_channels, 64, kernel_size=3, padding=1, dtype=dtype),
         nn.ReLU(inplace=True),
         nn.BatchNorm2d(64),
         nn.MaxPool2d(2),
         # Conv block 2
-        TernaryDQTConv2d(64, 128, kernel_size=3, padding=1),
+        TernaryDQTConv2d(64, 128, kernel_size=3, padding=1, dtype=dtype),
         nn.ReLU(inplace=True),
         nn.BatchNorm2d(128),
         nn.MaxPool2d(2),
         # Conv block 3
-        TernaryDQTConv2d(128, 256, kernel_size=3, padding=1),
+        TernaryDQTConv2d(128, 256, kernel_size=3, padding=1, dtype=dtype),
         nn.ReLU(inplace=True),
         nn.BatchNorm2d(256),
         nn.MaxPool2d(2),
         # Flatten
         nn.Flatten(),
         # Linear block
-        TernaryDQTLinear(flat_features, head_hidden),
+        TernaryDQTLinear(flat_features, head_hidden, dtype=dtype),
         nn.ReLU(inplace=True),
         nn.BatchNorm1d(head_hidden),
         # Output layer (no activation — raw logits)
-        TernaryDQTLinear(head_hidden, n_classes),
+        TernaryDQTLinear(head_hidden, n_classes, dtype=dtype),
     ]
 
     model = nn.Sequential(*layers)

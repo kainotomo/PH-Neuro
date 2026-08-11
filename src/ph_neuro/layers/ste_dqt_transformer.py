@@ -355,16 +355,20 @@ class TernaryDQTMultiheadAttention(nn.Module):
         sin = self.rope_sin[past_length : past_length + seq]
         q, k = apply_rotary_embeddings(q, k, cos, sin)
 
-        # Scaled dot-product attention with causal mask
-        attn = q @ k.transpose(-2, -1) * self.scale  # (B, H, T, T)
-        causal = torch.triu(
-            torch.ones(seq, seq, dtype=torch.bool, device=x.device), diagonal=1
-        )
-        attn = attn.masked_fill(causal, float("-inf"))
-        attn = F.softmax(attn, dim=-1)
-        attn = self.attn_dropout(attn)
-
-        out = attn @ v  # (B, H, T, d_head)
+        # OPT-4: F.scaled_dot_product_attention (FlashAttention / SDPA on
+        # Ampere+). The causal mask + softmax + attention dropout are handled
+        # internally with the SAME scale (1/√d_head), so RoPE + causal are
+        # preserved. Memory: O(N²) → O(N) attention, ~2-3x faster.
+        dropout_p = self.attn_dropout.p if self.training else 0.0
+        out = F.scaled_dot_product_attention(
+            q,
+            k,
+            v,
+            attn_mask=None,
+            dropout_p=dropout_p,
+            is_causal=True,
+            scale=self.scale,
+        )  # (B, H, T, d_head)
         out = out.transpose(1, 2).contiguous().view(batch, seq, self.d_model)
 
         return self.o_proj(out)

@@ -3,6 +3,7 @@
 > Consolidated results for all trained models. Hardware: **NVIDIA RTX 4060**
 > (8 GB). Accuracy = mean **best** test accuracy across 3 seeds.
 > All models use **2-bit ternary weights** {-1, 0, +1} (4 weights/byte).
+> **Last updated:** 2026-08-11.
 
 ---
 
@@ -14,6 +15,9 @@
 | **DQT CNN** | CIFAR-10 | **78.98%** | 4.27 M | 1.0 MB | ~10 min | RTX 4060 |
 | **DQT CNN** | CIFAR-100 | **54.15%** | 2.52 M | 615 KB | ~20 min | RTX 4060 |
 | **STE CNN** | CIFAR-10 | **76.09%** | 4.27 M | — | ~10 min | RTX 4060 |
+| **DQT Transformer** | TinyStories | **ppl 11.35** | 102 M | ~25 MB | ~2 h | RTX 4060 |
+| **DQT Transformer** | WikiText-2 | **ppl 480** (data-limited) | 253 M | ~63 MB | ~1 h | RTX 4060 |
+| **MoE DQT Transformer** | TinyStories | **ppl 14.08** | 265 M (190 M active) | ~66 MB | ~3 h | RTX 4060 |
 
 **Takeaways**
 
@@ -124,7 +128,39 @@ Hyperparameters: `lr=0.01`, `weight_decay=1e-4`, `batch_size=128`,
 
 ---
 
-## 6. Reproduce
+## 6. Phase 2.5: Memory Optimization (measured)
+
+> **Status:** ✅ COMPLETE (2026-08-11). Full report:
+> [`research/docs/experiments/E030-m2-9-memory-benchmark.md`](../research/docs/experiments/E030-m2-9-memory-benchmark.md).
+
+Pre-sprint DQT training: ~13 bytes/param (fp32 weight_float + AdamW m/v fp32
++ int8 ternary) → max ~300M ternary params on 8 GB VRAM.
+
+Three optimizations shipped (no DQT-autograd changes):
+
+| Technique | What it saves | VRAM reduction |
+|:----------|:--------------|:--------------:|
+| **8-bit AdamW** (bitsandbytes) | Optimizer states: 8→2 B/param | **-6 B/param** (75%) |
+| **bf16 weight_float** + autocast | Weight buffer: 4→2 B/param + activations | **-2 B/param** (50%) |
+| **Flash Attention / SDPA** | Attention activations: O(N²)→O(N) | Variable (large for transformers) |
+
+**Measured peak GPU memory** (`torch.cuda.max_memory_allocated`, RTX 4060 8 GB):
+
+| Run | Params | Batch | New peak | Old (pre-sprint) | Δ |
+|:----|:------:|:-----:|:--------:|:----------------:|:--:|
+| M2.2 smoke | 253 M | 4 | **5.03 GB** | ~6.5 GB | **−22%** |
+| M2.2 smoke | 253 M | 8 | **5.23 GB** | ~7.6 GB (over limit) | **−31%** |
+| **M2.8 smoke** | **1.02 B** | 4 | **8.04 GB** | — | **5× ceiling** |
+
+The 1.02B-param DQT transformer (d=1536, L=36) trains stably on the 8 GB
+card — the first at this scale, validating the ~5 B/param steady-state budget
+(peak adds ~3 B/param transient gradients + activations). Batch 8 is now the
+safe default for M2.2/M2.3 (memory is fixed-cost dominated: +0.2 GB for 2×
+batch).
+
+---
+
+## 7. Reproduce
 
 ```bash
 # CIFAR-10 (M1.1)

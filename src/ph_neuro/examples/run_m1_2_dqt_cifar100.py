@@ -50,6 +50,7 @@ from ph_neuro.layers.ste_dqt import TernaryDQTLinear
 from ph_neuro.layers.ste_dqt_conv import TernaryDQTConv2d
 from ph_neuro.models.dqt_models import dqt_cnn_cifar100
 from ph_neuro.training.data import get_cifar100_loaders
+from ph_neuro.utils.optimizers import make_adamw
 
 warnings.filterwarnings("ignore", category=UserWarning, module="torch.quantization")
 
@@ -153,6 +154,7 @@ def train_dqt_cnn(
     max_patience: int = 15,
     verbose: bool = True,
     checkpoint_dir: str | None = None,
+    use_autocast: bool = False,
 ) -> dict:
     """Train a DQT CNN on CIFAR-100.
 
@@ -217,8 +219,13 @@ def train_dqt_cnn(
             x, y = x.to(device), y.to(device)
 
             optimizer.zero_grad()
-            out = model(x)
-            loss = F.cross_entropy(out, y)
+            # OPT-3: bf16 autocast (enabled only when weight_float is bf16 —
+            # halves activation memory + ~1.2x faster via tensor cores).
+            with torch.autocast(
+                device_type="cuda", dtype=torch.bfloat16, enabled=use_autocast
+            ):
+                out = model(x)
+                loss = F.cross_entropy(out, y)
             loss.backward()
             optimizer.step()
 
@@ -330,6 +337,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--patience", type=int, default=40,  # M1.2-RETRY: 30 -> 40 (> anneal_start_epoch = 160)
                         help="Early stopping patience (must be > anneal_start_epoch)")
     parser.add_argument("--num-workers", type=int, default=2)
+    parser.add_argument(
+        "--dtype", choices=["fp32", "bf16"], default="fp32",
+        help="DQT weight-buffer dtype: fp32 (default) or bf16 (OPT-3: halves "
+             "weight_float memory 4→2 B/param, pairs with autocast)",
+    )
     parser.add_argument("--device", default=None,
                         help="Torch device (default: cuda if available)")
     parser.add_argument("--output-dir", default="m1_2_results")
@@ -372,7 +384,9 @@ def run_experiment(args: argparse.Namespace) -> None:
     print()
 
     # ── Model ───────────────────────────────────────────────────────
-    model = dqt_cnn_cifar100(device=device)
+    # OPT-3: bf16 weight_float buffers when --dtype bf16 (4→2 B/param).
+    dtype = torch.float32 if args.dtype == "fp32" else torch.bfloat16
+    model = dqt_cnn_cifar100(device=device, dtype=dtype)
     n_params = sum(p.numel() for p in model.parameters())
     print(f"Model parameters (float buffers + BN): {n_params:,}")
     print(f"  Ternary weights: {sum(m.weight_ternary.numel() for m in model.modules() if is_dqt_module(m)):,}")
@@ -381,7 +395,8 @@ def run_experiment(args: argparse.Namespace) -> None:
     print()
 
     # ── Optimizer ───────────────────────────────────────────────────
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    # OPT-2: 8-bit AdamW (bitsandbytes) — optimizer states 8→2 B/param.
+    optimizer = make_adamw(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
 
     # ── Checkpoint dir (per-seed so seeds don't overwrite each other) ──
@@ -392,11 +407,13 @@ def run_experiment(args: argparse.Namespace) -> None:
     # ── Train ───────────────────────────────────────────────────────
     print("Training...")
     print()
+    use_autocast = args.dtype == "bf16" and device.type == "cuda"
     results = train_dqt_cnn(
         model, train_loader, test_loader,
         optimizer, scheduler, device,
         epochs=args.epochs, max_patience=args.patience,
         checkpoint_dir=checkpoint_dir,
+        use_autocast=use_autocast,
     )
     print(f"  Best model checkpoint: {os.path.join(checkpoint_dir, 'best.pt')}")
 

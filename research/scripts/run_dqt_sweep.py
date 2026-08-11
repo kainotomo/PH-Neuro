@@ -20,6 +20,7 @@ from torch.utils.data import DataLoader
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from ph_neuro.layers.ste_dqt import TernaryDQTLinear
+from ph_neuro.utils.optimizers import make_adamw
 
 
 def get_mnist_loaders(batch_size: int = 128) -> tuple[DataLoader, DataLoader]:
@@ -83,7 +84,8 @@ def train_one_config(
 
     train_loader, test_loader = get_mnist_loaders(batch_size=batch_size)
     model = build_dqt_mlp([784, 512, 256, 10], device, init_std=init_std)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+    # OPT-2: 8-bit AdamW (states 8→2 B/param), falls back to fp32.
+    optimizer = make_adamw(model.parameters(), lr=lr, weight_decay=weight_decay)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
 
     print(f"\n{'='*60}")

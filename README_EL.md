@@ -15,29 +15,36 @@ scores (**DQT**) — 4.5× λιγότερη μνήμη εκπαίδευσης α
 
 | Milestone | Αποτέλεσμα | Κατάσταση | Λεπτομέρειες |
 |:----------|:-----------|:---------:|:-------------|
-| **M1.1** — DQT CNN σε CIFAR-10 | **78.98%** (+2.89pp vs STE) | ✅ CONDITIONAL GO | [E020–E021.3](research/docs/RESEARCH_SUMMARY.md) |
-| **M1.2** — DQT CNN σε CIFAR-100 | **54.15%** (+15.95pp vs STE) | 🟡 CONDITIONAL GO | [E022](research/docs/RESEARCH_SUMMARY.md) |
-| **M1.3** — Εξαγωγή ONNX | 3 μοντέλα, <1 MB packed, verified | ✅ GO | [export guide](docs/export_guide.md) |
-| **M1.4** — Production README + docs | **← εδώ είμαστε** | 🟡 | αυτό το repo |
+| **M2.1** — DQT Transformer 102M | **ppl 11.35** TinyStories | ✅ GO | [E025](research/docs/RESEARCH_SUMMARY.md) |
+| **M2.2** — DQT Transformer 253M | **Stable ✅** WikiText-2 | 🟡 SCIENTIFIC GO | [E026](research/docs/RESEARCH_SUMMARY.md) |
+| **M2.3** — MoE DQT Transformer | **ppl 14.08**, 265M/190M ενεργές | ✅ GO | [E027](research/docs/RESEARCH_SUMMARY.md) |
+| **M2.4** — On-device demo | **21-25 tok/s CPU**, 11 MB packed | ✅ GO | [E028](research/docs/RESEARCH_SUMMARY.md) |
+| **M2.5** — Δημόσιο demo | **Gradio app**, 3 μοντέλα, 26 MB | ✅ GO | [E029](research/docs/RESEARCH_SUMMARY.md) |
+| **M2.6** — 8-bit AdamW + bf16 | 10 scripts, MNIST smoke OK | ✅ ΕΤΟΙΜΟ | [ROADMAP §2.5](ROADMAP.md) |
+| **M2.7** — Flash Attention / SDPA | Transformer attention | ✅ ΕΤΟΙΜΟ | [ROADMAP §2.5](ROADMAP.md) |
+| **M2.8** — 1B DQT Transformer | **1.02B τριαδικές, σταθερό, 8.04 GB** | ✅ GO | [E030](research/docs/experiments/E030-m2-9-memory-benchmark.md) |
 
-**Σταθερό μοτίβο:** σε ίδια αρχιτεκτονική, το DQT νικά το STE baseline κατά
-**+2.89pp** (CIFAR-10) και **+15.95pp** (CIFAR-100).
+**Phase 2 ΟΛΟΚΛΗΡΩΘΗΚΕ ✅** — 5/5 milestones. Το **Phase 2.5 (Memory
+Optimization Sprint) ΟΛΟΚΛΗΡΩΘΗΚΕ ✅** — 8-bit AdamW + bf16 + Flash
+Attention έκοψαν τη μνήμη εκπαίδευσης ~22–31% (253M: 6.5 → 5.0 GB) και
+έφεραν το πρώτο **μοντέλο 1B παραμέτρων στην RTX 4060 8 GB** (8.04 GB κορυφή)
+— 3.4× το παλιό όριο των 300M, χωρίς αλλαγές στο DQT autograd.
 
 ---
 
 ## ⚡ Quickstart σε 5 λεπτά
 
 ```bash
-pip install -e . && pip install onnxruntime   # από τη ρίζα του repo
+pip install -e . && pip install onnxruntime bitsandbytes  # από τη ρίζα του repo
 ```
 
 ```python
-import torch, torch.nn as nn, torch.nn.functional as F
+import torch, torch.nn as nn, torch.nn.functional as F, bitsandbytes as bnb
 from ph_neuro.layers.ste_dqt import TernaryDQTLinear
 from ph_neuro.training.data import get_mnist_loaders
 
 model = nn.Sequential(TernaryDQTLinear(784, 512), nn.ReLU(), TernaryDQTLinear(512, 10))
-opt = torch.optim.AdamW(model.parameters(), lr=0.01)
+opt = bnb.optim.AdamW8bit(model.parameters(), lr=0.01)  # ★ 8-bit Adam = 75% λιγότερη VRAM
 train, test = get_mnist_loaders(batch_size=128)
 
 for x, y in train:
@@ -114,8 +121,9 @@ assert verify_onnx(inf, "models/dqt_cnn_cifar10.onnx", torch.randn(2, 3, 32, 32)
 .venv/bin/python -m pytest tests/ -v        # 616 tests
 ```
 
-Φάσεις: **0** Research ✅ · **1** Production DQT 🟡 (M1.4 σε εξέλιξη) ·
-**2** Tiny Transformer ⬜ · **3** MVP ⬜ · **4** Scale ⬜ · **5** Platform ⬜.
+Φάσεις: **0** Research ✅ · **1** Production DQT ✅ (M1.1–M1.5) ·
+**2** Tiny Transformer ✅ (M2.1–M2.5) · **2.5** Memory Sprint ✅ (1B στην 8 GB) ·
+**3** MVP ⬜ · **4** Scale ⬜ · **5** Platform ⬜.
 Αναλυτικό roadmap: [ROADMAP.md](ROADMAP.md) · Όραμα: [GOALS.md](GOALS.md).
 
 ---

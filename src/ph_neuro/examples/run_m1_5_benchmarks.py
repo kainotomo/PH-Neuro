@@ -54,6 +54,7 @@ import torch.nn as nn
 import torch.nn.functional as F  # noqa: N812
 
 from ph_neuro.examples._utils import print_header
+from ph_neuro.utils.optimizers import make_adamw
 from ph_neuro.examples.run_m1_2_dqt_cifar100 import apply_dqt_rounding, is_dqt_module
 from ph_neuro.models.dqt_models import dqt_cnn, dqt_cnn_cifar100
 from ph_neuro.models.export import (
@@ -269,7 +270,8 @@ def _train_one_epoch(
     lr: float,
 ) -> float:
     """Run one full training epoch (DQT rounding for DQT models)."""
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
+    # OPT-2: 8-bit AdamW (states 8→2 B/param) for the memory benchmark.
+    optimizer = make_adamw(model.parameters(), lr=lr, weight_decay=1e-4)
     model.train()
     running_loss = 0.0
     n_batches = 0
