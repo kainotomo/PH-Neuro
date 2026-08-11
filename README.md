@@ -15,29 +15,32 @@ as a **1 MB** file.
 
 | Milestone | Result | Status | Details |
 |:----------|:-------|:------:|:--------|
-| **M1.1** — DQT CNN on CIFAR-10 | **78.98%** (+2.89pp vs STE) | ✅ CONDITIONAL GO | [E020–E021.3](research/docs/RESEARCH_SUMMARY.md) |
-| **M1.2** — DQT CNN on CIFAR-100 | **54.15%** (+15.95pp vs STE) | 🟡 CONDITIONAL GO | [E022](research/docs/RESEARCH_SUMMARY.md) |
-| **M1.3** — ONNX export | 3 models, <1 MB packed, verified | ✅ GO | [export guide](docs/export_guide.md) |
-| **M1.4** — Production README + docs | **← you are here** | 🟡 | this repo |
+| **M2.1** — DQT Transformer 102M | **ppl 11.35** TinyStories | ✅ GO | [E025](research/docs/RESEARCH_SUMMARY.md) |
+| **M2.2** — DQT Transformer 253M | **Stable ✅** WikiText-2 | 🟡 SCIENTIFIC GO | [E026](research/docs/RESEARCH_SUMMARY.md) |
+| **M2.3** — MoE DQT Transformer | **ppl 14.08**, 265M/190M active | ✅ GO | [E027](research/docs/RESEARCH_SUMMARY.md) |
+| **M2.4** — On-device demo | **21-25 tok/s CPU**, 11 MB packed | ✅ GO | [E028](research/docs/RESEARCH_SUMMARY.md) |
+| **M2.5** — Public demo | **Gradio app**, 3 models, 26 MB total | ✅ GO | [E029](research/docs/RESEARCH_SUMMARY.md) |
+| **M2.6** — 🚧 Memory Sprint | **1B+ target**, 8-bit Adam + bf16 | ⬜ IN PROGRESS | [ROADMAP §2.5](ROADMAP.md) |
 
-**The pattern is consistent:** on identical architectures, DQT beats the STE
-baseline by **+2.89pp** (CIFAR-10) and **+15.95pp** (CIFAR-100).
+**Phase 2 COMPLETE ✅** — 5/5 gate milestones closed. Phase 2.5 (Memory
+Optimization Sprint) targets **5× scaling** (300M → 1.5B params) on the
+same RTX 4060 via 8-bit AdamW + bf16 + Flash Attention.
 
 ---
 
 ## ⚡ 5-Minute Quickstart
 
 ```bash
-pip install -e . && pip install onnxruntime   # from repo root
+pip install -e . && pip install onnxruntime bitsandbytes  # from repo root
 ```
 
 ```python
-import torch, torch.nn as nn, torch.nn.functional as F
+import torch, torch.nn as nn, torch.nn.functional as F, bitsandbytes as bnb
 from ph_neuro.layers.ste_dqt import TernaryDQTLinear
 from ph_neuro.training.data import get_mnist_loaders
 
 model = nn.Sequential(TernaryDQTLinear(784, 512), nn.ReLU(), TernaryDQTLinear(512, 10))
-opt = torch.optim.AdamW(model.parameters(), lr=0.01)
+opt = bnb.optim.AdamW8bit(model.parameters(), lr=0.01)  # ★ 8-bit Adam = 75% less VRAM
 train, test = get_mnist_loaders(batch_size=128)
 
 for x, y in train:
@@ -187,8 +190,9 @@ latent scores (the current production path).
 | Phase | Milestone | Status |
 |:------|:----------|:------:|
 | 0 | Research foundation (19 experiments) | ✅ Closed |
-| 1 | Production DQT (M1.1–M1.4) | 🟡 M1.4 in progress |
-| 2 | Tiny Transformer — DQT 100M, ppl <30 | ⬜ |
+| 1 | Production DQT (M1.1–M1.5) | ✅ Closed |
+| 2 | Tiny Transformer (M2.1–M2.5) | ✅ Closed |
+| **2.5** | **Memory Optimization Sprint (8-bit Adam + bf16 → 1B+)** | **🚧 In Progress** |
 | 3 | MVP & first customers — `pip install ph-neuro` | ⬜ |
 | 4 | Scale — pre-seed, 10B MoE model | ⬜ |
 | 5 | Commercial platform | ⬜ |

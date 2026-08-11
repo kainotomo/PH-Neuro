@@ -1,7 +1,7 @@
 # PH-Neuro — Product Roadmap
 
-> **Last updated:** 2026-08-04
-> **Status:** Phase 1 — **M1.1–M1.5 closed ✅ (Phase 1 complete)**
+> **Last updated:** 2026-08-11
+> **Status:** Phase 2 — **M2.1–M2.5 closed ✅ (Phase 2 complete)** → **Phase 2.5: Memory Optimization Sprint**
 
 ---
 
@@ -61,6 +61,77 @@ M2.5 — ✅ **GO** (Gradio demo: text + vision + benchmarks, 3 models,
 
 ---
 
+## Phase 2.5: Memory Optimization Sprint (Aug 2026) 🚧 IN PROGRESS
+
+**Goal:** Break the 300M-param VRAM ceiling. Scale DQT training to **1B+ ternary
+params on a single RTX 4060 (8 GB VRAM + 32 GB RAM)** — without rewriting the
+DQT autograd.
+
+### Why Now
+
+PH-Neuro has hit the **VRAM ceiling**: ~13 bytes/param (fp32 weight + AdamW
+m/v + int8 ternary). Max ~300M ternary params on 8 GB. The 100M–250M models
+validated Phase 2, but to build a competitive 1B+ LLM we need **more params
+without more GPU**.
+
+### Research (2026-08-11): 13 Techniques Evaluated
+
+Full analysis in the project session log. Summary:
+
+| # | Technique | VRAM Saving | Speed | DQT Compat | Verdict |
+|:--|:----------|:-----------:|:-----:|:----------:|:-------:|
+| 1 | **8-bit AdamW (bitsandbytes)** | **75% opt** | 1.0× | ✅ | 🔴 **#1 priority** |
+| 2 | **bf16 weight_float + autocast** | **50% weights** | 1.2× | ✅ | 🔴 **#2 priority** |
+| 3 | **Fused AdamW** (PyTorch native) | ~15% temps | 1.1× | ✅ | 🟡 Quick win |
+| 4 | **Flash Attention / SDPA** | Attention mem | 2-3× attn | ✅ | 🟡 Quick win |
+| 5 | Gradient Checkpointing | ~50% activ | 0.7× | ✅ | ✅ Already active |
+| 6 | Embed-SGD (no AdamW for embedding) | 0.4 GB | 1.0× | ✅ | ✅ Already active |
+| 7 | `expandable_segments` | ~10% frag | 1.0× | ✅ | ✅ Already active |
+| 8 | **accelerate cpu_offload** | Opt states → RAM | 0.85× | ✅ | 🟢 Fallback |
+| 9 | Adafactor | ~50% opt | 1.0× | ✅ | ⚠️ Convergence risk |
+| 10 | torch.compile (JIT) | ~15% temps | 1.3× | ⚠️ | ⚠️ Test first |
+| 11 | GaLore (ICML 2024 Oral) | 65% opt | 0.85× | ⚠️ | 🔬 Research |
+| 12 | DeepSpeed ZeRO-3 | 90% | 0.2× | ⚠️ | ⏳ Later |
+| 13 | NVMe Offloading | ~100% | 0.1× | ⚠️ | ⏳ Later |
+
+### New Memory Budget (projected)
+
+| Scenario | GPU bytes/param | Max Params (8 GB) |
+|:---------|:---------------:|:-----------------:|
+| Current (fp32 all-GPU) | 13 B | **~300M** |
+| + 8-bit AdamW | 7 B | **~1.1B** |
+| + 8-bit AdamW + bf16 | **5 B** | **~1.5B** |
+| + all above + Flash Attn | ~4.5 B | **~1.7B** |
+
+**Target:** **1B ternary params** (≈ 600M fp16 equivalent quality), trainable
+in ~7 GB VRAM. This is **5× the current 300M ceiling.**
+
+### Implementation Sprint
+
+| Step | What | Time | Priority |
+|:-----|:-----|:----:|:--------:|
+| **OPT-1** | Install `bitsandbytes`, test 8-bit AdamW on MNIST DQT | 10 min | 🔴 |
+| **OPT-2** | Convert all training scripts: AdamW → `AdamW8bit` | 30 min | 🔴 |
+| **OPT-3** | bf16 weight_float + autocast in training loop | 30 min | 🔴 |
+| **OPT-4** | Replace manual attention with `F.scaled_dot_product_attention` | 30 min | 🟡 |
+| **OPT-5** | Test `torch.compile` (skip if it breaks custom autograd) | 15 min | 🟢 |
+| **OPT-6** | Integrate all optimizations, run M2.2 smoke test | 1 h | 🔴 |
+| **OPT-7** | Increase batch size (4→8) / seq length where VRAM allows | 30 min | 🟡 |
+| **OPT-DOC** | Update docs (ROADMAP, GOALS, README, benchmarks) | 1 h | 🟡 |
+
+**Go/No-go gate:** OPT-1 (8-bit AdamW + DQT MNIST accuracy == fp32 baseline).
+
+### Milestones
+
+| Milestone | Target | Priority | Status |
+|:----------|:------:|:--------:|:------:|
+| **M2.6** 8-bit AdamW + bf16 on all training scripts | All scripts converted, MNIST smoke OK | 🔴 Critical | ⬜ |
+| **M2.7** Flash Attention / SDPA in transformer attention | SDPA passes transformer layer tests | 🟡 High | ⬜ |
+| **M2.8** 1B-param DQT Transformer smoke test | Stable training at 1B ternary params | 🔴 Critical | ⬜ |
+| **M2.9** Memory benchmark report | Measured: VRAM, speed, accuracy impact | 🟡 High | ⬜ |
+
+---
+
 ## Phase 3: MVP & First Customers (Dec 2026–Feb 2027)
 
 **Goal:** Working product + paying customer.
@@ -102,7 +173,19 @@ M2.5 — ✅ **GO** (Gradio demo: text + vision + benchmarks, 3 models,
 
 ## Current Focus (August 2026)
 
-> **Phase 1 complete ✅** — M1.1–M1.5 all closed. Ready for Phase 2 (Tiny Transformer).
+> **Phase 2.5: Memory Optimization Sprint 🚧** — Breaking the 300M VRAM ceiling.
+> Target: scale DQT training to **1B+ ternary params** on the same RTX 4060.
+
+### Why
+
+The 8 GB VRAM ceiling is the #1 blocker for PH-Neuro. We've validated DQT at
+100M–250M (Phase 2), but to build a competitive LLM we need more parameters.
+Newly identified techniques (8-bit AdamW, bf16, Flash Attention) can deliver
+**5× the current ceiling (300M → 1.5B) without rewriting the DQT autograd.**
+
+### Phase 2 — COMPLETE ✅
+
+> **M2.1–M2.5 all closed**. Phase 1+2 = 10/10 milestones delivered.
 
 ### M1.5 — CLOSED (GO) ✅
 

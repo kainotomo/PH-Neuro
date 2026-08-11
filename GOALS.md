@@ -1,7 +1,7 @@
 # PH-Neuro — Goals & Vision
 
 > **The smallest useful AI models in the world.**
-> Last updated: 2026-08-04
+> Last updated: 2026-08-11
 
 ---
 
@@ -88,9 +88,14 @@ Combined target: **1B parameters → 200MB on disk → runs on a phone.**
 | GitHub stars | — | >500 | Dec 2026 |
 | First paying customer | — | 1 | Mar 2027 |
 
-> **Memory budget lesson (Aug 2026):** DQT training = ~13 bytes/param.
-> RTX 4060 8GB → max ~300M ternary params. Original 500M/1B targets
-> were aspirational, now adjusted to measured constraints.
+> **Memory budget lesson (Aug 2026):** DQT training = ~13 bytes/param (fp32).
+> RTX 4060 8 GB → max ~300M ternary params. Original 500M/1B targets were
+> aspirational — now adjusted to measured constraints.
+>
+> **Phase 2.5 Memory Sprint (Aug 2026):** Newly identified techniques
+> (8-bit AdamW, bf16 weight_float, Flash Attention) project **1.5B ternary
+> params on the same 8 GB GPU** — a **5× ceiling increase** without
+> rewriting the DQT autograd. See [ROADMAP.md § Phase 2.5](ROADMAP.md).
 
 ---
 

@@ -3,6 +3,7 @@
 > Consolidated results for all trained models. Hardware: **NVIDIA RTX 4060**
 > (8 GB). Accuracy = mean **best** test accuracy across 3 seeds.
 > All models use **2-bit ternary weights** {-1, 0, +1} (4 weights/byte).
+> **Last updated:** 2026-08-11.
 
 ---
 
@@ -14,6 +15,9 @@
 | **DQT CNN** | CIFAR-10 | **78.98%** | 4.27 M | 1.0 MB | ~10 min | RTX 4060 |
 | **DQT CNN** | CIFAR-100 | **54.15%** | 2.52 M | 615 KB | ~20 min | RTX 4060 |
 | **STE CNN** | CIFAR-10 | **76.09%** | 4.27 M | — | ~10 min | RTX 4060 |
+| **DQT Transformer** | TinyStories | **ppl 11.35** | 102 M | ~25 MB | ~2 h | RTX 4060 |
+| **DQT Transformer** | WikiText-2 | **ppl 480** (data-limited) | 253 M | ~63 MB | ~1 h | RTX 4060 |
+| **MoE DQT Transformer** | TinyStories | **ppl 14.08** | 265 M (190 M active) | ~66 MB | ~3 h | RTX 4060 |
 
 **Takeaways**
 
@@ -124,7 +128,35 @@ Hyperparameters: `lr=0.01`, `weight_decay=1e-4`, `batch_size=128`,
 
 ---
 
-## 6. Reproduce
+## 6. Phase 2.5: Memory Optimization (projected)
+
+> **Status:** 🚧 IN PROGRESS (August 2026). Targets measured once implemented.
+
+Current DQT training state: ~13 bytes/param (fp32 weight_float + AdamW m/v
+fp32 + int8 ternary). Max: ~300M ternary params on 8 GB VRAM.
+
+Projected savings from three new optimizations:
+
+| Technique | What it saves | VRAM reduction |
+|:----------|:--------------|:--------------:|
+| **8-bit AdamW** (bitsandbytes) | Optimizer states: 8→2 B/param | **-6 B/param** (75%) |
+| **bf16 weight_float** + autocast | Weight buffer: 4→2 B/param + activations | **-2 B/param** (50%) |
+| **Flash Attention / SDPA** | Attention activations: O(N²)→O(N) | Variable (large for transformers) |
+
+**New memory budget (projected):**
+
+| Scenario | GPU B/param | Max ternary params (8 GB) |
+|:---------|:-----------:|:-------------------------:|
+| Current (fp32, all-GPU) | 13 | **~300M** |
+| + 8-bit AdamW | 7 | **~1.1B** |
+| + 8-bit AdamW + bf16 | **5** | **~1.5B** |
+| + all + Flash Attention | ~4.5 | **~1.7B** |
+
+**Target:** 1B ternary params in ~7 GB VRAM — **5× the current ceiling.**
+
+---
+
+## 7. Reproduce
 
 ```bash
 # CIFAR-10 (M1.1)
