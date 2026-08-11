@@ -109,7 +109,7 @@ export_one() {
     "$PYTHON" -m ph_neuro.examples.run_m1_3_export \
         --model "$model" --checkpoint "$ckpt" \
         --output "$out" --packed --verify \
-        2>&1 | grep -v "torch.onnx\|FutureWarning\|copyreg\|Run decomp\|Optimize\|Translate\|Obtain model\|Compiling graph\|graph \("
+        2>&1 | grep -v "torch.onnx\|FutureWarning\|copyreg\|Run decomp\|Optimize\|Translate\|Obtain model\|Compiling graph\|graph ("
     if [ ! -f "$out" ]; then
         log "FAILED export $model — no $out produced"
         return 1
