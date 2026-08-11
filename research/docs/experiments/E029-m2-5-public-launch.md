@@ -1,8 +1,8 @@
 # Experiment E029: M2.5 — Public Demo + Blog Post (PH-Neuro launch)
 
 - **Date:** 2026-08-10
-- **Git commit:** `TBD` (M2.5 work)
-- **Status:** 🟢 **IN PROGRESS** — 3 models retrained → exported (ONNX + 2-bit packed) → served via a 3-tab Gradio demo on CPU.
+- **Git commit:** `116e776` (M2.5)
+- **Status:** ✅ **GO — COMPLETE** — 3 models retrained → exported (ONNX + 2-bit packed) → served via a 3-tab Gradio demo on CPU; blog + this report written.
 - **Phase:** 2 (public launch) — demo + blog, NOT a GO/NO-GO gate (each model re-validates its own milestone).
 
 ---
@@ -21,9 +21,9 @@ below so the demo ships reproducible, self-contained artifacts.
 
 | Model | Config | Train cmd (exact) | Time |
 |-------|--------|-------------------|------|
-| 📝 **DQT Transformer 102M** (text) | `d_model=768, n_layers=9, n_heads=12, d_ff=3072, vocab=50257, seq=256` → **102,298,368 ternary** + 38.6M float emb ≈ 140.9M total | `run_m2_1_dqt_transformer --d-model 768 --n-layers 9 --n-heads 12 --d-ff 3072 --epochs 3 --lr 0.01 --seed 42 --batch-size 8 --output-dir results/phase2/m2_5/text_model` | ~2-3.5 h |
-| 🖼️ **DQT CNN CIFAR-10** | `dqt_cnn()`: Conv(3→64)→Pool→Conv(64→128)→Pool→FC(8192→512)→FC(512→10), ~2.14M ternary | `run_m1_1_dqt_cifar10 --lr 0.01 --epochs 100 --seed 42 --patience 25 --output-dir results/phase2/m2_5/vision_cifar10` | ~12 min |
-| 🖼️ **DQT CNN CIFAR-100** | `dqt_cnn_cifar100()`: Conv(3→64→128→256)→Pool→FC(4096→512)→FC(512→100), ~1.26M ternary | `run_m1_2_dqt_cifar100 --lr 0.01 --epochs 150 --seed 42 --patience 30 --output-dir results/phase2/m2_5/vision_cifar100` | ~25 min |
+| 📝 **DQT Transformer 102M** (text) | `d_model=768, n_layers=9, n_heads=12, d_ff=3072, vocab=50257, seq=256` → **102,298,368 ternary** + 38.6M float emb ≈ 140.9M total | `run_m2_1_dqt_transformer --d-model 768 --n-layers 9 --n-heads 12 --d-ff 3072 --epochs 3 --lr 0.01 --seed 42 --batch-size 8 --max-samples 150000 --num-workers 0 --checkpoint-every 2000 --output-dir results/phase2/m2_5/text_model` | ~2 h |
+| 🖼️ **DQT CNN CIFAR-10** | `dqt_cnn()`: Conv(3→64)→Pool→Conv(64→128)→Pool→FC(8192→512)→FC(512→10), **4,274,880** ternary | `run_m1_1_dqt_cifar10 --lr 0.01 --epochs 100 --seed 42 --patience 25 --output-dir results/phase2/m2_5/vision_cifar10` | ~12 min |
+| 🖼️ **DQT CNN CIFAR-100** | `dqt_cnn_cifar100()`: Conv(3→64→128→256)→Pool→FC(4096→512)→FC(512→100), **2,518,720** ternary | `run_m1_2_dqt_cifar100 --lr 0.01 --epochs 150 --seed 42 --patience 30 --output-dir results/phase2/m2_5/vision_cifar100` | ~19 min |
 
 Checkpoint convention (per repo): `{output_dir}/checkpoints/seed42/best.pt`
 — for vision, `best.pt` stores `{model_state_dict, epoch, best_accuracy}` and
@@ -62,20 +62,18 @@ All 3 models → ONNX (dynamic batch, opset 18) + 2-bit packed `.ternary` via th
 existing `run_m1_3_export` (`--model dqt_gpt2 | dqt_cnn | dqt_cnn_cifar100`,
 `--packed --verify`). Expected artifacts in `results/phase2/m2_5/`:
 
-| File | Expected size |
-|------|--------------:|
-| `text_model.onnx` | ~270 MB |
-| `text_model.ternary` | ~25 MB |
-| `vision_cifar10.onnx` | ~16 MB |
-| `vision_cifar10.ternary` | ~1.0 MB |
-| `vision_cifar100.onnx` | ~10 MB |
-| `vision_cifar100.ternary` | ~0.6 MB |
+| File | Actual size |
+|------|------------:|
+| `text_model.onnx` | **540 MB** (float32; brief's ~270 MB assumed a smaller config) |
+| `text_model.ternary` | **24.4 MB** |
+| `vision_cifar10.onnx` | **16.3 MB** |
+| `vision_cifar10.ternary` | **1.02 MB** |
+| `vision_cifar100.onnx` | **9.6 MB** |
+| `vision_cifar100.ternary` | **0.60 MB** |
 
 ---
 
 ## Results
-
-(TBD — filled after training + export complete.)
 
 ### CIFAR-10 (DQT CNN)
 
@@ -93,26 +91,48 @@ existing `run_m1_3_export` (`--model dqt_gpt2 | dqt_cnn | dqt_cnn_cifar100`,
 
 | Metric | Value |
 |--------|-------|
-| Best test accuracy | TBD |
-| Best epoch | TBD |
-| Training time | TBD |
+| Best test accuracy | **54.39%** (epoch 148) |
+| Final test accuracy | 54.36% |
+| Training time | 1144 s (~19.1 min) |
+| Peak GPU memory | 336 MB |
+| Ternary weights | 2,518,720 |
+| ONNX / packed | 9.64 MB / 615.1 KB |
+| ONNX verified | ✅ (max\|Δ\| = 9.54e-06; torch ≡ onnx 57.03% on subset) |
 
 ### Transformer 102M (TinyStories)
 
 | Metric | Value |
 |--------|-------|
-| Best val ppl | TBD |
-| Steps trained | TBD |
-| Training time | TBD |
-| Gen speed (CPU, ONNX) | TBD tok/s |
+| Best val ppl | **11.51** (GO, gate <30) |
+| Steps trained | 48,708 (3 epochs, 150K samples) |
+| Training time | ~2 h steady-state on RTX 4060 (JSON final segment 3,062 s; run paused/resumed once) |
+| Peak GPU memory | 4.6 GB |
+| Ternary weights | 102,298,368 (d768/L9/H12/ff3072) + 38.6M float emb |
+| Final train loss / flip | 2.50 / 0.001 |
+| ONNX / packed | 540 MB / 24.4 MB |
+| Gen speed (CPU, ONNX) | ~5.2 tok/s observed on the running demo |
+
+### Exported artifacts (`results/phase2/m2_5/`)
+
+| File | Size |
+|------|-----:|
+| `text_model.onnx` | 540 MB |
+| `text_model.ternary` | 24.4 MB |
+| `vision_cifar10.onnx` | 16.3 MB |
+| `vision_cifar10.ternary` | 1.02 MB |
+| `vision_cifar100.onnx` | 9.6 MB |
+| `vision_cifar100.ternary` | 0.60 MB |
+
+**Total 2-bit packed ≈ 26 MB (< 30 MB gate ✓)**
 
 ### Demo
 
 - Gradio demo launches, loads ONNX models via onnxruntime (CPU).
 - **3 tabs verified end-to-end on the running server (Gradio 6.22)**:
-  - 📝 Text Generation — UI + streaming generator wired; graceful error when
-    the text ONNX is absent (until export). Sliders: max-tokens 10-200,
-    temperature 0.1-2.0, top-k 1-100.
+  - 📝 Text Generation — **verified live**: streams coherent TinyStories
+    (*"Once upon a time, a little girl named Lily…"*) at `⚡ ~5.2 tok/s |
+    💾 24.4 MB (2-bit) | 🖥️ CPU`. Sliders: max-tokens 10-200, temperature
+    0.1-2.0, top-k 1-100.
   - 🖼️ Image Classification — CIFAR-10 & CIFAR-100 selector, upload/webcam,
     label + confidence + top-3 matplotlib bar chart; verified through the
     server API: `⚡ 1.5 ms/image | 💾 1.0 MB (2-bit) | 🖥️ CPU`.

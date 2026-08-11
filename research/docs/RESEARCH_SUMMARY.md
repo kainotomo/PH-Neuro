@@ -4,7 +4,8 @@
 > **Era 2 (STE):** Ternary Networks for Low-Memory & Continual Learning
 >
 > **Status:** Phase 1 COMPLETE. Phase 2: M2.1 GO (DQT Transformer 102M, ppl 11.35).
-> **Last updated:** 2026-08-09
+> **Status:** Phase 1 + Phase 2 COMPLETE. 10 milestones closed across vision + language.
+> **Last updated:** 2026-08-11
 
 ---
 
@@ -254,6 +255,7 @@ After the Hebbian era closed, PH-Neuro pivoted to STE backpropagation. See [`ROA
 | **M2.2 E026** | DQT Transformer 250M | WikiText-2 | 🟡 **SCIENTIFIC GO**. 252.8M ternary, 3/3 stable, fits 6.5 GB. ppl 479.9 (data-limited). See [E026](experiments/E026-m2-2-dqt-wikitext2.md) |
 | **M2.3 E027** | MoE DQT Transformer | TinyStories | ✅ **GO**. 265M/190M active (63% sparse), ppl **14.08** < 20. First MoE DQT Transformer. See [E027](experiments/E027-m2-3-moe-dqt-transformer.md) |
 | **M2.4 E028** | On-device Inference Demo | TinyStories | ✅ **GO**. 44.6M DQT, 21-25 tok/s CPU, ONNX 270 MB / packed **11 MB**. End-to-end pipeline proven. See [E028](experiments/E028-m2-4-inference-demo.md) |
+| **M2.5 E029** | Public Launch | All | ✅ **GO**. Gradio app (text + vision + benchmarks), 3 models retrained (ppl 11.51, 78.61%, 54.39%), 26 MB total packed. Blog post. Phase 2 complete. See [E029](experiments/E029-m2-5-public-launch.md) |
 
 ### Key STE Era Conclusions
 

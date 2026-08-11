@@ -47,14 +47,16 @@ All 19 experiments completed. See [`research/`](research/).
 | **M2.2** DQT Transformer 250M params | Perplexity <20 on WikiText-2 | 🟡 High | 🟡 SCIENTIFIC GO |
 | **M2.3** MoE DQT Transformer | **265M total, 190M active**, ppl <20 | 🟡 High | ✅ GO |
 | **M2.4** On-device inference demo | Token generation on CPU, 11 MB packed | 🟡 High | ✅ GO |
-| **M2.5** Public demo + blog post | Hacker News / Reddit launch | 🟢 Medium | ⬜ |
+| **M2.5** Public demo + blog post | Gradio app + launch blog | 🟢 Medium | ✅ GO |
 
 **Go/No-go gate:** M2.1 — ✅ **GO** (ppl **11.35**). M2.2 — 🟡 **SCIENTIFIC GO**
 (250M stable, data-limited). M2.3 — ✅ **GO** (mean ppl **14.08** < 20,
 first MoE DQT Transformer, 265M total/190M active, 3/3 seeds stable).
-M2.4 — ✅ **GO** (on-device inference demo: 44.6M-param DQT Transformer
-generates coherent TinyStories on CPU at ~21-25 tok/s; ONNX 269.8 MB, 2-bit
-packed **~11 MB**; E028). Next: M2.5 (Public demo + blog post).
+M2.4 — ✅ **GO** (CPU inference, 21-25 tok/s, 11 MB packed).
+M2.5 — ✅ **GO** (Gradio demo: text + vision + benchmarks, 3 models,
+26 MB total packed, blog post).
+
+> 🎉 **Phase 2 COMPLETE.** All 5 milestones closed. See Phase 3.
 (already validated on MLP vision — E019).
 
 ---

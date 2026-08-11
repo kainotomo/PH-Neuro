@@ -76,14 +76,15 @@ Combined target: **1B parameters → 200MB on disk → runs on a phone.**
 | Model export ONNX | **<17 MB** (all models) | <100MB | ✅ GO |
 | Production docs | **README + API + quickstart** | Complete | ✅ GO |
 | Memory vs TF Lite | **4.00× smaller, 2× faster** | 4× / 2× | ✅ GO |
-### Phase 2 (In Progress) — VRAM-limited to ~300M params
+### Phase 2 — COMPLETE ✅
 
 | Metric | Result | Target | Status |
 |:-------|:------:|:------:|:------:|
 | DQT Transformer 100M | **11.35 ppl** TinyStories | <30 ppl | ✅ GO |
-| DQT Transformer 250M | **Stable ✅**, ppl 479.9 (data-limited) | <20 ppl | 🟡 SCIENTIFIC GO |
-| MoE DQT Transformer | **14.08 ppl**, 265M/190M active, 3/3 stable | <20 ppl | ✅ GO |
-| On-device demo | **21-25 tok/s CPU**, 11 MB packed, coherent | Token generation | ✅ GO |
+| DQT Transformer 250M | **Stable ✅** | <20 ppl | 🟡 SCIENTIFIC GO |
+| MoE DQT Transformer | **14.08 ppl** | <20 ppl | ✅ GO |
+| On-device demo | **21-25 tok/s CPU** | Token generation | ✅ GO |
+| Public launch | **Gradio app + blog**, 3 models, 26 MB | Demo live | ✅ GO |
 | GitHub stars | — | >500 | Dec 2026 |
 | First paying customer | — | 1 | Mar 2027 |
 
