@@ -138,7 +138,7 @@ pruned). Per-seed disk is now bounded to `(keep_last + 1) × ~3.9 GB` ≈ **12-1
 GB** — the newest checkpoint is all that is needed to resume. Control:
 `--keep-last-checkpoints N` (default 2). Tests: `TestCheckpointPruning` (2 ✅).
 
-**Disk now:** `m2_3_results/` 349 GB → **6.2 GB** (kept `ckpt_step47000` +
+**Disk now:** `results/phase2/m2_3_results/` 349 GB → **6.2 GB** (kept `ckpt_step47000` +
 `ckpt_step47500`); filesystem 458 GB → **116 GB used (13%)**.
 
 ### Prevention going forward (2026-08-07)
@@ -195,14 +195,14 @@ bash scripts/run_m2_3_dqt_moe.sh status      # watch "Disk (WSL fs)" + "Checkpoi
 - `tests/integration/test_m2_3_moe.py` — 12 tests ✅
   (config budget 312M/161M/52%, hybrid layout, router 0.1× group, overfit,
   short training loop, no-dead-expert check, lb_coef=0, perplexity, resume).
-- Results: `m2_3_results/` (JSON + checkpoints).
+- Results: `results/phase2/m2_3_results/` (JSON + checkpoints).
 
 ---
 
 ## Manual start / pause (FULLY MANUAL — nothing automatic)
 
 The user requested manual start/pause control only. Each training process
-writes its PID to `m2_3_results/checkpoints/seed{S}/train.pid`, so a seed can
+writes its PID to `results/phase2/m2_3_results/checkpoints/seed{S}/train.pid`, so a seed can
 be paused precisely:
 
 ```bash
@@ -210,7 +210,7 @@ be paused precisely:
 bash scripts/run_m2_3_dqt_moe.sh full 0.01 42
 
 # PAUSE seed 42 gracefully (finishes the step, saves a checkpoint, exits 130)
-kill -SIGUSR1 $(cat m2_3_results/checkpoints/seed42/train.pid)
+kill -SIGUSR1 $(cat results/phase2/m2_3_results/checkpoints/seed42/train.pid)
 
 # RESUME seed 42 from its latest checkpoint
 bash scripts/run_m2_3_dqt_moe.sh resume 0.01 42
@@ -268,7 +268,7 @@ MoE approaches but doesn't surpass dense at this data budget.
 # GPU must be free of gaming (check nvidia-smi + Windows GPU usage first)
 bash scripts/run_m2_3_dqt_moe.sh smoke     # 12-step smoke
 bash scripts/run_m2_3_dqt_moe.sh full 0.01 42   # START seed 42 (manual)
-kill -SIGUSR1 $(cat m2_3_results/checkpoints/seed42/train.pid)  # PAUSE
+kill -SIGUSR1 $(cat results/phase2/m2_3_results/checkpoints/seed42/train.pid)  # PAUSE
 bash scripts/run_m2_3_dqt_moe.sh resume 0.01 42 # RESUME seed 42
 bash scripts/run_m2_3_dqt_moe.sh status    # progress
 ```

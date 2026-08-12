@@ -58,7 +58,7 @@ MAX_SAMPLES=150000          # reuse the existing M2.1 TinyStories cache
 NUM_WORKERS="${NUM_WORKERS:-0}"  # 0 safest under GPU contention
 CHECKPOINT_EVERY=2000
 
-RESULTS_DIR="m2_4_demo"
+RESULTS_DIR="results/phase2/m2_4_demo"
 LOG_DIR="logs/logs_m2_4"
 ONNX="models/dqt_transformer_demo.onnx"
 PACKED="models/dqt_transformer_demo.ternary"

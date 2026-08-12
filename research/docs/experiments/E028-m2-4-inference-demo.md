@@ -151,7 +151,7 @@ deployment artifact (2-bit packed ternary weights ≈ 11 MB).
 | Final train loss | 2.56 |
 | Final flip rate | 0.0009 (clean deterministic tail) |
 
-(From `m2_4_demo/results_m2_1_dqt_transformer_lr0.01_seed42.json`.)
+(From `results/phase2/m2_4_demo/results_m2_1_dqt_transformer_lr0.01_seed42.json`.)
 
 ---
 
@@ -266,5 +266,5 @@ demo. The deployable model (2-bit packed ternary) is only **~11 MB**.
 - [x] `src/ph_neuro/examples/generate_text.py` (text generation)
 - [x] `scripts/run_m2_4_demo.sh` (train + export + generate)
 - [x] `models/dqt_transformer_demo.onnx` (exported model)
-- [x] `m2_4_demo/` (checkpoint + results)
+- [x] `results/phase2/m2_4_demo/` (checkpoint + results)
 - [x] `research/docs/experiments/E028-m2-4-inference-demo.md` (this report)

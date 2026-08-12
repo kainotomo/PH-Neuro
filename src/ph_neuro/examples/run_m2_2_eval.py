@@ -16,7 +16,7 @@ Usage::
 
     # Use a specific checkpoint:
     .venv/bin/python -m ph_neuro.examples.run_m2_2_eval \\
-        --checkpoint m2_2_results/checkpoints/seed43/ckpt_step7000.pt
+        --checkpoint results/phase2/m2_2_results/checkpoints/seed43/ckpt_step7000.pt
 
     # Generate a continuation from a prompt:
     .venv/bin/python -m ph_neuro.examples.run_m2_2_eval --seed 43 \\
@@ -39,7 +39,7 @@ from ph_neuro.examples.run_m2_2_dqt_wikitext2 import evaluate_perplexity
 from ph_neuro.models.dqt_transformer import M2_2_CONFIG, dqt_gpt2
 from ph_neuro.training.wikitext2 import get_wikitext2_data, make_gpt2_tokenizer
 
-CHECKPOINT_DIR = "m2_2_results/checkpoints"
+CHECKPOINT_DIR = "results/phase2/m2_2_results/checkpoints"
 
 
 def find_final_checkpoint(seed: int) -> str:

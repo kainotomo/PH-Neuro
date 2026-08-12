@@ -178,7 +178,7 @@ Ran via `research/scripts/run_m2_1_supervisor.sh 42 43 44` (sequential, pause/re
 with SIGINT + `--resume auto` — see the pause/resume section). 150K stories,
 lr=0.01, anneal@80%, batch 8, seq 256, **48,708 steps/seed**. Full val ppl
 histories and per-epoch metrics are in the per-seed result JSONs
-(`m2_1_results/results_m2_1_dqt_transformer_lr0.01_seed{42,43,44}.json`).
+(`results/phase2/m2_1_results/results_m2_1_dqt_transformer_lr0.01_seed{42,43,44}.json`).
 
 | Metric | seed 42 | seed 43 | seed 44 | Mean |
 |--------|--------:|--------:|--------:|-----:|
@@ -238,7 +238,7 @@ GPU for a game) and continued later:
 - Progress: `tail -f logs/logs_m2_1/results_m2_1_dqt_transformer_lr0.01_seed42.log`
   (per-epoch Train Loss / Val PPL / Flip / LR lines).
 - GPU memory/contention: `nvidia-smi -l 5` (free VRAM in the `Memory-Usage` column).
-- Final verdict: `m2_1_results/results_m2_1_dqt_transformer_lr0.01_seed42.json`.
+- Final verdict: `results/phase2/m2_1_results/results_m2_1_dqt_transformer_lr0.01_seed42.json`.
 
 **Gaming while training (8 GB RTX 4060):** the FULL run peaks at ~4.8 GB of the
 8 GB. A game holding ~3+ GB risks CUDA OOM — in M1.2 a game holding ~6 GB killed

@@ -1,6 +1,6 @@
 {
   "experiment": "m2_4_generate_text",
-  "checkpoint": "m2_4_demo/checkpoints/seed42/best.pt",
+  "checkpoint": "results/phase2/m2_4_demo/checkpoints/seed42/best.pt",
   "config": {
     "vocab_size": 50257,
     "d_model": 512,

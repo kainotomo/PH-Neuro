@@ -23,7 +23,7 @@
 #   bash scripts/run_m1_5_benchmarks.sh ste_mlp dqt_cnn # a subset
 #
 # Output:
-#   m1_5_results/results_m1_5_{model}.json
+#   results/phase1/m1_5_results/results_m1_5_{model}.json
 #   logs/logs_m1_5/results_m1_5_{model}.log
 #
 # Runs whose result JSON already exists are SKIPPED (safe to re-run).
@@ -46,7 +46,7 @@ if [ ! -x "$PROJECT_ROOT/.venv/bin/python" ]; then
 fi
 cd "$PROJECT_ROOT"
 
-RESULTS_DIR="m1_5_results"
+RESULTS_DIR="results/phase1/m1_5_results"
 LOG_DIR="logs/logs_m1_5"
 mkdir -p "$RESULTS_DIR" "$LOG_DIR"
 

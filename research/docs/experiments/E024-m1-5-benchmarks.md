@@ -85,7 +85,7 @@ logs to `logs/logs_m1_5/`, and **skips runs whose result JSON already
 exists** (safe to re-run). `PYTHONUNBUFFERED=1` for live logs; continues
 past failed runs with per-run FAILED reporting (B2 lesson).
 
-### 3. Results — `m1_5_results/results_m1_5_{model}.json`
+### 3. Results — `results/phase1/m1_5_results/results_m1_5_{model}.json`
 
 One JSON per model with the full measured + theoretical breakdown
 (3 files, listed in [Artifacts](#artifacts)).
@@ -159,7 +159,7 @@ One JSON per model with the full measured + theoretical breakdown
 
 > All numbers are reproducible: `bash scripts/run_m1_5_benchmarks.sh`
 > regenerates the JSON + console GO/NO-GO summary. Results were already
-> saved in `m1_5_results/` (re-running skips them).
+> saved in `results/phase1/m1_5_results/` (re-running skips them).
 
 ---
 
@@ -249,9 +249,9 @@ One JSON per model with the full measured + theoretical breakdown
 - **Benchmark runner**: `src/ph_neuro/examples/run_m1_5_benchmarks.py`
 - **Orchestration**: `scripts/run_m1_5_benchmarks.sh`
 - **Results (JSON)**:
-  - `m1_5_results/results_m1_5_dqt_cnn.json`
-  - `m1_5_results/results_m1_5_dqt_cnn_cifar100.json`
-  - `m1_5_results/results_m1_5_ste_mlp.json`
+  - `results/phase1/m1_5_results/results_m1_5_dqt_cnn.json`
+  - `results/phase1/m1_5_results/results_m1_5_dqt_cnn_cifar100.json`
+  - `results/phase1/m1_5_results/results_m1_5_ste_mlp.json`
 - **Logs**: `logs/logs_m1_5/`
 - **Updated doc**: `docs/benchmarks.md` (measured inference + training memory)
 

@@ -951,17 +951,17 @@ sampling (temperature → top-k → softmax) on CPU; PyTorch and/or ONNX backend
 ```bash
 # PyTorch CPU (smartphone simulation)
 python -m ph_neuro.examples.generate_text \
-    --checkpoint m2_4_demo/checkpoints/seed42/best.pt \
+    --checkpoint results/phase2/m2_4_demo/checkpoints/seed42/best.pt \
     --prompt "Once upon a time" --max-tokens 100 --temperature 0.8 --top-k 50
 
 # ONNX Runtime + PyTorch-vs-ONNX speed comparison
 python -m ph_neuro.examples.generate_text \
-    --checkpoint m2_4_demo/checkpoints/seed42/best.pt \
+    --checkpoint results/phase2/m2_4_demo/checkpoints/seed42/best.pt \
     --onnx models/dqt_transformer_demo.onnx --compare
 
 # Export ONNX from a checkpoint, then generate with it
 python -m ph_neuro.examples.generate_text \
-    --checkpoint m2_4_demo/checkpoints/seed42/best.pt \
+    --checkpoint results/phase2/m2_4_demo/checkpoints/seed42/best.pt \
     --export-onnx models/dqt_transformer_demo.onnx --compare
 ```
 

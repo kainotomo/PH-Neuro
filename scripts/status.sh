@@ -43,11 +43,11 @@ declare -A LABEL=(
     [m2_3]="M2.3 MoE DQT Transformer TinyStories (gate ppl<20)"
 )
 declare -A RESULTS_DIR=(
-    [m1_1]="m1_1_retry_results"
-    [m1_2]="m1_2_retry_results"
-    [m2_1]="m2_1_results"
-    [m2_2]="m2_2_results"
-    [m2_3]="m2_3_results"
+    [m1_1]="results/phase1/m1_1_retry_results"
+    [m1_2]="results/phase1/m1_2_retry_results"
+    [m2_1]="results/phase2/m2_1_results"
+    [m2_2]="results/phase2/m2_2_results"
+    [m2_3]="results/phase2/m2_3_results"
 )
 
 # Milestones whose runner has a rich `status` mode (per-seed detail).

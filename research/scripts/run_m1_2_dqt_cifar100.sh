@@ -17,8 +17,8 @@
 #   bash scripts/run_m1_2_dqt_cifar100.sh full 0.01 42 43 44 # custom seeds
 #
 # Output:
-#   Sweep: m1_2_sweep_results/results_dqt_cifar100_lr{lr}_seed42.json
-#   Full:  m1_2_retry_results/results_dqt_cifar100_lr{lr}_seed{seed}.json
+#   Sweep: results/phase1/m1_2_sweep_results/results_dqt_cifar100_lr{lr}_seed42.json
+#   Full:  results/phase1/m1_2_retry_results/results_dqt_cifar100_lr{lr}_seed{seed}.json
 #   Logs:  logs/logs_m1_2/
 #
 # Runs whose result JSON already exists are SKIPPED, so this script is
@@ -61,8 +61,8 @@ if [ ! -x "$PROJECT_ROOT/.venv/bin/python" ]; then
 fi
 cd "$PROJECT_ROOT"
 
-FULL_RESULTS_DIR="m1_2_retry_results"
-SWEEP_RESULTS_DIR="m1_2_sweep_results"
+FULL_RESULTS_DIR="results/phase1/m1_2_retry_results"
+SWEEP_RESULTS_DIR="results/phase1/m1_2_sweep_results"
 LOG_DIR="logs/logs_m1_2"
 mkdir -p "$FULL_RESULTS_DIR" "$SWEEP_RESULTS_DIR" "$LOG_DIR"
 

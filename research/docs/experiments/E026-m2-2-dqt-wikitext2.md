@@ -154,7 +154,7 @@ bash scripts/run_m2_2_dqt_wikitext2.sh status
 Ran via the `recover` supervisor (detached, sequential seeds 42 → 43 → 44,
 skip-if-exists, SIGUSR1 pause/resume, checkpoint-every 500). ~7,005 steps/seed at
 batch 4. Per-seed results in
-`m2_2_results/results_m2_2_dqt_wikitext2_lr0.01_seed{42,43,44}.json`.
+`results/phase2/m2_2_results/results_m2_2_dqt_wikitext2_lr0.01_seed{42,43,44}.json`.
 
 | Metric | seed 42 | seed 43 | seed 44 | Mean |
 |--------|--------:|--------:|--------:|-----:|

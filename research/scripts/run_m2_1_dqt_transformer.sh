@@ -27,8 +27,8 @@
 #                                                                 (from latest checkpoint)
 #
 # Output:
-#   Results: m2_1_results/results_m2_1_dqt_transformer_lr{lr}_seed{seed}.json
-#   Checkpoints: m2_1_results/checkpoints/  (per-step, if --checkpoint-every)
+#   Results: results/phase2/m2_1_results/results_m2_1_dqt_transformer_lr{lr}_seed{seed}.json
+#   Checkpoints: results/phase2/m2_1_results/checkpoints/  (per-step, if --checkpoint-every)
 #   Logs:    logs/logs_m2_1/
 #
 # Runs whose result JSON already exists are SKIPPED, so re-running is safe.
@@ -69,8 +69,8 @@ if [ ! -x "$PROJECT_ROOT/.venv/bin/python" ]; then
 fi
 cd "$PROJECT_ROOT"
 
-RESULTS_DIR="m2_1_results"
-SMOKE_RESULTS_DIR="m2_1_smoke_results"
+RESULTS_DIR="results/phase2/m2_1_results"
+SMOKE_RESULTS_DIR="results/phase2/m2_1_smoke_results"
 LOG_DIR="logs/logs_m2_1"
 mkdir -p "$RESULTS_DIR" "$SMOKE_RESULTS_DIR" "$LOG_DIR"
 
@@ -240,7 +240,7 @@ case "$MODE" in
     resume)
         gpu_wait 0
         # Pause/resume: continue a seed from its latest checkpoint in
-        # m2_1_results/checkpoints/seed{seed}/ (runner --resume auto).
+        # results/phase2/m2_1_results/checkpoints/seed{seed}/ (runner --resume auto).
         # The result JSON does not exist yet (run was interrupted), so the
         # skip-if-exists guard does not block us.
         BEST_LR="${2:-$DEFAULT_LR}"

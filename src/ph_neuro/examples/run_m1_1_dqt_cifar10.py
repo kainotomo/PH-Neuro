@@ -329,7 +329,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--device", default=None,
                         help="Torch device (default: cuda if available)")
-    parser.add_argument("--output-dir", default="m1_1_results")
+    parser.add_argument("--output-dir", default="results/phase1/m1_1_results")
     parser.add_argument(
         "--checkpoint-dir", default=None,
         help="Directory for best.pt (default: {output_dir}/checkpoints/seed{seed})",

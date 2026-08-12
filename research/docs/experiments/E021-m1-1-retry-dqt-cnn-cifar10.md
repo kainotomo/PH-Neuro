@@ -191,7 +191,7 @@ and the FC capacity trade-off, not by flip jitter alone.
   (+`apply_deterministic_rounding()` on `TernaryDQTConv2d` and `TernaryDQTLinear`)
 - Model: `src/ph_neuro/models/dqt_models.py` (FC head 8192→256→10)
 - Runner: `src/ph_neuro/examples/run_m1_1_dqt_cifar10.py` (annealing logic)
-- Script: `research/scripts/run_m1_1_dqt_cifar10.sh` (→ `m1_1_retry_results/`)
+- Script: `research/scripts/run_m1_1_dqt_cifar10.sh` (→ `results/phase1/m1_1_retry_results/`)
 - Unit tests: `tests/layers/test_ste_dqt.py` (new, 11), `tests/layers/test_ste_dqt_conv.py` (+1)
 - Integration tests: `tests/integration/test_m1_1_dqt_cifar10.py` (+2 annealing tests)
-- Results: `m1_1_retry_results/results_dqt_cifar10_lr0.01_seed{42,43,44}.json`
+- Results: `results/phase1/m1_1_retry_results/results_dqt_cifar10_lr0.01_seed{42,43,44}.json`

@@ -232,7 +232,7 @@ TF Lite comparison is theoretical (no TF Lite installed); PH-Neuro numbers
 are measured (CPU batch=1, ONNX runtime; GPU 1-epoch peak).
 
 **Key deliverables:** `run_m1_5_benchmarks.py` (CLI runner), `run_m1_5_benchmarks.sh`
-(orchestration), `m1_5_results/` (3 JSON), report `E024-m1-5-benchmarks.md`,
+(orchestration), `results/phase1/m1_5_results/` (3 JSON), report `E024-m1-5-benchmarks.md`,
 `docs/benchmarks.md` updated. Reproduce: `bash scripts/run_m1_5_benchmarks.sh`.
 
 ### M1.4 — CLOSED (GO) ✅

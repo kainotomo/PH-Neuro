@@ -30,20 +30,20 @@
 #
 # MANUAL start/pause (FULLY MANUAL — nothing runs or retries on its own):
 #   START  : bash scripts/run_m2_3_dqt_moe.sh full 0.01 42
-#   PAUSE  : kill -SIGUSR1 $(cat m2_3_results/checkpoints/seed42/train.pid)
+#   PAUSE  : kill -SIGUSR1 $(cat results/phase2/m2_3_results/checkpoints/seed42/train.pid)
 #            → graceful checkpointed pause (saves ckpt, exits 130)
 #   RESUME : bash scripts/run_m2_3_dqt_moe.sh resume 0.01 42
 #   STATUS : bash scripts/run_m2_3_dqt_moe.sh status
 #
 # Pause/resume (gaming co-use): each training process writes its PID to
-# m2_3_results/checkpoints/seed{S}/train.pid. Sending SIGUSR1 to it makes the
+# results/phase2/m2_3_results/checkpoints/seed{S}/train.pid. Sending SIGUSR1 to it makes the
 # runner finish the current step, save a checkpoint and exit 130. Later
 # `bash scripts/run_m2_3_dqt_moe.sh resume 0.01 42` continues from the
 # latest checkpoint.
 #
 # Output:
-#   Results: m2_3_results/results_m2_3_dqt_moe_lr{lr}_seed{seed}.json
-#   Checkpoints: m2_3_results/checkpoints/seed{seed}/ckpt_step{N}.pt (+ status.json)
+#   Results: results/phase2/m2_3_results/results_m2_3_dqt_moe_lr{lr}_seed{seed}.json
+#   Checkpoints: results/phase2/m2_3_results/checkpoints/seed{seed}/ckpt_step{N}.pt (+ status.json)
 #   Logs:    logs/logs_m2_3/run_lr{lr}_seed{seed}.log
 #
 # Runs whose result JSON already exists are SKIPPED, so re-running is safe.
@@ -86,8 +86,8 @@ if [ ! -x "$PROJECT_ROOT/.venv/bin/python" ]; then
 fi
 cd "$PROJECT_ROOT"
 
-RESULTS_DIR="m2_3_results"
-SMOKE_RESULTS_DIR="m2_3_smoke_results"
+RESULTS_DIR="results/phase2/m2_3_results"
+SMOKE_RESULTS_DIR="results/phase2/m2_3_smoke_results"
 LOG_DIR="logs/logs_m2_3"
 mkdir -p "$RESULTS_DIR" "$SMOKE_RESULTS_DIR" "$LOG_DIR"
 
@@ -198,7 +198,7 @@ run_one() {
 
     log "▶ MoE DQT Transformer  lr=${lr}  seed=${seed}  ${mode_flags}"
     # Per-seed PID file so the user can pause THIS seed precisely:
-    #   kill -SIGUSR1 $(cat m2_3_results/checkpoints/seed{S}/train.pid)
+    #   kill -SIGUSR1 $(cat results/phase2/m2_3_results/checkpoints/seed{S}/train.pid)
     local seed_ckpt_dir="$RESULTS_DIR/checkpoints/seed${seed}"
     mkdir -p "$seed_ckpt_dir"
     # `if !` so a failed run does NOT abort the script (B2 lesson).
@@ -318,7 +318,7 @@ case "$MODE" in
     resume)
         gpu_wait 0
         # Pause/resume: continue a seed from its latest checkpoint in
-        # m2_3_results/checkpoints/seed{seed}/ (runner --resume auto).
+        # results/phase2/m2_3_results/checkpoints/seed{seed}/ (runner --resume auto).
         BEST_LR="${2:-$DEFAULT_LR}"
         SEED="${3:-42}"
         log "Resume: seed ${SEED} × lr=${BEST_LR} (auto-resume from latest checkpoint)"

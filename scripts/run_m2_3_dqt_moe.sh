@@ -18,7 +18,7 @@
 #
 # MANUAL only — nothing runs or retries on its own:
 #   START  : bash scripts/run_m2_3_dqt_moe.sh full 0.01 42
-#   PAUSE  : kill -SIGUSR1 $(cat m2_3_results/checkpoints/seed42/train.pid)
+#   PAUSE  : kill -SIGUSR1 $(cat results/phase2/m2_3_results/checkpoints/seed42/train.pid)
 #   RESUME : bash scripts/run_m2_3_dqt_moe.sh resume 0.01 42
 # ──────────────────────────────────────────────────────────────────────
 

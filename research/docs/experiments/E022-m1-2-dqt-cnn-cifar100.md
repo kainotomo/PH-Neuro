@@ -123,8 +123,8 @@ epoch_flips += apply_dqt_rounding(model, use_stochastic=use_stochastic)
 - Results saved to `results_dqt_cifar100_lr{lr}_seed{seed}.json`.
 
 **Execution flow (scripts/run_m1_2_dqt_cifar100.sh):**
-1. **LR sweep** — 1 seed (42), lr ∈ {0.01, 0.005, 0.001}, 150 ep each → `m1_2_sweep_results/`.
-2. **Full run** — best LR from the sweep, 3 seeds (42/43/44), 150 ep each → `m1_2_results/`.
+1. **LR sweep** — 1 seed (42), lr ∈ {0.01, 0.005, 0.001}, 150 ep each → `results/phase1/m1_2_sweep_results/`.
+2. **Full run** — best LR from the sweep, 3 seeds (42/43/44), 150 ep each → `results/phase1/m1_2_results/`.
 
 **GO/NO-GO:** mean best test accuracy over 3 seeds > 55% → GO;
 50–55% → MARGINAL (evaluate vs STE 38.2%, try 200 ep / 4-conv);
@@ -289,5 +289,5 @@ saturates at ~54% on CIFAR-100; DQT beats STE by +15.5 pp but cannot reach
 - Runner: `src/ph_neuro/examples/run_m1_2_dqt_cifar100.py` (defaults now 200 ep / patience 40 for M1.2-RETRY; annealing logic reused from M1.1)
 - Script: `scripts/run_m1_2_dqt_cifar100.sh` (→ `research/scripts/run_m1_2_dqt_cifar100.sh`; hardened: `PYTHONUNBUFFERED=1`, `NUM_WORKERS` override, continue-past-failed-runs)
 - Integration tests: `tests/integration/test_m1_2_dqt_cifar100.py` (8 tests, all pass)
-- Results: `m1_2_sweep_results/` (3 JSON ✅), `m1_2_results/` (3 JSON ✅), `m1_2_retry_results/` (3 JSON ✅)
+- Results: `results/phase1/m1_2_sweep_results/` (3 JSON ✅), `results/phase1/m1_2_results/` (3 JSON ✅), `results/phase1/m1_2_retry_results/` (3 JSON ✅)
 - Logs: `logs/logs_m1_2/`

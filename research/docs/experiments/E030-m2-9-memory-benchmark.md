@@ -89,7 +89,7 @@ First DQT model at 1B ternary params on a consumer GPU:
 | Val ppl (20 steps) | 30.21 |
 | Peak GPU memory | **8,042 MB** (98% of 8.2 GB) |
 | NaN / divergence | none |
-| Result JSON | `m2_8_smoke_results/results_m2_1_dqt_transformer_lr0.01_seed42.json` |
+| Result JSON | `results/phase2/m2_8_smoke_results/results_m2_1_dqt_transformer_lr0.01_seed42.json` |
 
 **Caveat:** only ~0.2 GB headroom at 1B. Production 1B training should add
 gradient checkpointing (the M2.1 runner predates it) or shave the config
@@ -123,7 +123,7 @@ tied head).
       --d-model 1536 --n-layers 36 --n-heads 16 --d-ff 6144 \
       --lr 0.01 --epochs 1 --seed 42 --batch-size 4 --seq-len 128 \
       --anneal-fraction 1.0 --synthetic-vocab 64 --synthetic-batches 20 \
-      --dtype bf16 --max-steps 20 --output-dir m2_8_smoke_results
+      --dtype bf16 --max-steps 20 --output-dir results/phase2/m2_8_smoke_results
   ```
 - Report this file: `research/docs/experiments/E030-m2-9-memory-benchmark.md`
 

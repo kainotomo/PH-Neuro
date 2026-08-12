@@ -30,19 +30,19 @@ Usage::
 
     # PyTorch CPU generation
     python -m ph_neuro.examples.generate_text \\
-        --checkpoint m2_4_demo/checkpoints/seed42/best.pt \\
-        --prompt "Once upon a time" \\
+        --checkpoint results/phase2/m2_4_demo/checkpoints/seed42/best.pt \
+        --prompt "Once upon a time" \
         --max-tokens 100 --temperature 0.8 --top-k 50
 
     # ONNX Runtime generation (requires the exported .onnx)
-    python -m ph_neuro.examples.generate_text \\
-        --checkpoint m2_4_demo/checkpoints/seed42/best.pt \\
-        --onnx models/dqt_transformer_demo.onnx \\
+    python -m ph_neuro.examples.generate_text \
+        --checkpoint results/phase2/m2_4_demo/checkpoints/seed42/best.pt \
+        --onnx models/dqt_transformer_demo.onnx \
         --prompt "Once upon a time" --max-tokens 100
 
     # Export ONNX + benchmark both backends
-    python -m ph_neuro.examples.generate_text \\
-        --checkpoint m2_4_demo/checkpoints/seed42/best.pt \\
+    python -m ph_neuro.examples.generate_text \
+        --checkpoint results/phase2/m2_4_demo/checkpoints/seed42/best.pt \
         --export-onnx models/dqt_transformer_demo.onnx --compare
 
 Output:

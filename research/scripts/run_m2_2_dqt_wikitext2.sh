@@ -29,8 +29,8 @@
 # resume 0.01 42` continues from the latest checkpoint.
 #
 # Output:
-#   Results: m2_2_results/results_m2_2_dqt_wikitext2_lr{lr}_seed{seed}.json
-#   Checkpoints: m2_2_results/checkpoints/seed{seed}/ckpt_step{N}.pt (+ status.json)
+#   Results: results/phase2/m2_2_results/results_m2_2_dqt_wikitext2_lr{lr}_seed{seed}.json
+#   Checkpoints: results/phase2/m2_2_results/checkpoints/seed{seed}/ckpt_step{N}.pt (+ status.json)
 #   Logs:    logs/logs_m2_2/run_lr{lr}_seed{seed}.log
 #
 # Runs whose result JSON already exists are SKIPPED, so re-running is safe.
@@ -74,8 +74,8 @@ if [ ! -x "$PROJECT_ROOT/.venv/bin/python" ]; then
 fi
 cd "$PROJECT_ROOT"
 
-RESULTS_DIR="m2_2_results"
-SMOKE_RESULTS_DIR="m2_2_smoke_results"
+RESULTS_DIR="results/phase2/m2_2_results"
+SMOKE_RESULTS_DIR="results/phase2/m2_2_smoke_results"
 LOG_DIR="logs/logs_m2_2"
 mkdir -p "$RESULTS_DIR" "$SMOKE_RESULTS_DIR" "$LOG_DIR"
 
@@ -272,7 +272,7 @@ case "$MODE" in
     resume)
         gpu_wait 0
         # Pause/resume: continue a seed from its latest checkpoint in
-        # m2_2_results/checkpoints/seed{seed}/ (runner --resume auto).
+        # results/phase2/m2_2_results/checkpoints/seed{seed}/ (runner --resume auto).
         # The result JSON does not exist yet (run was interrupted), so the
         # skip-if-exists guard does not block us.
         BEST_LR="${2:-$DEFAULT_LR}"

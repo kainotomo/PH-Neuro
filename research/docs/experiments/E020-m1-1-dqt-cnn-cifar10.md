@@ -264,7 +264,7 @@ the final ~10-15% of training) or adding capacity — not just more epochs.
 | **DQT `dqt_cnn` (lr=0.01, 100 ep)** | **77.94%** | 77.50% | 91 | 2331 s |
 
 DQT wins by **+1.85 pp** on identical architecture/config (seed 42).
-Result: `m1_1_results_ste/results_ste_cifar10_lr0.01_seed42.json`.
+Result: `results/phase1/m1_1_results_ste/results_ste_cifar10_lr0.01_seed42.json`.
 
 ## Artifacts
 
@@ -274,4 +274,4 @@ Result: `m1_1_results_ste/results_ste_cifar10_lr0.01_seed42.json`.
 - Script: `research/scripts/run_m1_1_dqt_cifar10.sh`
 - Unit tests: `tests/layers/test_ste_dqt_conv.py` (16)
 - Integration tests: `tests/integration/test_m1_1_dqt_cifar10.py` (6)
-- Results: `m1_1_results/results_dqt_cifar10_lr0.01_seed{42,43,44}.json`
+- Results: `results/phase1/m1_1_results/results_dqt_cifar10_lr0.01_seed{42,43,44}.json`

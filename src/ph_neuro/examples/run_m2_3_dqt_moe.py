@@ -1089,7 +1089,7 @@ def parse_args() -> argparse.Namespace:
     # Output
     parser.add_argument("--device", default=None,
                         help="Torch device (default: cuda if available)")
-    parser.add_argument("--output-dir", default="m2_3_results")
+    parser.add_argument("--output-dir", default="results/phase2/m2_3_results")
     parser.add_argument("--checkpoint-dir", default=None)
     parser.add_argument("--pid-file", default=None,
                         help="Write this process's PID to a file at startup "

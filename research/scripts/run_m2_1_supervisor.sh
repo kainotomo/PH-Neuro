@@ -31,7 +31,7 @@ done
 cd "$PROJECT_ROOT"
 
 PYTHON=".venv/bin/python"
-RESULTS_DIR="m2_1_results"
+RESULTS_DIR="results/phase2/m2_1_results"
 PID_FILE="${M2_1_PID_FILE:-/tmp/m2_1_train.pid}"
 mkdir -p "logs/logs_m2_1"
 

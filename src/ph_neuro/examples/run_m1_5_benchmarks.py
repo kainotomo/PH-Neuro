@@ -456,7 +456,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--output-dir",
-        default="m1_5_results",
+        default="results/phase1/m1_5_results",
         help="Directory for the result JSON.",
     )
     return parser.parse_args()

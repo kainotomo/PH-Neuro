@@ -25,7 +25,7 @@ cd "$PROJECT_ROOT"
 
 LR="${1:-0.01}"
 SEEDS=(42 43 44)
-RESULTS_DIR="m2_2_results"
+RESULTS_DIR="results/phase2/m2_2_results"
 
 log() { echo "[$(date '+%H:%M:%S')] $*"; }
 

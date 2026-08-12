@@ -7,7 +7,7 @@
 #
 # Retry: annealing stochastic->deterministic sign (last 15%), smaller FC
 # head (8192->256->10), 3 seeds (42/43/44), lr=0.01, 100 ep.
-# Results go to m1_1_retry_results/.
+# Results go to results/phase1/m1_1_retry_results/.
 #
 # Usage:
 #   bash scripts/run_m1_1_dqt_cifar10.sh                    # 3 seeds, lr=0.01

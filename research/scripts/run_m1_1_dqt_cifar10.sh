@@ -15,13 +15,13 @@
 #   bash scripts/run_m1_1_dqt_cifar10.sh 42 43 44           # custom seeds
 #
 # Output:
-#   JSON files: m1_1_retry_results/results_dqt_cifar10_lr{lr}_seed{seed}.json
+#   JSON files: results/phase1/m1_1_retry_results/results_dqt_cifar10_lr{lr}_seed{seed}.json
 #   Log files:  logs/m1_1_retry/  (gitignored)
 #
 # STE baseline (same architecture, for comparison) — run manually:
 #   .venv/bin/python -m ph_neuro.examples.run_m1_1_dqt_cifar10 \
 #       --lr 0.01 --epochs 100 --seed 42 --batch-size 128 \
-#       --output-dir m1_1_retry_results
+#       --output-dir results/phase1/m1_1_retry_results
 #
 # Runs whose result JSON already exists are SKIPPED, so this script is
 # safe to re-run.
@@ -61,7 +61,7 @@ if [ ! -x "$PROJECT_ROOT/.venv/bin/python" ]; then
 fi
 cd "$PROJECT_ROOT"
 
-RESULTS_DIR="m1_1_retry_results"
+RESULTS_DIR="results/phase1/m1_1_retry_results"
 LOG_DIR="logs/m1_1_retry"
 mkdir -p "$RESULTS_DIR" "$LOG_DIR"
 

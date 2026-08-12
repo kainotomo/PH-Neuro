@@ -76,12 +76,14 @@ env/
 # 250M/1B transformer checkpoint is 1.8–3.8 GB (> GitHub's 100 MB limit).
 **/checkpoints/
 *.ckpt
+# No .pt files should ever be committed (checkpoints or result tensors).
+*.pt
 # B2 QLoRA adapter checkpoints (regenerable via `bash scripts/run_b2_qlora.sh`)
 research/b2_results/lora/
 
 # M2.4 on-device demo — large reproducible artifacts
 # (regenerate with `bash scripts/run_m2_4_demo.sh`; keep the result JSONs)
-m2_4_demo/checkpoints/
+results/phase2/m2_4_demo/checkpoints/
 models/dqt_transformer_demo.onnx
 models/dqt_transformer_demo.ternary
 
