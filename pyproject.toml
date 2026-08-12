@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ph-neuro"
 version = "0.1.0.dev0"
-description = "Ternary Hebbian deep learning — no backpropagation"
+description = "Brain-like continual learning — wrap pre-trained models with local plasticity, no backpropagation"
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [
@@ -13,8 +13,9 @@ authors = [
 ]
 requires-python = ">=3.10"
 keywords = [
-    "hebbian", "ternary", "deep-learning", "backprop-free",
-    "neural-networks", "research",
+    "hebbian", "ternary", "continual-learning", "brain-inspired",
+    "local-plasticity", "backprop-free", "deep-learning",
+    "neural-networks", "research", "on-device",
 ]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",

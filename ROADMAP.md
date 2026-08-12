@@ -1,7 +1,7 @@
 # PH-Neuro — Product Roadmap
 
-> **Last updated:** 2026-08-11
-> **Status:** Phase 2 — **M2.1–M2.9 closed ✅** → **Phase 3: MVP (next)**
+> **Last updated:** 2026-08-12
+> **Status:** Infrastructure (Phases 0–2.5) COMPLETE ✅ → **Brain Phase 0: Foundation Research (in progress)**
 
 ---
 
@@ -133,71 +133,94 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 
 ---
 
-## Phase 3: MVP & First Customers (Dec 2026–Feb 2027)
+# 🧠 PH-Neuro Brain — The Real Product
 
-**Goal:** Working product + paying customer.
+> The infrastructure above (Phases 0–2.5) is the **pre-training toolkit** —
+> it builds efficient "born networks." The product is what comes next.
 
-| Milestone | Target | Priority |
-|:----------|:------:|:--------:|
-| **M3.1** SDK v0.1 | Python package: `pip install ph-neuro` | 🔴 Critical |
-| **M3.2** 2 reference models | Vision classifier + Text chat | 🔴 Critical |
-| **M3.3** Documentation site | Tutorials, API reference, benchmarks | 🟡 High |
-| **M3.4** First paying customer | Pilot project or license | 🔴 Critical |
-| **M3.5** Startup incorporation | Cyprus LLC, bank account, legal | 🟡 High |
+## Brain Phase 0: Foundation Research (Aug 2026) 🔬 IN PROGRESS
 
----
+**Goal:** Answer every open question before writing a single line of new code.
+**Rule:** Investigate → Decide → Implement. No implementation before investigation is documented.
 
-## Phase 4: Scale (Mar–Aug 2027)
+| Step | What | Question It Answers | Status |
+|:----:|:-----|:--------------------|:------:|
+| **0.1** | Model Selection | Which pre-trained model is the best "born brain"? Survey GPT-2, SmolLM2, TinyLlama, Qwen2.5, Phi-3, Gemma-2, MobileLLM, OPT, Pythia. | 🔬 |
+| **0.2** | Plasticity Mechanism Survey | Which local learning rule could work on a frozen backbone? Catalog Hebbian, Oja, BCM, STDP, 3-factor, predictive coding, target propagation, Forward-Forward, Equilibrium Propagation. | ⬜ |
+| **0.3** | Surprise Signal Design | What tells the brain "learn now"? Survey prediction error, Bayesian surprise, information content, novelty, uncertainty, free energy. | ⬜ |
+| **0.4** | Architecture Design | How does the Brain Wrapper hook into any HuggingFace model? Forward hooks, monkey-patching, custom wrapper. Design the public API. | ⬜ |
+| **0.5** | Evaluation Protocol | What does success look like? Domain adaptation ppl, forgetting resistance, forward/backward transfer. Baselines: frozen, random plastic, full fine-tune, LoRA. | ⬜ |
 
-**Goal:** Funding, team, production scale.
-
-| Milestone | Target |
-|:----------|:------|
-| **M4.1** Pre-seed funding | €50K–200K (EU grants, angels) |
-| **M4.2** Hire 1–2 engineers | ML + Systems |
-| **M4.3** 10B MoE model training | Cloud GPU cluster |
-| **M4.4** Enterprise pilots | 3–5 paying customers |
-| **M4.5** Publish results | arXiv + conference |
+**Deliverables:** `docs/brain/00-model-selection.md` through `docs/brain/04-evaluation-protocol.md`
 
 ---
 
-## Phase 5: Commercial Platform (2027+)
+## Brain Phase 1: Proof of Concept — Vector Bias Plasticity
 
-**Goal:** Sustainable business.
+**Goal:** The simplest possible experiment that tests the core hypothesis.
+**Hypothesis:** Local surprise-modulated Hebbian updates on a frozen pre-trained backbone can produce measurable domain adaptation without catastrophic forgetting.
 
-- Self-serve SDK for custom on-device models
-- Enterprise tier with SLAs
-- Target: 50+ customers, €1M+ ARR
-- Exit: acquisition by edge AI platform or cloud provider
+| Step | What | Key Question | Status |
+|:----:|:-----|:-------------|:------:|
+| **1.1** | Minimal Viable Experiment | Frozen GPT-2 + vector bias per transformer block + surprise-modulated Hebbian. WikiText-2 → PubMed, 10K tokens. Does ppl improve? | ⬜ |
+| **1.2** | Ablation Experiments | 2×2×2 grid: surprise vs constant LR, Hebbian vs random update, decay vs no decay. Which components are necessary? | ⬜ |
+| **1.3** | Architectural Generalization | Repeat on SmolLM2-135M (LLaMA-style, RoPE, SwiGLU). Does the method transfer across architectures? | ⬜ |
+
+**Go/No-go gate (1.1):** Any measurable perplexity improvement on target domain over frozen baseline, with <1% degradation on source domain.
+
+---
+
+## Brain Phase 2: Scaling Plasticity Capacity
+
+**Goal:** Move from vector biases to richer plastic representations. Demonstrate that more capacity → better adaptation without forgetting.
+
+| Step | What | Key Question | Status |
+|:----:|:-----|:-------------|:------:|
+| **2.1** | Low-Rank Plastic Matrices | LoRA-style BA^T updated via local (non-backprop) Hebbian rules. Does rank>1 help more than vector bias? | ⬜ |
+| **2.2** | Ternary Plastic Weights | Convert plastic weights from float to {-1, 0, +1} using existing DQT/hysteresis infrastructure. Does ternary match float adaptation quality? | ⬜ |
+| **2.3** | Consolidation Mechanism | Sleep-inspired memory transfer: important plastic changes move to long-term store with slower decay. Does this reduce forgetting across sequential domains? | ⬜ |
+
+---
+
+## Brain Phase 3: Continual Learning at Scale
+
+**Goal:** Demonstrate that Brain Wrapper enables a single model to continually adapt across many domains — a capability no existing system has.
+
+| Step | What | Key Question | Status |
+|:----:|:-----|:-------------|:------:|
+| **3.1** | Multi-Domain Sequential Adaptation | 5–10 diverse text domains in sequence. Does the model improve on ALL domains over frozen baseline? | ⬜ |
+| **3.2** | Scaling Laws | How does adaptation improvement scale with model size (124M → 355M → 1.1B)? With plastic capacity (0.01% → 5% of params)? | ⬜ |
+| **3.3** | Beyond Language: Vision | Apply Brain Wrapper to ViT/DINOv2. Class-incremental learning on CIFAR-100. Is this a general principle, not just a language trick? | ⬜ |
 
 ---
 
 ## Current Focus (August 2026)
 
-> **Phase 2.5: Memory Optimization Sprint 🚧** — Breaking the 300M VRAM ceiling.
-> Target: scale DQT training to **1B+ ternary params** on the same RTX 4060.
+> **Brain Phase 0.1: Model Selection** — Investigating which open-source
+> pre-trained model is the best candidate for the first Brain Wrapper
+> experiment. Surveying GPT-2, SmolLM2, TinyLlama, and others across
+> architecture type, parameter count, disk/memory footprint, perplexity,
+> license, and ease of activation interception.
 
-### Why
+### Why This Direction
 
-The 8 GB VRAM ceiling is the #1 blocker for PH-Neuro. We've validated DQT at
-100M–250M (Phase 2), but to build a competitive LLM we need more parameters.
-Newly identified techniques (8-bit AdamW, bf16, Flash Attention) can deliver
-**5× the current ceiling (300M → 1.5B) without rewriting the DQT autograd.**
+After 19 Hebbian experiments and a complete DQT training pipeline, we
+concluded that (a) local Hebbian rules cannot train deep networks from
+scratch (~88% MNIST ceiling, proven), and (b) DQT is excellent model
+compression but is still backprop-based — it doesn't achieve brain-like
+learning.
 
-### Phase 2 — COMPLETE ✅
+The breakthrough insight: **the brain is not trained from scratch.** It's
+born pre-wired (evolution = pre-training) and learns through local
+plasticity. We can replicate this: take any open-source pre-trained model
+(the "born brain") and add local Hebbian/neuromodulated plasticity for
+lifetime learning. No backprop through frozen layers. No forgetting.
 
-> **M2.1–M2.5 all closed**. Phase 1+2 = 10/10 milestones delivered.
+### Infrastructure Status
 
-### M1.5 — CLOSED (GO) ✅
-
-**Goal achieved:** Memory benchmarks vs TF Lite — **4× smaller, 2× faster**.
-PH-Neuro ternary models are **exactly 4× smaller than TF Lite INT8** (2-bit
-vs 8-bit), and DQT training uses **4.5× less GPU memory** than STE.
-
-| Model | Packed (2-bit) | TF Lite INT8 (theor.) | Ratio | PH-Neuro inference (ONNX) |
-|:------|:--------------:|:--------------------:|:-----:|:-------------------------:|
-| ste_mlp (MNIST) | 130.6 KB | 0.51 MB | **4.00×** | 0.019 ms |
-| dqt_cnn (CIFAR-10) | 1.02 MB | 4.08 MB | **4.00×** | 0.203 ms |
+> ✅ Phase 0–2.5 COMPLETE. DQT training, ternary weights, MoE, memory
+> optimization, 1B-param ceiling — all ready to build the born networks
+> that Brain Wrapper will use.
 | dqt_cnn_cifar100 (CIFAR-100) | 614.9 KB | 2.40 MB | **4.00×** | 0.227 ms |
 
 | Method | dqt_cnn | dqt_cnn_cifar100 |

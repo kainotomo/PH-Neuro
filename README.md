@@ -1,6 +1,39 @@
-# PH-Neuro — Tiny Ternary AI
+# PH-Neuro — Brain-Like Continual Learning
 
-> **The smallest deep learning models in the world. 2-bit weights. Train on one GPU. Run on a phone.**
+> **Give any AI model a brain. Wrap a pre-trained model with local plasticity. It learns from experience without backpropagation or forgetting.**
+
+---
+
+## 🧠 PH-Neuro Brain (New — In Research)
+
+**The problem:** Every AI model is static. You train once, ship it, and it
+never learns again. Fine-tuning with backprop causes catastrophic forgetting.
+
+**The insight:** The brain is not trained from scratch — it's born pre-wired
+and learns through local synaptic plasticity. Evolution is pre-training;
+lifetime learning is local Hebbian updates. No global backprop. No forgetting.
+
+**Our approach:** Take any open-source pre-trained model (GPT-2, SmolLM,
+Llama, ViT), freeze it, and inject tiny ternary plastic weights at each
+layer. These plastic weights update via local, brain-like rules:
+
+- **Surprise-modulated Hebbian plasticity** — unexpected inputs drive stronger learning
+- **Natural decay** — unimportant changes fade over time
+- **Memory consolidation** — important changes transfer to long-term storage
+- **No backprop through frozen layers** — each layer learns from locally available signals only
+
+**Status:** 🔬 Phase 0 — Foundation Research (Aug 2026). Investigating model
+selection, plasticity mechanisms, surprise signals, and architecture design.
+See [ROADMAP.md](ROADMAP.md) for the full 13-step plan.
+
+Read the investigation docs: [`docs/brain/`](docs/brain/)
+
+---
+
+## 📦 Pre-Training Toolkit (Infrastructure — Complete ✅)
+
+> The sections below describe the infrastructure that builds efficient
+> "born networks" for Brain Wrapper. All phases complete.
 
 Weights are **{-1, 0, +1}** (2 bits, 4 per byte). Train without latent float
 scores (**DQT**) — 4.5× less training memory than BitNet. Sparse activation
@@ -11,7 +44,7 @@ as a **1 MB** file.
 
 ---
 
-## 🔥 Latest Results (August 2026)
+## 🔥 Infrastructure Results (Phases 1–2.5, Complete)
 
 | Milestone | Result | Status | Details |
 |:----------|:-------|:------:|:--------|
@@ -24,11 +57,9 @@ as a **1 MB** file.
 | **M2.7** — Flash Attention / SDPA | Transformer attention, tests pass | ✅ DONE | [ROADMAP §2.5](ROADMAP.md) |
 | **M2.8** — 1B DQT Transformer | **1.02B ternary, stable, 8.04 GB peak** | ✅ GO | [E030](research/docs/experiments/E030-m2-9-memory-benchmark.md) |
 
-**Phase 2 COMPLETE ✅** — 5/5 gate milestones closed. **Phase 2.5 (Memory
-Optimization Sprint) COMPLETE ✅** — 8-bit AdamW + bf16 + Flash Attention
-cut training memory ~22–31% (253M: 6.5 → 5.0 GB) and scaled DQT to the
-first **1B-param model on an RTX 4060 8 GB** (8.04 GB peak) — 3.4× the old
-300M ceiling, zero DQT-autograd changes.
+All infrastructure milestones complete. 8-bit AdamW + bf16 + Flash Attention
+cut training memory ~22–31% and scaled DQT to the first **1B-param model on
+an RTX 4060 8 GB** (8.04 GB peak).
 
 ---
 
@@ -91,6 +122,14 @@ Launch blog post: [docs/blog.md](docs/blog.md).
 ---
 
 ## 🧠 Core Technology
+
+### The Product: Brain Wrapper 🔬
+
+| Pillar | What it does | Status | Metric |
+|:-------|:-------------|:------:|:-------|
+| **Brain Wrapper** | Local plasticity on frozen pre-trained models | 🔬 Research | Continual adaptation, zero forgetting |
+
+### The Pre-Training Toolkit (Infrastructure)
 
 | Pillar | What it does | Status | Metric |
 |:-------|:-------------|:------:|:-------|
@@ -191,13 +230,15 @@ latent scores (the current production path).
 
 ## 🗺️ Roadmap
 
-| Phase | Milestone | Status |
-|:------|:----------|:------:|
-| 0 | Research foundation (19 experiments) | ✅ Closed |
-| 1 | Production DQT (M1.1–M1.5) | ✅ Closed |
-| 2 | Tiny Transformer (M2.1–M2.5) | ✅ Closed |
-| **2.5** | **Memory Optimization Sprint (8-bit Adam + bf16 → 1B+)** | ✅ **Complete** |
-| 3 | MVP & first customers — `pip install ph-neuro` | ⬜ |
+| Phase | What | Status |
+|:------|:-----|:------:|
+| 0–2.5 | Infrastructure: Hebbian research, DQT, MoE, ternary, memory optimization | ✅ Complete |
+| **Brain 0** | **Foundation Research — model selection, plasticity survey, architecture design** | 🔬 **In Progress** |
+| Brain 1 | Proof of Concept — GPT-2 + vector bias plasticity | ⬜ |
+| Brain 2 | Scaling — low-rank + ternary plastic weights, consolidation | ⬜ |
+| Brain 3 | Continual Learning at Scale — multi-domain, scaling laws, vision | ⬜ |
+
+See [ROADMAP.md](ROADMAP.md) for the full 13-step plan.
 | 4 | Scale — pre-seed, 10B MoE model | ⬜ |
 | 5 | Commercial platform | ⬜ |
 

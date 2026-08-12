@@ -1,35 +1,46 @@
 # PH-Neuro — Goals & Vision
 
-> **The smallest useful AI models in the world.**
-> Last updated: 2026-08-11
+> **Give any AI model a brain. Continual learning without backpropagation. No forgetting.**
+> Last updated: 2026-08-12
 
 ---
 
 ## Vision
 
-**Democratize AI by making deep learning models so small they run anywhere.**
+**AI that learns like a brain — born with innate knowledge, adapts throughout life, never forgets.**
 
-Every device — phone, watch, sensor, drone — should be able to run and train its own AI. No cloud. No data center. No compromise on privacy.
+Every AI model today is a static snapshot. You train it once, ship it, and it never learns again. Fine-tuning requires backpropagation through the entire model and causes catastrophic forgetting of previous knowledge. This is not how intelligence works.
+
+The brain is born pre-wired (evolution's pre-training) and learns continuously through local synaptic plasticity — no global backpropagation, no catastrophic forgetting. PH-Neuro Brain brings this paradigm to deep learning: wrap any pre-trained open-source model with local plasticity, and it continues learning from experience without forgetting what it already knows.
 
 ---
 
 ## Mission
 
-Build the most memory-efficient deep learning framework that:
+Build a **brain-like continual learning platform** where:
 
-1. **Trains on a single consumer GPU** — no data center required
-2. **Runs on edge devices** — smartphones, microcontrollers, wearables
-3. **Learns continuously** — adapts to new data without forgetting (QLoRA)
-4. **Uses ternary weights** — {-1, 0, +1}, 2 bits/weight, popcount math
+1. **Any pre-trained model becomes a "born brain"** — GPT-2, SmolLM, Llama, ViT, or your own
+2. **Learning is local, not global** — no backpropagation through frozen layers, only local Hebbian/neuromodulated updates
+3. **No catastrophic forgetting** — plastic weights adapt to new domains while structural weights preserve original knowledge
+4. **Runs on-device** — ternary plastic weights (2-bit), popcount math, single GPU or CPU
+5. **Biologically grounded** — surprise-modulated plasticity, memory consolidation, natural decay
 
 ---
 
-## Core Technology (3 Pillars)
+## Core Technology
+
+### The Product: Brain Wrapper
+
+| Pillar | What | Status | Key Metric |
+|:-------|:-----|:------:|:-----------|
+| **Brain Wrapper** | Local plasticity on frozen pre-trained models | 🔬 Research | Continual adaptation, zero forgetting |
+
+### The Pre-Training Toolkit (Infrastructure)
 
 | Pillar | What | Status | Key Metric |
 |:-------|:-----|:------:|:-----------|
 | **DQT** | Train ternary weights without latent float scores | ✅ Proven | 98.2% MNIST, 4.5× less training memory |
-| **MoE** | Sparse activation — only 50% params active | ✅ Proven | +2.5pp accuracy vs dense |
+| **MoE** | Sparse activation — only top_k/n experts run | ✅ Proven | +2.5pp accuracy vs dense |
 | **Ternary** | {-1, 0, +1} weights, 2 bits/weight | ✅ Proven | 8× smaller than FP16 |
 
 Combined target: **1B parameters → 200MB on disk → runs on a phone.**
@@ -38,36 +49,53 @@ Combined target: **1B parameters → 200MB on disk → runs on a phone.**
 
 ## Target Product
 
-### Phase 1: Tiny Vision (6 months)
-- Image classifier: 100MB, >80% CIFAR-10, runs on Raspberry Pi
-- Object detector: person/face detection for security cameras
-- Target customers: IoT manufacturers, security companies
+### Brain Wrapper — The Real Product
 
-### Phase 2: Tiny LLM (12 months)
-- Language model: 1B params, 200MB, perplexity <30
-- Chat/assistant that runs entirely on-device
-- Target customers: mobile app developers, privacy-focused companies
+A Python library that wraps any HuggingFace model and gives it a brain:
 
-### Phase 3: Platform (18-24 months)
-- SDK for custom on-device models
-- Training pipeline for non-ML engineers
-- Target: any company that needs AI on edge devices
+```
+model = AutoModelForCausalLM.from_pretrained("gpt2")
+brain = BrainWrapper(model, plasticity="ternary_hebbian")
+brain.learn(new_experiences)       # local updates, no backprop
+brain.generate(prompt)             # inference with plastic weights
+brain.consolidate()                # sleep-like memory transfer
+```
+
+- **Input:** Any pre-trained open-source model (GPT-2, SmolLM, Llama, ViT, etc.)
+- **Output:** The same model, but now it continues learning from experience
+- **Mechanism:** Local Hebbian/neuromodulated plasticity injected at each layer
+- **Memory:** Plastic weights are ternary {-1, 0, +1}, 2-bit, ~0.1–1% of model size
+- **Hardware:** Runs on the same device as the frozen model — no extra GPU needed
+
+### Use Cases
+
+- **Personal AI assistants** that learn your writing style, preferences, and knowledge over time — without sending your data to the cloud
+- **Edge devices** that adapt to their environment (cameras, sensors, robots)
+- **Privacy-first applications** where models must learn on-device and never share data
+- **Scientific models** that stay current with new research without full retraining
 
 ---
 
 ## Competitive Advantage
 
-| | TensorFlow Lite | ONNX Runtime | BitNet | **PH-Neuro** |
-|:--|:---------------:|:------------:|:------:|:------------:|
-| Weight size | 8-bit | 8-bit | 2-bit | **2-bit** |
-| Training memory | High | High | High (latent scores) | **4.5× lower (DQT)** |
-| Sparse activation | ❌ | ❌ | ❌ | **✅ MoE** |
-| On-device training | ❌ | ❌ | ❌ | **✅ QLoRA** |
+| | Fine-tuning | LoRA | EWC | **PH-Neuro Brain** |
+|:--|:-----------:|:----:|:---:|:------------------:|
+| Continual learning | ❌ Forgets | ❌ Adapter per task | ⚠️ Limited | **✅ By design** |
+| Local updates (no backprop) | ❌ | ❌ | ❌ | **✅ Hebbian/neuromodulated** |
+| Works with any pre-trained model | ✅ | ✅ | ✅ | **✅** |
+| Biological plausibility | ❌ | ❌ | ❌ | **✅ Surprise, consolidation, decay** |
+| On-device | ❌ | ⚠️ | ⚠️ | **✅ Ternary plastic weights (2-bit)** |
+| No forgetting of original knowledge | ❌ | ✅ (frozen) | ⚠️ | **✅ Structural weights frozen** |
 | Open source | ✅ | ✅ | ✅ | ✅ |
 
 ---
 
-## Success Metrics (Phase 1) — COMPLETE ✅
+## Infrastructure Milestones — COMPLETE ✅
+
+These are the pre-training toolkit milestones. All completed. They enable
+building efficient "born networks" — but they are NOT the product.
+
+### Phase 1 (Vision DQT)
 
 | Metric | Result | Target | Status |
 |:-------|:------:|:------:|:------:|
@@ -76,7 +104,8 @@ Combined target: **1B parameters → 200MB on disk → runs on a phone.**
 | Model export ONNX | **<17 MB** (all models) | <100MB | ✅ GO |
 | Production docs | **README + API + quickstart** | Complete | ✅ GO |
 | Memory vs TF Lite | **4.00× smaller, 2× faster** | 4× / 2× | ✅ GO |
-### Phase 2 — COMPLETE ✅
+
+### Phase 2 (Transformer DQT)
 
 | Metric | Result | Target | Status |
 |:-------|:------:|:------:|:------:|
@@ -85,40 +114,53 @@ Combined target: **1B parameters → 200MB on disk → runs on a phone.**
 | MoE DQT Transformer | **14.08 ppl** | <20 ppl | ✅ GO |
 | On-device demo | **21-25 tok/s CPU** | Token generation | ✅ GO |
 | Public launch | **Gradio app + blog**, 3 models, 26 MB | Demo live | ✅ GO |
-| GitHub stars | — | >500 | Dec 2026 |
-| First paying customer | — | 1 | Mar 2027 |
 
-> **Memory budget lesson (Aug 2026):** DQT training = ~13 bytes/param (fp32).
-> RTX 4060 8 GB → max ~300M ternary params. Original 500M/1B targets were
-> aspirational — now adjusted to measured constraints.
->
-> **Phase 2.5 Memory Sprint (Aug 2026) — ✅ COMPLETE:** 8-bit AdamW + bf16
-> weight_float + Flash Attention shipped with **zero DQT-autograd changes**.
-> Measured: M2.2 (253M) peak **5.03 GB** (batch 4) / **5.23 GB** (batch 8) vs
-> ~6.5 GB baseline; a **1.02B-param DQT transformer now trains stably on the
-> 8 GB GPU** (peak 8.04 GB). The ~13 → ~5 B/param budget delivers the
-> **1B+ ceiling** — a **3.4× increase** over the pre-sprint 300M max (batch 8
-> now the default). See [ROADMAP.md § Phase 2.5](ROADMAP.md) and
+### Phase 2.5 (Memory Sprint)
+
+| Metric | Result | Target | Status |
+|:-------|:------:|:------:|:------:|
+| 8-bit AdamW + bf16 | All scripts converted, MNIST smoke OK | — | ✅ DONE |
+| Flash Attention / SDPA | Transformer attention, tests pass | — | ✅ DONE |
+| 1B-param DQT Transformer | **1.02B ternary, stable, 8.04 GB peak** | — | ✅ GO |
+| Memory benchmark | M2.2 −22/−31%, 1B fits in 8.04 GB | — | ✅ DONE |
+
+> DQT training budget: **~5 bytes/param** (8-bit AdamW + bf16).
+> **1B+ ternary params train stably on RTX 4060 8 GB.** This is the
+> pre-training toolkit that builds the "born networks" for Brain Wrapper.
+> See [ROADMAP.md § Phase 2.5](ROADMAP.md) and
 > [E030](research/docs/experiments/E030-m2-9-memory-benchmark.md).
+
+---
+
+## Brain Milestones — THE PRODUCT
+
+| Phase | Milestone | Target | Status |
+|:------|:----------|:------|:------:|
+| **0** | Foundation Research | Model selection, plasticity survey, architecture design | 🔬 In progress |
+| **1** | Proof of Concept | GPT-2 + vector bias plasticity, WikiText-2 → PubMed adaptation | ⬜ |
+| **2** | Scaling Plasticity | Low-rank + ternary plastic weights, consolidation mechanism | ⬜ |
+| **3** | Continual Learning at Scale | Multi-domain adaptation, scaling laws, vision extension | ⬜ |
+
+See [ROADMAP.md](ROADMAP.md) for the full 13-step plan.
 
 ---
 
 ## Non-Goals (What We Are NOT)
 
-- ❌ NOT an LLM company (we're infrastructure, not models)
-- ❌ NOT competing with OpenAI/DeepSeek on scale
-- ❌ NOT selling training services
-- ❌ NOT targeting data centers (we're edge-first)
-- ❌ NOT a research lab anymore (product-first from Aug 2026)
+- ❌ NOT an LLM company (we don't train models from scratch — we wrap existing ones)
+- ❌ NOT competing with OpenAI/DeepSeek/Meta on model quality
+- ❌ NOT a model compression framework (that's infrastructure, not the product)
+- ❌ NOT selling training services or cloud compute
+- ❌ NOT a research lab — we're building a product, grounded in science
 
 ---
 
 ## Funding Strategy
 
-1. **Bootstrap Phase 1** (€0 — using existing RTX 4060)
-2. **Cloud for Phase 2** (~€2,000 — personal investment)
+1. **Bootstrap Phase 0–1** (€0 — using existing RTX 4060, open-source models are free)
+2. **Public demo after Phase 1** (GPT-2 + Brain Wrapper, self-hosted)
 3. **Pre-seed after Phase 2 demo** (€50K–200K from EU/Cyprus startup grants or angels)
-4. **Seed after Phase 3 MVP** (€500K–2M for team + compute)
+4. **Seed after Phase 3 validation** (€500K–2M for team + compute)
 
 ---
 
@@ -126,4 +168,5 @@ Combined target: **1B parameters → 200MB on disk → runs on a phone.**
 
 - Research archive: [`research/`](research/)
 - Product roadmap: [`ROADMAP.md`](ROADMAP.md)
+- Brain investigation docs: [`docs/brain/`](docs/brain/)
 - Original research summary: [`research/docs/RESEARCH_SUMMARY.md`](research/docs/RESEARCH_SUMMARY.md)
