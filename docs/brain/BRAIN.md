@@ -35,9 +35,9 @@ Our 19 Hebbian experiments (E001–E019, see [`research/docs/RESEARCH_SUMMARY.md
 ### Phase 1: Proof of Concept
 | Step | Document | Question |
 |:----:|:---------|:---------|
-| 1.1 | [Minimal Viable Experiment](05-e031-minimal-viable.md) | Frozen GPT-2 + vector bias + surprise-modulated Hebbian. Does it work? |
+| 1.1 | [Minimal Viable Experiment](05-e031-minimal-viable.md) | Frozen [user-selected model] + vector bias + surprise-modulated Hebbian. Does it work? |
 | 1.2 | [Ablation Experiments](06-e032-ablation.md) | Which components are necessary? |
-| 1.3 | [Architectural Generalization](07-e033-generalization.md) | Does it work on SmolLM2 (different architecture)? |
+| 1.3 | [Architectural Generalization](07-e033-generalization.md) | Does it work on a different architecture (e.g. LLaMA-style)? |
 
 ### Phase 2: Scaling Plasticity
 | Step | Document | Question |
@@ -59,7 +59,7 @@ Our 19 Hebbian experiments (E001–E019, see [`research/docs/RESEARCH_SUMMARY.md
 
 1. **No backprop through frozen layers.** Each layer's plastic weights update from locally available information only: pre-activation, post-activation, and a global surprise/modulator signal.
 
-2. **Plastic weights are tiny.** Target: 0.1–1% of model parameters. A 124M GPT-2 should need at most ~1.2M plastic parameters. With ternary (2-bit) storage, that's ~300 KB.
+2. **Plastic weights are tiny.** Target: 0.1–1% of model parameters. For a ~124M-parameter model that is at most ~1.2M plastic parameters; with ternary (2-bit) storage, ~300 KB.
 
 3. **Forgetting is a feature, not a bug.** Plastic weights decay toward zero. Only surprising, repeated, or important experiences persist. This is biologically accurate — most things we experience are forgotten.
 
