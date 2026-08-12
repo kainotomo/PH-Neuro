@@ -1,7 +1,7 @@
 # PH-Neuro — Product Roadmap
 
 > **Last updated:** 2026-08-12
-> **Status:** Infrastructure (Phases 0–2.5) COMPLETE ✅ → **Brain Phase 0: Foundation Research (in progress)**
+> **Status:** Infrastructure (Phases 0–2.5) COMPLETE ✅ → **Brain Phase 0: Foundation Research COMPLETE ✅ → Brain Phase 1.1: Minimal Viable Experiment (next)**
 
 ---
 
@@ -138,10 +138,11 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 > The infrastructure above (Phases 0–2.5) is the **pre-training toolkit** —
 > it builds efficient "born networks." The product is what comes next.
 
-## Brain Phase 0: Foundation Research (Aug 2026) 🔬 IN PROGRESS
+## Brain Phase 0: Foundation Research (Aug 2026) ✅ COMPLETE
 
 **Goal:** Answer every open question before writing a single line of new code.
 **Rule:** Investigate → Decide → Implement. No implementation before investigation is documented.
+**Status (2026-08-12):** All 5 foundation steps closed. Evaluation protocol LOCKED. Phase 1.1 implementation is next.
 
 | Step | What | Question It Answers | Status |
 |:----:|:-----|:--------------------|:------:|
@@ -149,7 +150,7 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 | **0.2** | Plasticity Mechanism Survey | Which local learning rule could work on a frozen backbone? Catalog Hebbian, Oja, BCM, STDP, 3-factor, predictive coding, target propagation, Forward-Forward, Equilibrium Propagation. **→ 3-factor Hebbian with global surprise modulator selected.** | ✅ |
 | **0.3** | Surprise Signal Design | What tells the brain "learn now"? Survey prediction error, Bayesian surprise, information content, novelty, uncertainty, free energy. **→ Sequence-mean loss dev. from EMA, sigmoid-modulated, global float32 scalar M.** [Report](docs/brain/02-surprise-signal.md) | ✅ |
 | **0.4** | Architecture Design | How does the Brain Wrapper hook into any HuggingFace model? Forward hooks, monkey-patching, custom wrapper. Design the public API. **→ Output-modification forward hooks + thin `BlockWrapper` adapter; full `BrainWrapper` API + learn/checkpoint/GPU spec.** [Report](docs/brain/03-architecture.md) | ✅ |
-| **0.5** | Evaluation Protocol | What does success look like? Domain adaptation ppl, forgetting resistance, forward/backward transfer. Baselines: frozen, random plastic, full fine-tune, LoRA. | ⬜ |
+| **0.5** | Evaluation Protocol | What does success look like? Domain adaptation ppl, forgetting resistance, forward/backward transfer. Baselines: frozen, random plastic, full fine-tune, LoRA. **→ LOCKED: WikiText-2→PubMed (10.65→11.67 ppl, verified); budgets 1K/10K/100K/1M (100K=primary, EMA τ≈102K tok); baselines frozen/random/const-M/LoRA-r1 (98,304-param exact match); full-FT infeasible on 8 GB; window 512/stride 256; d=0.5@80%→16,074 tok; success=Δppl≥0.5 ppl, p<0.05, <1% forgetting.** [Report](docs/brain/04-evaluation-protocol.md) | ✅ |
 
 **Deliverables:** `docs/brain/00-model-selection.md` through `docs/brain/04-evaluation-protocol.md`
 
@@ -162,11 +163,11 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 
 | Step | What | Key Question | Status |
 |:----:|:-----|:-------------|:------:|
-| **1.1** | Minimal Viable Experiment | Frozen SmolLM2-1.7B (primary) + vector bias per transformer block + surprise-modulated Hebbian. WikiText-2 → PubMed, 10K tokens. Does ppl improve? | ⬜ |
+| **1.1** | Minimal Viable Experiment | Frozen SmolLM2-1.7B (primary) + vector bias per transformer block + surprise-modulated Hebbian. WikiText-2 → PubMed, 100K tokens (primary), 10K go/no-go. Does ppl improve? | ⬜ |
 | **1.2** | Ablation Experiments | 2×2×2 grid: surprise vs constant LR, Hebbian vs random update, decay vs no decay. Which components are necessary? | ⬜ |
 | **1.3** | Architectural Generalization | Repeat on GPT-2 124M (gen-test, classic pre-norm, no RoPE/SwiGLU). Does the method transfer across architectures? | ⬜ |
 
-**Go/No-go gate (1.1):** Any measurable perplexity improvement on target domain over frozen baseline, with <1% degradation on source domain.
+**Go/No-go gate (1.1) — LOCKED in [04-evaluation-protocol.md](docs/brain/04-evaluation-protocol.md):** at the 100K-token primary point — Δppl ≥ **0.5 ppl** on PubMed (practical bar; ≥~0.23 ppl is the detectable floor), p < 0.05 (paired, across ≥3 seeds), Δppl > random-plastic baseline, <1% source (WikiText-2) degradation, and surprise-modulated ≥ constant-M. Quick 10K run = mechanism go/no-go only (M≈const there).
 
 ---
 
@@ -196,9 +197,10 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 
 ## Current Focus (August 2026)
 
-> **Brain Phase 0.4: ✅ Complete — architecture locked: output-modification forward hooks (Option C) on `o_proj`/`down_proj` (SmolLM2) & `c_proj` (GPT-2), thin `BlockWrapper` adapter, full `BrainWrapper` API + `learn()` loop + pause/resume/GPU-check spec.**
-> Next: **Phase 0.5 (Evaluation Protocol)** — define success metrics before running experiments.
-> Steps 0.1–0.4 are closed. Phase 0.5 is the last foundation step before Phase 1.1 implementation.
+> **Brain Phase 0.5: ✅ Complete — evaluation protocol LOCKED (2026-08-12).**
+> Phase 0 (Foundation Research) is COMPLETE: model selection, plasticity mechanism, surprise signal, architecture, and evaluation are all locked.
+> Next: **Phase 1.1 (Minimal Viable Experiment)** — implement the Brain Wrapper + eval harness exactly as specified in `docs/brain/03-architecture.md` (API) and `docs/brain/04-evaluation-protocol.md` (measurement). First gate: does vector-bias Hebbian move ppl on PubMed at 10K (go/no-go) and 100K (surprise) tokens?
+> Baseline rules for Phase 1.1 are pre-registered — no post-hoc metric selection.
 
 ### Why This Direction
 

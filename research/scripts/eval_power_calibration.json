@@ -1,0 +1,40 @@
+{
+  "model": "HuggingFaceTB/SmolLM2-1.7B",
+  "block_len": 512,
+  "device": "cuda",
+  "timestamp": "2026-08-12 16:45:49",
+  "wikitext2": {
+    "tokens": 301948,
+    "n_blocks": 148,
+    "mean_nll_per_token": 2.3659370839595795,
+    "std_nll_per_block": 0.26191435251205647,
+    "ppl": 10.654017850416636,
+    "ppl_ci95_low": 10.213800527703047,
+    "ppl_ci95_high": 11.113208648350492,
+    "seconds": 64.4,
+    "required_for_d05": {
+      "d": 0.5,
+      "n_chunks": 31.4,
+      "n_tokens_independent": 16074,
+      "delta_nats_per_token": 0.13095717625602823,
+      "ppl_ratio_exp": 1.1399189233779907
+    }
+  },
+  "pubmed_subsample": {
+    "tokens": 250000,
+    "n_blocks": 122,
+    "mean_nll_per_token": 2.4569835242677907,
+    "std_nll_per_block": 0.3201222439534635,
+    "ppl": 11.669557458293127,
+    "ppl_ci95_low": 11.025136609635332,
+    "ppl_ci95_high": 12.351644799883257,
+    "seconds": 51.6,
+    "required_for_d05": {
+      "d": 0.5,
+      "n_chunks": 31.4,
+      "n_tokens_independent": 16074,
+      "delta_nats_per_token": 0.16006112197673175,
+      "ppl_ratio_exp": 1.1735825538635254
+    }
+  }
+}

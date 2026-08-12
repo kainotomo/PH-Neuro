@@ -1,0 +1,58 @@
+{
+  "timestamp": "2026-08-12 16:39:09",
+  "checks": {
+    "wikitext2_raw_v1": {
+      "load_seconds": 2.4,
+      "splits": {
+        "test": 4358,
+        "train": 36718,
+        "validation": 3760
+      },
+      "test_words": 241211,
+      "test_tokens_smollm": 301948,
+      "test_tokens_gpt2": 283287
+    },
+    "pubmed-summarization": {
+      "load_seconds": 37.2,
+      "splits": {
+        "train": 119924,
+        "validation": 6633,
+        "test": 6658
+      },
+      "test_words": 21960918,
+      "test_tokens_smollm": 28998879,
+      "test_tokens_gpt2": 28988405
+    },
+    "adaptation_budgets": {
+      "batch_size": 4,
+      "seq_len": 256,
+      "tokens_per_step": 1024,
+      "budgets": {
+        "micro": {
+          "tokens": 1000,
+          "sequences_at_seq256": 3,
+          "steps_bs4": 0.9765625,
+          "steps_bs4_int": 1
+        },
+        "small": {
+          "tokens": 10000,
+          "sequences_at_seq256": 39,
+          "steps_bs4": 9.765625,
+          "steps_bs4_int": 10
+        },
+        "medium": {
+          "tokens": 100000,
+          "sequences_at_seq256": 390,
+          "steps_bs4": 97.65625,
+          "steps_bs4_int": 98
+        },
+        "large": {
+          "tokens": 1000000,
+          "sequences_at_seq256": 3906,
+          "steps_bs4": 976.5625,
+          "steps_bs4_int": 977
+        }
+      }
+    }
+  }
+}
