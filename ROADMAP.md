@@ -146,7 +146,7 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 | Step | What | Question It Answers | Status |
 |:----:|:-----|:--------------------|:------:|
 | **0.1** | Model Selection | Which pre-trained model is the best "born brain"? Survey (HuggingFace, 2026-08-12) → **primary SmolLM2-1.7B · gen-test GPT-2 124M · scaling SmolLM2 135M→1.7B · bench BitNet b1.58 2B4T**. [Report](docs/brain/00-model-selection.md) | ✅ |
-| **0.2** | Plasticity Mechanism Survey | Which local learning rule could work on a frozen backbone? Catalog Hebbian, Oja, BCM, STDP, 3-factor, predictive coding, target propagation, Forward-Forward, Equilibrium Propagation. | ⬜ |
+| **0.2** | Plasticity Mechanism Survey | Which local learning rule could work on a frozen backbone? Catalog Hebbian, Oja, BCM, STDP, 3-factor, predictive coding, target propagation, Forward-Forward, Equilibrium Propagation. **→ 3-factor Hebbian with global surprise modulator selected.** | ✅ |
 | **0.3** | Surprise Signal Design | What tells the brain "learn now"? Survey prediction error, Bayesian surprise, information content, novelty, uncertainty, free energy. | ⬜ |
 | **0.4** | Architecture Design | How does the Brain Wrapper hook into any HuggingFace model? Forward hooks, monkey-patching, custom wrapper. Design the public API. | ⬜ |
 | **0.5** | Evaluation Protocol | What does success look like? Domain adaptation ppl, forgetting resistance, forward/backward transfer. Baselines: frozen, random plastic, full fine-tune, LoRA. | ⬜ |
@@ -196,11 +196,10 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 
 ## Current Focus (August 2026)
 
-> **Brain Phase 0.1: Model Selection** — Investigating which open-source
-> pre-trained model is the best candidate for the first Brain Wrapper
-> experiment. Surveying GPT-2, SmolLM2, TinyLlama, and others across
-> architecture type, parameter count, disk/memory footprint, perplexity,
-> license, and ease of activation interception.
+> **Brain Phase 0.2: ✅ Complete — 3-factor Hebbian with global surprise modulator selected.**
+> Next: **Phase 0.3 (Surprise Signal Design)** — what tells the brain "learn now"?
+> Survey prediction error, Bayesian surprise, information content, novelty, uncertainty.
+> Steps 0.1 (model selection) and 0.2 (plasticity mechanism) are closed.
 
 ### Why This Direction
 
