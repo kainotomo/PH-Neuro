@@ -145,7 +145,7 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 
 | Step | What | Question It Answers | Status |
 |:----:|:-----|:--------------------|:------:|
-| **0.1** | Model Selection | Which pre-trained model is the best "born brain"? Survey GPT-2, SmolLM2, TinyLlama, Qwen2.5, Phi-3, Gemma-2, MobileLLM, OPT, Pythia. | 🔬 |
+| **0.1** | Model Selection | Which pre-trained model is the best "born brain"? Survey (HuggingFace, 2026-08-12) → **primary SmolLM2-1.7B · gen-test GPT-2 124M · scaling SmolLM2 135M→1.7B · bench BitNet b1.58 2B4T**. [Report](docs/brain/00-model-selection.md) | ✅ |
 | **0.2** | Plasticity Mechanism Survey | Which local learning rule could work on a frozen backbone? Catalog Hebbian, Oja, BCM, STDP, 3-factor, predictive coding, target propagation, Forward-Forward, Equilibrium Propagation. | ⬜ |
 | **0.3** | Surprise Signal Design | What tells the brain "learn now"? Survey prediction error, Bayesian surprise, information content, novelty, uncertainty, free energy. | ⬜ |
 | **0.4** | Architecture Design | How does the Brain Wrapper hook into any HuggingFace model? Forward hooks, monkey-patching, custom wrapper. Design the public API. | ⬜ |
@@ -162,9 +162,9 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 
 | Step | What | Key Question | Status |
 |:----:|:-----|:-------------|:------:|
-| **1.1** | Minimal Viable Experiment | Frozen GPT-2 + vector bias per transformer block + surprise-modulated Hebbian. WikiText-2 → PubMed, 10K tokens. Does ppl improve? | ⬜ |
+| **1.1** | Minimal Viable Experiment | Frozen SmolLM2-1.7B (primary) + vector bias per transformer block + surprise-modulated Hebbian. WikiText-2 → PubMed, 10K tokens. Does ppl improve? | ⬜ |
 | **1.2** | Ablation Experiments | 2×2×2 grid: surprise vs constant LR, Hebbian vs random update, decay vs no decay. Which components are necessary? | ⬜ |
-| **1.3** | Architectural Generalization | Repeat on SmolLM2-135M (LLaMA-style, RoPE, SwiGLU). Does the method transfer across architectures? | ⬜ |
+| **1.3** | Architectural Generalization | Repeat on GPT-2 124M (gen-test, classic pre-norm, no RoPE/SwiGLU). Does the method transfer across architectures? | ⬜ |
 
 **Go/No-go gate (1.1):** Any measurable perplexity improvement on target domain over frozen baseline, with <1% degradation on source domain.
 
@@ -189,7 +189,7 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 | Step | What | Key Question | Status |
 |:----:|:-----|:-------------|:------:|
 | **3.1** | Multi-Domain Sequential Adaptation | 5–10 diverse text domains in sequence. Does the model improve on ALL domains over frozen baseline? | ⬜ |
-| **3.2** | Scaling Laws | How does adaptation improvement scale with model size (124M → 355M → 1.1B)? With plastic capacity (0.01% → 5% of params)? | ⬜ |
+| **3.2** | Scaling Laws | How does adaptation improvement scale with model size (SmolLM2 135M → 360M → 1.7B)? With plastic capacity (0.01% → 5% of params)? | ⬜ |
 | **3.3** | Beyond Language: Vision | Apply Brain Wrapper to ViT/DINOv2. Class-incremental learning on CIFAR-100. Is this a general principle, not just a language trick? | ⬜ |
 
 ---

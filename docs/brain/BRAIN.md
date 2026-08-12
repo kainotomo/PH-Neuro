@@ -24,20 +24,20 @@ Our 19 Hebbian experiments (E001–E019, see [`research/docs/RESEARCH_SUMMARY.md
 ## The Plan (13 Steps)
 
 ### Phase 0: Foundation Research (No Code)
-| Step | Document | Question |
-|:----:|:---------|:---------|
-| 0.1 | [Model Selection](00-model-selection.md) | Which pre-trained model is the best "born brain"? |
-| 0.2 | [Plasticity Mechanisms](01-plasticity-mechanisms.md) | Which local learning rule could work on a frozen backbone? |
-| 0.3 | [Surprise Signal](02-surprise-signal.md) | What tells the brain "learn now"? |
-| 0.4 | [Architecture Design](03-architecture.md) | How does the Brain Wrapper hook into any model? |
-| 0.5 | [Evaluation Protocol](04-evaluation-protocol.md) | How do we know if it worked? |
+| Step | Document | Question | Status |
+|:----:|:---------|:---------|:------:|
+| 0.1 | [Model Selection](00-model-selection.md) | Which pre-trained model is the best "born brain"? | ✅ |
+| 0.2 | [Plasticity Mechanisms](01-plasticity-mechanisms.md) | Which local learning rule could work on a frozen backbone? | ⬜ |
+| 0.3 | [Surprise Signal](02-surprise-signal.md) | What tells the brain "learn now"? | ⬜ |
+| 0.4 | [Architecture Design](03-architecture.md) | How does the Brain Wrapper hook into any model? | ⬜ |
+| 0.5 | [Evaluation Protocol](04-evaluation-protocol.md) | How do we know if it worked? | ⬜ |
 
 ### Phase 1: Proof of Concept
 | Step | Document | Question |
 |:----:|:---------|:---------|
-| 1.1 | [Minimal Viable Experiment](05-e031-minimal-viable.md) | Frozen [user-selected model] + vector bias + surprise-modulated Hebbian. Does it work? |
+| 1.1 | [Minimal Viable Experiment](05-e031-minimal-viable.md) | Frozen SmolLM2-1.7B (primary) + vector bias + surprise-modulated Hebbian. Does it work? |
 | 1.2 | [Ablation Experiments](06-e032-ablation.md) | Which components are necessary? |
-| 1.3 | [Architectural Generalization](07-e033-generalization.md) | Does it work on a different architecture (e.g. RoPE/SwiGLU-style)? |
+| 1.3 | [Architectural Generalization](07-e033-generalization.md) | Does it work on a different architecture — GPT-2 124M (gen-test, classic pre-norm, no RoPE/GQA)? |
 
 ### Phase 2: Scaling Plasticity
 | Step | Document | Question |
