@@ -148,7 +148,7 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 | **0.1** | Model Selection | Which pre-trained model is the best "born brain"? Survey (HuggingFace, 2026-08-12) → **primary SmolLM2-1.7B · gen-test GPT-2 124M · scaling SmolLM2 135M→1.7B · bench BitNet b1.58 2B4T**. [Report](docs/brain/00-model-selection.md) | ✅ |
 | **0.2** | Plasticity Mechanism Survey | Which local learning rule could work on a frozen backbone? Catalog Hebbian, Oja, BCM, STDP, 3-factor, predictive coding, target propagation, Forward-Forward, Equilibrium Propagation. **→ 3-factor Hebbian with global surprise modulator selected.** | ✅ |
 | **0.3** | Surprise Signal Design | What tells the brain "learn now"? Survey prediction error, Bayesian surprise, information content, novelty, uncertainty, free energy. **→ Sequence-mean loss dev. from EMA, sigmoid-modulated, global float32 scalar M.** [Report](docs/brain/02-surprise-signal.md) | ✅ |
-| **0.4** | Architecture Design | How does the Brain Wrapper hook into any HuggingFace model? Forward hooks, monkey-patching, custom wrapper. Design the public API. | ⬜ |
+| **0.4** | Architecture Design | How does the Brain Wrapper hook into any HuggingFace model? Forward hooks, monkey-patching, custom wrapper. Design the public API. **→ Output-modification forward hooks + thin `BlockWrapper` adapter; full `BrainWrapper` API + learn/checkpoint/GPU spec.** [Report](docs/brain/03-architecture.md) | ✅ |
 | **0.5** | Evaluation Protocol | What does success look like? Domain adaptation ppl, forgetting resistance, forward/backward transfer. Baselines: frozen, random plastic, full fine-tune, LoRA. | ⬜ |
 
 **Deliverables:** `docs/brain/00-model-selection.md` through `docs/brain/04-evaluation-protocol.md`
@@ -196,9 +196,9 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 
 ## Current Focus (August 2026)
 
-> **Brain Phase 0.3: ✅ Complete — surprise signal finalized: sequence-mean loss deviation from EMA → sigmoid → global float32 scalar M.**
-> Next: **Phase 0.4 (Architecture Design)** — how does the Brain Wrapper hook into any HuggingFace model?
-> Steps 0.1 (model selection), 0.2 (plasticity mechanism), and 0.3 (surprise signal) are closed.
+> **Brain Phase 0.4: ✅ Complete — architecture locked: output-modification forward hooks (Option C) on `o_proj`/`down_proj` (SmolLM2) & `c_proj` (GPT-2), thin `BlockWrapper` adapter, full `BrainWrapper` API + `learn()` loop + pause/resume/GPU-check spec.**
+> Next: **Phase 0.5 (Evaluation Protocol)** — define success metrics before running experiments.
+> Steps 0.1–0.4 are closed. Phase 0.5 is the last foundation step before Phase 1.1 implementation.
 
 ### Why This Direction
 

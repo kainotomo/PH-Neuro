@@ -29,7 +29,7 @@ Our 19 Hebbian experiments (E001–E019, see [`research/docs/RESEARCH_SUMMARY.md
 | 0.1 | [Model Selection](00-model-selection.md) | Which pre-trained model is the best "born brain"? | ✅ |
 | 0.2 | [Plasticity Mechanisms](01-plasticity-mechanisms.md) | Which local learning rule could work on a frozen backbone? | ✅ |
 | 0.3 | [Surprise Signal](02-surprise-signal.md) | What tells the brain "learn now"? **→ Sequence-mean loss dev. from EMA → sigmoid → global float32 scalar M.** | ✅ |
-| 0.4 | [Architecture Design](03-architecture.md) | How does the Brain Wrapper hook into any model? | ⬜ |
+| 0.4 | [Architecture Design](03-architecture.md) | How does the Brain Wrapper hook into any model? **→ Output-modification forward hooks on `o_proj`/`down_proj` (SmolLM2) & `c_proj` (GPT-2); thin BlockWrapper adapter; full `BrainWrapper` API + learn/generate/pause-resume spec.** | ✅ |
 | 0.5 | [Evaluation Protocol](04-evaluation-protocol.md) | How do we know if it worked? | ⬜ |
 
 ### Phase 1: Proof of Concept
