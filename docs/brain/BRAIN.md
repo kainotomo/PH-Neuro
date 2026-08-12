@@ -37,7 +37,7 @@ Our 19 Hebbian experiments (E001–E019, see [`research/docs/RESEARCH_SUMMARY.md
 |:----:|:---------|:---------|
 | 1.1 | [Minimal Viable Experiment](05-e031-minimal-viable.md) | Frozen [user-selected model] + vector bias + surprise-modulated Hebbian. Does it work? |
 | 1.2 | [Ablation Experiments](06-e032-ablation.md) | Which components are necessary? |
-| 1.3 | [Architectural Generalization](07-e033-generalization.md) | Does it work on a different architecture (e.g. LLaMA-style)? |
+| 1.3 | [Architectural Generalization](07-e033-generalization.md) | Does it work on a different architecture (e.g. RoPE/SwiGLU-style)? |
 
 ### Phase 2: Scaling Plasticity
 | Step | Document | Question |

@@ -7,12 +7,12 @@
 
 ## Design Goals
 
-1. **Model-agnostic.** Work with any HuggingFace `AutoModelForCausalLM` (GPT-2, SmolLM2, LLaMA, Qwen, etc.) without model-specific code.
+1. **Model-agnostic.** Work with any HuggingFace `AutoModelForCausalLM` (any decoder-only transformer family) without model-specific code.
 2. **Non-invasive.** Don't modify the original model's source code. Use PyTorch hooks or wrapper modules.
 3. **Minimal overhead.** Plastic weights are tiny (~0.1–1% of model params). Inference with plastic weights disabled should be identical to the frozen model.
 4. **Clean API.** The user experience should be:
    ```python
-   model = AutoModelForCausalLM.from_pretrained("gpt2")
+   model = AutoModelForCausalLM.from_pretrained("<user-selected model id>")
    brain = BrainWrapper(model)
    brain.learn(texts)        # adapt plastic weights
    brain.generate(prompt)    # use model + plastic weights
@@ -55,7 +55,7 @@ class PlasticBlock(nn.Module):
 
 **Pros:** Full control over the forward pass. Clean integration. Plastic weights are proper `nn.Parameter`s.
 
-**Cons:** Requires knowing the module structure. Different for GPT-2 (`transformer.h[i]`) vs LLaMA (`model.layers[i]`). Need per-architecture adaptation.
+**Cons:** Requires knowing the module structure. Different per model family (e.g. `transformer.h[i]` vs `model.layers[i]`). Need per-architecture adaptation.
 
 **Verdict:** Best for controlling the forward pass. The architecture-specific mapping is manageable (we only need to support a few architectures).
 
@@ -85,7 +85,7 @@ def make_plastic_hook(plastic_bias):
 
 ## Plasticity Injection Points
 
-For a standard transformer block (GPT-2):
+For a standard decoder-only transformer block:
 
 ```
 Input → LayerNorm → Self-Attention → Residual → LayerNorm → MLP → Residual → Output
@@ -98,7 +98,7 @@ After the entire transformer block, add a learnable bias vector:
 ```
 output = frozen_block(hidden_states) + plastic_bias  # shape: (batch, seq, d_model)
 ```
-**Capacity:** d_model parameters per block. GPT-2: 12 × 768 = 9,216 params (36 KB float32, 2.3 KB ternary).
+**Capacity:** d_model parameters per block. For a 12-block, d_model=768 model: 12 × 768 = 9,216 params (36 KB float32, 2.3 KB ternary).
 
 ### 2. Post-Attention Bias
 After the self-attention sublayer, before the second residual and LayerNorm:
@@ -128,15 +128,15 @@ This modulates WHAT the layer attends to, rather than the output.
 attn_out = frozen_attention(x) + plastic_B @ plastic_A @ x
 ```
 Where A: (d_model, rank), B: (rank, d_model), rank ≪ d_model.
-**Capacity:** 2 × d_model × rank per injection point. For GPT-2 rank=4: 2 × 768 × 4 = 6,144 params per injection.
+**Capacity:** 2 × d_model × rank per injection point. For d_model=768, rank=4: 2 × 768 × 4 = 6,144 params per injection.
 
 ### Injection Strategy by Phase
 
-| Phase | Injection | Plastic Capacity (GPT-2) | Rationale |
+| Phase | Injection | Plastic Capacity (12 blocks × d_model=768) | Rationale |
 |:------|:----------|:------------------------:|:----------|
 | 1.1 | Post-block vector bias | 9,216 params (2.3 KB ternary) | Simplest. Test the core hypothesis. |
 | 1.2 | Same as 1.1 | Same | Ablation experiments. |
-| 1.3 | Same as 1.1 | Same (SmolLM2: 30×576=17,280) | Architectural generalization. |
+| 1.3 | Same as 1.1 | Same (e.g. 30 blocks × d_model=576 = 17,280) | Architectural generalization. |
 | 2.1 | Post-attention + post-MLP low-rank (rank 4) | ~300K params (75 KB ternary) | More capacity. |
 | 2.2 | Same, with ternary weights | Same, but 2-bit | Memory efficiency. |
 | 2.3 | Same + consolidation store | 2× (fast + slow) | Long-term memory. |
@@ -155,14 +155,14 @@ class BrainWrapper:
     through frozen layers.
 
     Args:
-        model: A HuggingFace AutoModelForCausalLM (GPT-2, SmolLM2, etc.)
+        model: A HuggingFace AutoModelForCausalLM (any decoder-only transformer)
         plasticity: Type of plastic weights — "vector_bias", "low_rank", or "ternary"
         capacity: Plastic capacity — for low_rank, the rank. For others, ignored.
         modulator: Surprise signal type — "prediction_error", "uncertainty", "constant"
 
     Example:
         >>> from transformers import AutoModelForCausalLM
-        >>> model = AutoModelForCausalLM.from_pretrained("gpt2")
+        >>> model = AutoModelForCausalLM.from_pretrained("<user-selected model id>")
         >>> brain = BrainWrapper(model, plasticity="vector_bias")
         >>> brain.learn(["The patient presented with acute..."])
         >>> brain.generate("The patient", max_length=50)
@@ -224,7 +224,7 @@ class BrainWrapper:
 
 | Component | Parameter Count | Memory (float32) | Memory (ternary 2-bit) |
 |:----------|:---------------:|:----------------:|:----------------------:|
-| Frozen GPT-2 Small | 124M | ~500 MB | N/A (on disk only) |
+| Frozen model (user-selected) | 124M | ~500 MB | N/A (on disk only) |
 | Vector bias (12 blocks × 768) | 9,216 | 36 KB | 2.3 KB |
 | Low-rank (rank 4, attn+MLP, 12 blocks) | ~300K | ~1.2 MB | ~75 KB |
 | Low-rank (rank 8, full injection, 12 blocks) | ~1.2M | ~4.8 MB | ~300 KB |
@@ -236,7 +236,7 @@ Total overhead (Phase 2.2, ternary, rank 8): **~600 KB** of plastic weights for 
 
 ## Next Steps
 
-- [ ] Map the transformer block structure for GPT-2, SmolLM2, and TinyLlama
+- [ ] Map the transformer block structure for the user-selected model family
 - [ ] Implement Option A (forward hooks) for rapid prototyping
 - [ ] Verify that hooking doesn't break generation or double memory
 - [ ] Implement Option B (module replacement) for the clean API

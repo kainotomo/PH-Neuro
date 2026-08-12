@@ -27,7 +27,7 @@ No gradient flow through frozen layers. No backpropagation. No computation of �
 
 **On frozen backbone:** The frozen backbone already computes useful features. Hebbian updates on the plastic weights might reinforce patterns that are useful for the current domain. The question is whether "fire together, wire together" on top of structured representations produces adaptation or just noise.
 
-**Computational cost:** One outer product per layer per batch. O(d²) where d is hidden dimension. For GPT-2 (d=768), this is 768² ≈ 590K operations — negligible.
+**Computational cost:** One outer product per layer per batch. O(d²) where d is the hidden dimension. For a typical small transformer (d=768), this is 768² ≈ 590K operations — negligible.
 
 **Key risk:** Without an error signal, Hebbian updates are purely correlational. They strengthen co-occurring patterns regardless of whether those patterns help the task. This is exactly why hidden-layer Hebbian failed before.
 

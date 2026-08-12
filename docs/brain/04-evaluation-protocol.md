@@ -38,7 +38,7 @@ After learning domain B, re-test on domain A. Measures whether learning B caused
 
 | Domain | Corpus | Size (tokens) | Why |
 |:-------|:-------|:-------------:|:----|
-| **Source** | WikiText-2 (test set) | ~250K | Standard benchmark. GPT-2's training domain. |
+| **Source** | WikiText-2 (test set) | ~250K | Standard benchmark; a typical pre-training source domain. |
 | **Target** | PubMed abstracts | ~10K adaptation, ~50K test | Scientific/medical domain. Very different vocabulary and style from web text. Measurable shift. |
 
 Alternative targets for follow-up:
@@ -66,10 +66,10 @@ Test adaptation at multiple data budgets to characterize the learning curve:
 
 | Baseline | What | Expected Behavior |
 |:---------|:-----|:------------------|
-| **Frozen (zero plasticity)** | Evaluate GPT-2 out-of-the-box on target domain | Baseline ppl. Plasticity should beat this. |
+| **Frozen (zero plasticity)** | Evaluate the model out-of-the-box on target domain | Baseline ppl. Plasticity should beat this. |
 | **Random plastic weights** | Initialize plastic weights randomly (fixed seed), no training | Controls for added capacity alone. Plasticity training should beat this. |
 | **Plasticity with constant LR** | Hebbian updates with M=1 (no surprise modulation) | Tests whether surprise modulation matters. Surprise-modulated should beat or match this. |
-| **Full fine-tuning (upper bound)** | Unfreeze GPT-2, train with backprop on target domain | What's the maximum possible adaptation? Plasticity won't match this, but the gap tells us the ceiling. |
+| **Full fine-tuning (upper bound)** | Unfreeze the model, train with backprop on target domain | What's the maximum possible adaptation? Plasticity won't match this, but the gap tells us the ceiling. |
 | **LoRA fine-tuning (practical upper bound)** | LoRA with backprop, rank matching plastic capacity | Fair comparison: same parameter budget, different update rule. |
 | **EWC** | Fine-tune with Elastic Weight Consolidation | Does local plasticity beat a classic continual-learning method? |
 
@@ -87,8 +87,8 @@ Test adaptation at multiple data budgets to characterize the learning curve:
 
 ## Perplexity Computation Details
 
-- Use the model's own tokenizer (GPT-2 BPE tokenizer for GPT-2 experiments)
-- Slide a context window of 1024 tokens (GPT-2's max context)
+- Use the model's own tokenizer
+- Slide a context window of the model's max context length (e.g. 1024 tokens)
 - Stride = 512 tokens (50% overlap for stable estimates)
 - Compute token-level negative log-likelihood, aggregate to corpus-level perplexity
 - Ignore the first token of each sequence (no context to condition on)
@@ -124,7 +124,7 @@ Each experiment produces a results file:
 ```json
 {
   "experiment": "e031_minimal_viable",
-  "model": "gpt2",
+  "model": "<user-selected model id>",
   "plasticity": "vector_bias",
   "modulator": "prediction_error_ema",
   "target_domain": "pubmed",
