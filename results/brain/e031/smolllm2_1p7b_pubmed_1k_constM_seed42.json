@@ -1,0 +1,50 @@
+{
+  "experiment": "e031_minimal_viable",
+  "baseline": "constM",
+  "model": "HuggingFaceTB/SmolLM2-1.7B",
+  "model_short": "smolllm2_1p7b",
+  "plasticity": "vector_bias",
+  "modulator": "constant",
+  "source_domain": "wikitext2",
+  "target_domain": "pubmed",
+  "adaptation_tokens": 1000,
+  "adaptation_steps": 1,
+  "warmup_steps": 0,
+  "seed": 42,
+  "lr": 0.001,
+  "decay_rate": 0.0,
+  "eval": {
+    "window": 512,
+    "stride": 256,
+    "aggregation": "unweighted"
+  },
+  "metrics": {
+    "source_ppl_frozen": 10.663747829494856,
+    "source_ppl_plastic": 10.663747829494856,
+    "source_ppl_delta": 0.0,
+    "target_ppl_frozen": 11.45718667056774,
+    "target_ppl_plastic": 11.45718667056774,
+    "target_ppl_delta": 0.0,
+    "target_ppl_delta_ci95": [
+      0.0,
+      0.0
+    ],
+    "target_block_paired_t": 0.0,
+    "target_block_paired_p": 1.0,
+    "target_block_cohens_d": 0.0,
+    "source_block_paired_t": 0.0,
+    "source_block_paired_p": 1.0,
+    "source_block_cohens_d": 0.0,
+    "forgetting_pct": 0.0
+  },
+  "plastic_weights": {
+    "count": 98304,
+    "bytes": 393216,
+    "mean_magnitude": 0.0,
+    "sparsity": 1.0,
+    "max_magnitude": 0.0
+  },
+  "n_target_blocks": 1956,
+  "n_source_blocks": 1180,
+  "train_metrics": []
+}

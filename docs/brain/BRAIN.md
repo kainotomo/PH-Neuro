@@ -1,8 +1,8 @@
 # PH-Neuro Brain — Overview
 
-> **Status:** Phase 0 — Foundation Research (August 2026) ✅ **COMPLETE**
+> **Status:** Phase 0 ✅ COMPLETE (2026-08-12) · **Phase 1.1 (E031) ✅ COMPLETE — PARTIAL SUCCESS** (2026-08-12)
 > **Principle:** Investigate → Decide → Implement. No code before investigation is documented.
-> **Phase 0 closed 2026-08-12:** all 5 foundation steps (0.1–0.5) are done; the evaluation protocol is LOCKED. Phase 1.1 (implementation) is next.
+> **Phase 1.1 verdict:** 5/6 pre-registered checks pass at 100K. Surprise-modulated plasticity **works** and is validated as **essential** (constant-M control: +10.7% catastrophic forgetting, −0.57 target; surprise: +0.03 target, +0.37% forgetting, p=0.003) — but Δppl = +0.034 ≪ the 0.5-practical bar → **partial success, not a full GO**. See [05-e031-minimal-viable.md](05-e031-minimal-viable.md).
 
 ---
 
@@ -36,7 +36,7 @@ Our 19 Hebbian experiments (E001–E019, see [`research/docs/RESEARCH_SUMMARY.md
 ### Phase 1: Proof of Concept
 | Step | Document | Question |
 |:----:|:---------|:---------|
-| 1.1 | [Minimal Viable Experiment](05-e031-minimal-viable.md) | Frozen SmolLM2-1.7B (primary) + vector bias + surprise-modulated Hebbian. Does it work? |
+| 1.1 | [Minimal Viable Experiment](05-e031-minimal-viable.md) | Frozen SmolLM2-1.7B (primary) + vector bias + surprise-modulated Hebbian. Does it work? | 🟡 **PARTIAL SUCCESS** — mechanism works, surprise modulator essential (vs constM's +10.7% forgetting), but Δppl=+0.034 ≪ 0.5 bar |
 | 1.2 | [Ablation Experiments](06-e032-ablation.md) | Which components are necessary? |
 | 1.3 | [Architectural Generalization](07-e033-generalization.md) | Does it work on a different architecture — GPT-2 124M (gen-test, classic pre-norm, no RoPE/GQA)? |
 
@@ -72,10 +72,18 @@ Our 19 Hebbian experiments (E001–E019, see [`research/docs/RESEARCH_SUMMARY.md
 
 ## Success Criteria
 
-### Minimum Viable (Phase 1.1)
-- Any measurable perplexity improvement on a target domain over frozen baseline
-- <1% perplexity degradation on source domain (no forgetting)
-- Surprise modulation outperforms constant learning rate
+### Minimum Viable (Phase 1.1) — verdict (2026-08-12)
+| Criterion | Result |
+|:----------|:------:|
+| Any measurable ppl improvement on target over frozen | ✅ Δppl = +0.034, p = 0.003 |
+| <1% source degradation (no forgetting) | ✅ +0.37% (vs constM's +10.7%) |
+| Surprise modulation outperforms constant learning rate | ✅ +0.034 vs **−0.573** |
+| Practical bar: Δppl ≥ 0.5 ppl (locked §7) | ❌ +0.034 ≪ 0.5 |
+
+**PARTIAL SUCCESS:** mechanism works and the surprise modulator is essential
+(it prevents constant-M's catastrophic forgetting), but the effect is too
+small to be practically meaningful at vector-bias capacity. Phase 1.2:
+low-rank plastic matrices + stronger surprise gain.
 
 ### Strong Signal (Phase 2)
 - Low-rank plasticity > vector bias plasticity (capacity matters)

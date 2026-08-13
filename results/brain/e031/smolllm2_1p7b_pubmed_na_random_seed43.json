@@ -1,0 +1,50 @@
+{
+  "experiment": "e031_minimal_viable",
+  "baseline": "random",
+  "model": "HuggingFaceTB/SmolLM2-1.7B",
+  "model_short": "smolllm2_1p7b",
+  "plasticity": "vector_bias",
+  "modulator": "none",
+  "source_domain": "wikitext2",
+  "target_domain": "pubmed",
+  "adaptation_tokens": 0,
+  "adaptation_steps": 0,
+  "warmup_steps": 0,
+  "seed": 43,
+  "lr": 0.001,
+  "decay_rate": 0.0,
+  "eval": {
+    "window": 512,
+    "stride": 256,
+    "aggregation": "unweighted"
+  },
+  "metrics": {
+    "source_ppl_frozen": 10.663747829494856,
+    "source_ppl_plastic": 10.68901671144375,
+    "source_ppl_delta": 0.025268881948894872,
+    "target_ppl_frozen": 11.45718667056774,
+    "target_ppl_plastic": 11.50863096294791,
+    "target_ppl_delta": -0.0514442923801699,
+    "target_ppl_delta_ci95": [
+      -0.054834275499308305,
+      -0.04826747549640764
+    ],
+    "target_block_paired_t": -32.529557792048934,
+    "target_block_paired_p": 6.810709557371941e-186,
+    "target_block_cohens_d": -0.7355187262050423,
+    "source_block_paired_t": -14.24751561868528,
+    "source_block_paired_p": 1.2880373918165994e-42,
+    "source_block_cohens_d": -0.4147612150532419,
+    "forgetting_pct": 0.23696061040570093
+  },
+  "plastic_weights": {
+    "count": 98304,
+    "bytes": 393216,
+    "mean_magnitude": 0.00800973828881979,
+    "sparsity": 1.0172526344831567e-05,
+    "max_magnitude": 0.04390751197934151
+  },
+  "n_target_blocks": 1956,
+  "n_source_blocks": 1180,
+  "train_metrics": []
+}

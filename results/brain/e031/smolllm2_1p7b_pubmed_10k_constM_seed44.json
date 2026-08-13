@@ -1,0 +1,155 @@
+{
+  "experiment": "e031_minimal_viable",
+  "baseline": "constM",
+  "model": "HuggingFaceTB/SmolLM2-1.7B",
+  "model_short": "smolllm2_1p7b",
+  "plasticity": "vector_bias",
+  "modulator": "constant",
+  "source_domain": "wikitext2",
+  "target_domain": "pubmed",
+  "adaptation_tokens": 10000,
+  "adaptation_steps": 10,
+  "warmup_steps": 0,
+  "seed": 44,
+  "lr": 0.001,
+  "decay_rate": 0.0,
+  "eval": {
+    "window": 512,
+    "stride": 256,
+    "aggregation": "unweighted"
+  },
+  "metrics": {
+    "source_ppl_frozen": 10.663747829494856,
+    "source_ppl_plastic": 10.659337266608953,
+    "source_ppl_delta": -0.004410562885903246,
+    "target_ppl_frozen": 11.45718667056774,
+    "target_ppl_plastic": 11.432127387795246,
+    "target_ppl_delta": 0.02505928277249403,
+    "target_ppl_delta_ci95": [
+      0.023308980444364025,
+      0.02680071933892947
+    ],
+    "target_block_paired_t": 28.507811583352982,
+    "target_block_paired_p": 8.855549076977192e-150,
+    "target_block_cohens_d": 0.6445839011007479,
+    "source_block_paired_t": 4.081436568720095,
+    "source_block_paired_p": 4.777202281510882e-05,
+    "source_block_cohens_d": 0.11881521211915608,
+    "forgetting_pct": -0.041360344940866156,
+    "mean_surprise_M": 1.0,
+    "pct_steps_M_gt_05": 1.0,
+    "final_M": 1.0,
+    "n_steps": 10
+  },
+  "plastic_weights": {
+    "count": 98304,
+    "bytes": 393216,
+    "mean_magnitude": 0.006420079153031111,
+    "sparsity": 0.0,
+    "max_magnitude": 8.2618989944458
+  },
+  "n_target_blocks": 1956,
+  "n_source_blocks": 1180,
+  "train_metrics": [
+    {
+      "step": 0,
+      "loss": 2.4888975620269775,
+      "ema_loss": 2.4888975620269775,
+      "surprise_s": 0.0,
+      "modulator_M": 1.0,
+      "mean_abs_delta_b": 0.0006696701533428495,
+      "mean_abs_b": 0.0006696701533428495,
+      "tokens_seen": 1024
+    },
+    {
+      "step": 1,
+      "loss": 2.66739821434021,
+      "ema_loss": 2.66739821434021,
+      "surprise_s": 0.0,
+      "modulator_M": 1.0,
+      "mean_abs_delta_b": 0.000694334728374694,
+      "mean_abs_b": 0.0013065642096989905,
+      "tokens_seen": 2048
+    },
+    {
+      "step": 2,
+      "loss": 2.646181583404541,
+      "ema_loss": 2.646181583404541,
+      "surprise_s": 0.0,
+      "modulator_M": 1.0,
+      "mean_abs_delta_b": 0.0006981970393553638,
+      "mean_abs_b": 0.0019186402626019117,
+      "tokens_seen": 3072
+    },
+    {
+      "step": 3,
+      "loss": 2.6674585342407227,
+      "ema_loss": 2.6674585342407227,
+      "surprise_s": 0.0,
+      "modulator_M": 1.0,
+      "mean_abs_delta_b": 0.0007288465552998483,
+      "mean_abs_b": 0.0025550061770142443,
+      "tokens_seen": 4096
+    },
+    {
+      "step": 4,
+      "loss": 2.4240550994873047,
+      "ema_loss": 2.4240550994873047,
+      "surprise_s": 0.0,
+      "modulator_M": 1.0,
+      "mean_abs_delta_b": 0.0006785997439161898,
+      "mean_abs_b": 0.003164017780515375,
+      "tokens_seen": 5120
+    },
+    {
+      "step": 5,
+      "loss": 2.7066917419433594,
+      "ema_loss": 2.7066917419433594,
+      "surprise_s": 0.0,
+      "modulator_M": 1.0,
+      "mean_abs_delta_b": 0.0007157989706456647,
+      "mean_abs_b": 0.003820799289314891,
+      "tokens_seen": 6144
+    },
+    {
+      "step": 6,
+      "loss": 2.5318453311920166,
+      "ema_loss": 2.5318453311920166,
+      "surprise_s": 0.0,
+      "modulator_M": 1.0,
+      "mean_abs_delta_b": 0.0006877627005223985,
+      "mean_abs_b": 0.004468278834186397,
+      "tokens_seen": 7168
+    },
+    {
+      "step": 7,
+      "loss": 2.612192153930664,
+      "ema_loss": 2.612192153930664,
+      "surprise_s": 0.0,
+      "modulator_M": 1.0,
+      "mean_abs_delta_b": 0.0007060283748311728,
+      "mean_abs_b": 0.005121366709924284,
+      "tokens_seen": 8192
+    },
+    {
+      "step": 8,
+      "loss": 2.57114577293396,
+      "ema_loss": 2.57114577293396,
+      "surprise_s": 0.0,
+      "modulator_M": 1.0,
+      "mean_abs_delta_b": 0.0007272972922388968,
+      "mean_abs_b": 0.0057744519923896105,
+      "tokens_seen": 9216
+    },
+    {
+      "step": 9,
+      "loss": 2.609055280685425,
+      "ema_loss": 2.609055280685425,
+      "surprise_s": 0.0,
+      "modulator_M": 1.0,
+      "mean_abs_delta_b": 0.0007089721844219335,
+      "mean_abs_b": 0.006420079187591909,
+      "tokens_seen": 10240
+    }
+  ]
+}

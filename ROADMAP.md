@@ -1,7 +1,7 @@
 # PH-Neuro — Product Roadmap
 
 > **Last updated:** 2026-08-12
-> **Status:** Infrastructure (Phases 0–2.5) COMPLETE ✅ → **Brain Phase 0: Foundation Research COMPLETE ✅ → Brain Phase 1.1: Minimal Viable Experiment (next)**
+> **Status:** Infrastructure (Phases 0–2.5) COMPLETE ✅ → **Brain Phase 0 COMPLETE ✅ → Brain Phase 1.1: Minimal Viable Experiment COMPLETE 🟡 (PARTIAL SUCCESS) → Brain Phase 1.2: Ablations (next)**
 
 ---
 
@@ -163,7 +163,7 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 
 | Step | What | Key Question | Status |
 |:----:|:-----|:-------------|:------:|
-| **1.1** | Minimal Viable Experiment | Frozen SmolLM2-1.7B (primary) + vector bias per transformer block + surprise-modulated Hebbian. WikiText-2 → PubMed, 100K tokens (primary), 10K go/no-go. Does ppl improve? | ⬜ |
+| **1.1** | Minimal Viable Experiment | Frozen SmolLM2-1.7B (primary) + vector bias per transformer block + surprise-modulated Hebbian. WikiText-2 → PubMed, 100K tokens (primary), 10K go/no-go. Does ppl improve? | 🟡 **PARTIAL SUCCESS** — mechanism works; surprise modulator ESSENTIAL (constM control: +10.7% catastrophic forgetting, −0.57 tgt; surprise: +0.03 tgt, +0.37% forgetting, p=0.003); Δppl=+0.034 ≪ 0.5 practical bar. [Report](docs/brain/05-e031-minimal-viable.md) |
 | **1.2** | Ablation Experiments | 2×2×2 grid: surprise vs constant LR, Hebbian vs random update, decay vs no decay. Which components are necessary? | ⬜ |
 | **1.3** | Architectural Generalization | Repeat on GPT-2 124M (gen-test, classic pre-norm, no RoPE/SwiGLU). Does the method transfer across architectures? | ⬜ |
 
@@ -197,10 +197,20 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 
 ## Current Focus (August 2026)
 
-> **Brain Phase 0.5: ✅ Complete — evaluation protocol LOCKED (2026-08-12).**
-> Phase 0 (Foundation Research) is COMPLETE: model selection, plasticity mechanism, surprise signal, architecture, and evaluation are all locked.
-> Next: **Phase 1.1 (Minimal Viable Experiment)** — implement the Brain Wrapper + eval harness exactly as specified in `docs/brain/03-architecture.md` (API) and `docs/brain/04-evaluation-protocol.md` (measurement). First gate: does vector-bias Hebbian move ppl on PubMed at 10K (go/no-go) and 100K (surprise) tokens?
-> Baseline rules for Phase 1.1 are pre-registered — no post-hoc metric selection.
+> **Brain Phase 1.1 (E031): ✅ COMPLETE — 🟡 PARTIAL SUCCESS (2026-08-12).**
+> **Result at the 100K primary point:** 5/6 pre-registered checks pass.
+> Surprise-modulated vector-bias Hebbian works: Δppl = **+0.034** on PubMed
+> (p = 0.003, all 3 seeds positive), source forgetting **+0.37%** (≪ 1%).
+> The surprise modulator is **essential** — its constant-M=1.0 control is
+> catastrophically destructive (+10.7% forgetting, −0.57 target), while
+> surprise keeps the model intact. But Δppl = +0.034 is **far below the
+> 0.5-ppl practical bar** → partial success, not a full GO.
+> **Next: Phase 1.2 (Ablation Experiments)** — 2×2×2 grid (surprise vs
+> constant LR, Hebbian vs random update, decay vs no decay) + **low-rank
+> plastic matrices** (more capacity per injection point, same 98,304-param
+> budget) and a **stronger surprise gain**, targeting the 0.5-ppl bar.
+> Baseline rules for Phase 1.1 were pre-registered — no post-hoc metric
+> selection was used.
 
 ### Why This Direction
 
