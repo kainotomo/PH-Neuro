@@ -1,0 +1,70 @@
+{
+  "groups": {
+    "pc": {
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "n": 3,
+      "target_ppl_delta": {
+        "n": 3,
+        "mean": 0.0006761782988468449,
+        "sd": 0.0030391051765178236,
+        "t": 0.3853684227934974,
+        "p": 0.7370897276937662,
+        "cohens_d": 0.22249256263700726
+      },
+      "forgetting_pct": {
+        "n": 3,
+        "mean": -0.01221125145242826,
+        "sd": 0.011341881958707048,
+        "t": -1.8648146768418763,
+        "p": 0.20321133661343757,
+        "cohens_d": -1.0766512556634225
+      },
+      "target_block_cohens_d": {
+        "n": 3,
+        "mean": 0.03100177077990977,
+        "sd": 0.09943067117085286,
+        "t": 0.540041030429538,
+        "p": 0.6432588965203492,
+        "cohens_d": 0.31179283429193666
+      },
+      "target_ppl_delta_per_seed": [
+        0.001,
+        0.0035,
+        -0.0025
+      ],
+      "target_ppl_plastic": [
+        11.4562,
+        11.4536,
+        11.4597
+      ],
+      "target_ppl_frozen": 11.45718667056774,
+      "source_ppl_frozen": 10.663747829494856,
+      "plastic_params": 344064,
+      "inverse_params": 2752512,
+      "mean_abs_error": 0.13900353014469147
+    }
+  },
+  "verdict": {
+    "primary_budget": 100000,
+    "lora_best_delta": 1.5195199191751438,
+    "pc_tag": "pc",
+    "pc": {
+      "tag": "pc",
+      "delta_mean": 0.0006761782988468449,
+      "delta_sd": 0.0030391051765178236,
+      "p": 0.7370897276937662,
+      "cohens_d": 0.22249256263700726,
+      "forgetting_mean": -0.01221125145242826,
+      "delta_ge_0_5": false,
+      "sign_agreement_gt_0": true,
+      "forgetting_lt_1pct": true,
+      "lora_ratio": 0.0004449946922801127,
+      "all_seeds_positive": false
+    },
+    "consequence": "PC failed the pre-registered criteria at matched budget (\u0394ppl = +0.001, p = 0.737). The local-rule scientific question is CLOSED: the project pivots to the backprop-LoRA product path. No second PC variant, no hyperparameter rescue, no capacity escalation."
+  }
+}

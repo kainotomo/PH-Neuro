@@ -1,7 +1,7 @@
 # PH-Neuro — Product Roadmap
 
-> **Last updated:** 2026-08-13
-> **Status:** Infrastructure (Phases 0–2.5) COMPLETE ✅ → **Brain Phase 0 COMPLETE ✅ → Brain Phase 1.1: Minimal Viable Experiment COMPLETE 🟡 (PARTIAL SUCCESS) → Brain Phase 1.2: Capacity & Gain Experiment COMPLETE ❌ (LOW-RANK HEBBIAN REJECTED; LoRA bound met) → next: error-based local rules / GPT-2 replication**
+> **Last updated:** 2026-08-14
+> **Status:** Infrastructure (Phases 0–2.5) COMPLETE ✅ → **Brain Phase 0 COMPLETE ✅ → Brain Phase 1.1 COMPLETE 🟡 (PARTIAL SUCCESS) → Brain Phase 1.2 COMPLETE ❌ (LOW-RANK HEBBIAN REJECTED; LoRA bound met) → Brain Phase 1.3 COMPLETE ❌ (PREDICTIVE CODING INERT; LOCAL-RULE QUESTION CLOSED) → next: pivot to backprop-LoRA product path**
 
 ---
 
@@ -165,7 +165,7 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 |:----:|:-----|:-------------|:------:|
 | **1.1** | Minimal Viable Experiment | Frozen SmolLM2-1.7B (primary) + vector bias per transformer block + surprise-modulated Hebbian. WikiText-2 → PubMed, 100K tokens (primary), 10K go/no-go. Does ppl improve? | 🟡 **PARTIAL SUCCESS** — mechanism works; surprise modulator ESSENTIAL (constM control: +10.7% catastrophic forgetting, −0.57 tgt; surprise: +0.03 tgt, +0.37% forgetting, p=0.003); Δppl=+0.034 ≪ 0.5 practical bar. [Report](docs/brain/05-e031-minimal-viable.md) |
 | **1.2** | Capacity & Gain Experiment (re-scoped; protocol §11 deviation) | E031 identified capacity + modulator conservatism as bottlenecks. E032 tests low-rank capacity (r=1/2/4), a full gain sweep (η, s₀, k, M_max), the untested decay axis, and a matched-budget **backprop LoRA upper bound**; plus a 1M anneal. [Report](docs/brain/06-e032-capacity-gain.md) | ❌ **NEGATIVE — LOW-RANK HEBBIAN REJECTED** — capacity destroys (r1/2/4 = −1.35/−1648/−3172), every gain knob destructive, decay neutral, 1M compounds to −7381; **LoRA at the same 344K-param budget exceeds the 0.5 bar** (+1.52). Missing ingredient = **credit assignment**, not capacity/gain/decay. |
-| **1.3** | Architectural Generalization | Repeat on GPT-2 124M (gen-test, classic pre-norm, no RoPE/SwiGLU). Does the method transfer across architectures? | ⬜ |
+| **1.3** | Predictive Coding (re-scoped; protocol §11 deviation) | The last local-rule family with a credit-assignment story: **error-based predictive coding** (per-injection-site reconstruction error, surprise-gated) at the **matched 344K LoRA budget**. Can a no-backprop error signal adapt a frozen LM? [Report](docs/brain/07-e033-predictive-coding.md) | ❌ **NEGATIVE — INERT / LOCAL-RULE QUESTION CLOSED** — Δppl_PC = **+0.001 ± 0.003** (p=0.737, seeds +0.001/+0.004/−0.003): statistically null, ~500× below the 0.5 bar. The error-driven update is **stable** (source *improved* −0.012%, no forgetting — fixes E032's instability) but **inert** (plastic weights barely move; mean\|B\|≈0.0016). **Pre-registered kill criterion fired → pivot to the backprop-LoRA product path.** |
 
 **Go/No-go gate (1.1) — LOCKED in [04-evaluation-protocol.md](docs/brain/04-evaluation-protocol.md):** at the 100K-token primary point — Δppl ≥ **0.5 ppl** on PubMed (practical bar; ≥~0.23 ppl is the detectable floor), p < 0.05 (paired, across ≥3 seeds), Δppl > random-plastic baseline, <1% source (WikiText-2) degradation, and surprise-modulated ≥ constant-M. Quick 10K run = mechanism go/no-go only (M≈const there).
 
@@ -177,7 +177,7 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 
 | Step | What | Key Question | Status |
 |:----:|:-----|:-------------|:------:|
-| **2.1** | Low-Rank Plastic Matrices | LoRA-style BA^T updated via local (non-backprop) Hebbian rules. Does rank>1 help more than vector bias? | ❌ **ANSWERED NEGATIVE in E032** — local low-rank Hebbian is catastrophically unstable (rank-1 −1.35 … rank-4 −3172, 1M −7381). Re-scope required: either **error-based local rules** (credit assignment without backprop) or promote **backprop LoRA** (the proven +1.52 bound) as the scaling mechanism. |
+| **2.1** | Low-Rank Plastic Matrices | LoRA-style BA^T updated via local (non-backprop) Hebbian rules. Does rank>1 help more than vector bias? | ❌ **ANSWERED NEGATIVE (E032 + E033) — LOCAL RULES REJECTED.** E032: local low-rank Hebbian is catastrophically unstable (rank-1 −1.35 … rank-4 −3172, 1M −7381). E033 (Step 1.3 re-scope): error-based predictive coding at the same matched budget is stable but **inert** (Δppl +0.001, p=0.737). **The Phase 2 scaling mechanism is backprop LoRA** (proven +1.52, the product path). |
 | **2.2** | Ternary Plastic Weights | Convert plastic weights from float to {-1, 0, +1} using existing DQT/hysteresis infrastructure. Does ternary match float adaptation quality? | ⬜ |
 | **2.3** | Consolidation Mechanism | Sleep-inspired memory transfer: important plastic changes move to long-term store with slower decay. Does this reduce forgetting across sequential domains? | ⬜ |
 
@@ -197,24 +197,30 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 
 ## Current Focus (August 2026)
 
-> **Brain Phase 1.2 (E032): ✅ COMPLETE — ❌ NEGATIVE (2026-08-13).**
-> **Result (51 cells, 0 failures, pre-registered):** the two E031 bottleneck
-> hypotheses are answered **decisively in the negative** for local
-> plasticity. Capacity **destroys** (rank 1/2/4 = −1.35/−1648/−3172 Δppl),
-> every gain knob (η↑, s₀↓, k↓, M_max↑) is monotonically destructive
-> (−1.35 → −126K), decay is neutral, and the 1M anneal compounds to
-> **Δppl ≈ −7381** (+201,000% forgetting). The damage mechanism is surprise
-> positive feedback + Hebbian concentration (documented in the report).
-> **Matched-budget backprop LoRA (344K params, same init) exceeds the 0.5
-> practical bar at every lr** (+0.86/+1.32/+1.52) with the source
-> *improved* (−6.5 to −8.5%). **The missing ingredient is credit
-> assignment, not capacity/gain/decay.** Low-rank Hebbian is rejected;
-> E031's vector-bias (+0.034) remains the only stable local config.
-> **Next (options, report §12):** (1) error-based local rules
-> (predictive-coding / target propagation) — the honest next test of the
-> "no backprop" thesis; (2) re-scope Phase 1.3 (GPT-2) as a cheap
-> replication of the E032 verdict. Protocol amendment for the 1.2
-> re-scoping is logged in [04-evaluation-protocol.md §11](docs/brain/04-evaluation-protocol.md).
+> **Brain Phase 1.3 (E033): ✅ COMPLETE — ❌ NEGATIVE / INERT — LOCAL-RULE
+> QUESTION CLOSED (2026-08-14).**
+> **Result (4 cells, 0 failures, pre-registered):** the final local-rule test
+> — **error-based predictive coding** at the same matched 344K-param budget
+> as the E032 LoRA baseline. **Δppl_PC = +0.001 ± 0.003 (p = 0.737, per-seed
+> +0.001 / +0.004 / −0.003)** — statistically null, ~500× below the 0.5
+> practical bar and below the 0.2-ppl "within noise" floor. The error-driven
+> reconstruction-error update is **stable** (source *improved* −0.012%, zero
+> forgetting — it removes E032's surprise-feedback/Hebbian-concentration
+> instability) but **inert**: the plastic weights barely move (mean|A| ≈ init,
+> mean|B| ≈ 0.0016) and the per-site linear-inverse reconstruction error
+> carries no usable credit-assignment direction on a 1.7B residual
+> transformer. **Pre-registered kill criterion fired (report §8/§12): the
+> local-rule scientific question is CLOSED.** E031 (vector-bias Hebbian:
+> +0.034, stable, sub-threshold), E032 (low-rank Hebbian: destructive
+> −1.35), E033 (predictive coding: stable, inert +0.001) span every plausible
+> local-rule axis; none reaches the 0.5-ppl bar at a matched budget.
+> **Next (pre-registered consequence): PIVOT to the backprop-LoRA product
+> path** — E032's proven +1.52 bound (344K params, source improved) becomes
+> the Phase 2 adaptation/scaling mechanism; Phase 2.2 (ternary/DQT) is
+> re-scoped to apply the existing DQT/hysteresis infrastructure to LoRA
+> adapters. Protocol amendments for the 1.2 and 1.3 re-scopings are logged in
+> [04-evaluation-protocol.md §11](docs/brain/04-evaluation-protocol.md);
+> full report [07-e033-predictive-coding.md](docs/brain/07-e033-predictive-coding.md).
 
 ### Why This Direction
 

@@ -46,6 +46,14 @@ class InjectionPoint:
     the point carries ``A``/``B`` and ``in_features``; ``bias`` is kept as a
     zero tensor for state-schema compatibility but is unused by low-rank
     injection/update.
+
+    Predictive-coding mode (E033): reuses the exact ``A``/``B`` rank-``rank``
+    structure (same matched budget) but carries an extra **linear inverse**
+    ``W_inv = U @ V`` (``U: (d_in, r_inv)``, ``V: (r_inv, d_out)``) that
+    predicts the block input from the frozen projection output:
+    ``x̂ = U @ (V @ post)``. ``U``/``V`` are auxiliary learning machinery
+    (like AdamW optimizer states) — they are NOT counted in the plastic
+    parameter budget, which stays ``A + B``.
     """
 
     name: str  # stable id, e.g. "L03.o_proj" or "L07.mlp_c_proj"
@@ -60,6 +68,11 @@ class InjectionPoint:
     B: torch.Tensor | None = None
     in_features: int | None = None  # d_in, read at construction
     rank: int = 0  # 0 = vector-bias mode; > 0 = low-rank mode
+    # predictive-coding mode (E033): W_inv = U @ V, U: (d_in, r_inv),
+    # V: (r_inv, d_out), float32. V starts at 0 so x̂ = 0 (identity holds).
+    U: torch.Tensor | None = None
+    V: torch.Tensor | None = None
+    inv_rank: int = 0  # 0 = no inverse (vector_bias/low_rank)
 
 
 # ── Out/in-features helpers ────────────────────────────────────────
@@ -134,15 +147,15 @@ class SmolLM2BlockWrapper:
     block_paths: tuple[str, ...] = ("self_attn.o_proj", "mlp.down_proj")
 
     def get_injection_points(
-        self, block: nn.Module, layer_idx: int, *, rank: int = 0
+        self, block: nn.Module, layer_idx: int, *, rank: int = 0, inv_rank: int = 0
     ) -> list[InjectionPoint]:
         return [
-            self._make(block, layer_idx, "self_attn.o_proj", "o_proj", rank),
-            self._make(block, layer_idx, "mlp.down_proj", "down_proj", rank),
+            self._make(block, layer_idx, "self_attn.o_proj", "o_proj", rank, inv_rank),
+            self._make(block, layer_idx, "mlp.down_proj", "down_proj", rank, inv_rank),
         ]
 
     @staticmethod
-    def _make(block, layer_idx, path, suffix, rank: int = 0):
+    def _make(block, layer_idx, path, suffix, rank: int = 0, inv_rank: int = 0):
         mod = _resolve(block, path)
         out = _get_out_features(mod)
         inn = _get_in_features(mod)
@@ -150,6 +163,10 @@ class SmolLM2BlockWrapper:
         if rank > 0:
             A = torch.zeros(rank, inn, dtype=torch.float32)
             B = torch.zeros(out, rank, dtype=torch.float32)
+        U = V = None
+        if inv_rank > 0:
+            U = torch.zeros(inn, inv_rank, dtype=torch.float32)
+            V = torch.zeros(inv_rank, out, dtype=torch.float32)
         return InjectionPoint(
             name=f"L{layer_idx:02d}.{suffix}",
             module=mod,
@@ -160,6 +177,9 @@ class SmolLM2BlockWrapper:
             B=B,
             in_features=inn,
             rank=rank,
+            U=U,
+            V=V,
+            inv_rank=inv_rank,
         )
 
 
@@ -174,15 +194,15 @@ class GPT2BlockWrapper:
     block_paths: tuple[str, ...] = ("attn.c_proj", "mlp.c_proj")
 
     def get_injection_points(
-        self, block: nn.Module, layer_idx: int, *, rank: int = 0
+        self, block: nn.Module, layer_idx: int, *, rank: int = 0, inv_rank: int = 0
     ) -> list[InjectionPoint]:
         return [
-            self._make(block, layer_idx, "attn.c_proj", "attn_c_proj", rank),
-            self._make(block, layer_idx, "mlp.c_proj", "mlp_c_proj", rank),
+            self._make(block, layer_idx, "attn.c_proj", "attn_c_proj", rank, inv_rank),
+            self._make(block, layer_idx, "mlp.c_proj", "mlp_c_proj", rank, inv_rank),
         ]
 
     @staticmethod
-    def _make(block, layer_idx, path, suffix, rank: int = 0):
+    def _make(block, layer_idx, path, suffix, rank: int = 0, inv_rank: int = 0):
         mod = _resolve(block, path)
         out = _get_out_features(mod)
         inn = _get_in_features(mod)
@@ -190,6 +210,10 @@ class GPT2BlockWrapper:
         if rank > 0:
             A = torch.zeros(rank, inn, dtype=torch.float32)
             B = torch.zeros(out, rank, dtype=torch.float32)
+        U = V = None
+        if inv_rank > 0:
+            U = torch.zeros(inn, inv_rank, dtype=torch.float32)
+            V = torch.zeros(inv_rank, out, dtype=torch.float32)
         return InjectionPoint(
             name=f"L{layer_idx:02d}.{suffix}",
             module=mod,
@@ -200,6 +224,9 @@ class GPT2BlockWrapper:
             B=B,
             in_features=inn,
             rank=rank,
+            U=U,
+            V=V,
+            inv_rank=inv_rank,
         )
 
 

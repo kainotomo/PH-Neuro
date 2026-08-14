@@ -190,6 +190,9 @@ class BrainWrapper:
         *,
         lr: float = 1e-3,  # η
         decay_rate: float = 0.0,  # λ; 0.0 = off
+        inv_rank: int = 8,  # E033: rank of the per-site linear inverse (PC)
+        inv_lr: float = 1e-3,  # E033: local recirculation lr for W_inv
+        inv_decay: float = 1e-4,  # E033: decay on W_inv (stability)
         dtype: torch.dtype = torch.float32,
         tokenizer=None,
         device=None,
@@ -198,16 +201,20 @@ class BrainWrapper:
         min_free_gb: float | None = None,  # GPU gate; auto from model size
         log: logging.Logger | None = None,
     ) -> None:
-        if plasticity not in ("vector_bias", "low_rank"):
+        if plasticity not in ("vector_bias", "low_rank", "predictive_coding"):
             raise NotImplementedError(
                 f"plasticity={plasticity!r} not implemented "
-                "(Phase 1.1 = 'vector_bias'; Phase 1.2 = 'low_rank')"
+                "(Phase 1.1 = 'vector_bias'; Phase 1.2 = 'low_rank'; "
+                "Phase 1.3 = 'predictive_coding')"
             )
-        if plasticity == "low_rank" and int(rank) < 1:
-            raise ValueError("low_rank plasticity requires rank >= 1")
+        if plasticity in ("low_rank", "predictive_coding") and int(rank) < 1:
+            raise ValueError(f"{plasticity} plasticity requires rank >= 1")
         self.model = model
         self.plasticity = plasticity
         self.rank = int(rank)
+        self.inv_rank = int(inv_rank)
+        self.inv_lr = float(inv_lr)
+        self.inv_decay = float(inv_decay)
         self.lr = float(lr)
         self.decay_rate = float(decay_rate)
         self.dtype = dtype if isinstance(dtype, torch.dtype) else torch.float32
@@ -232,14 +239,23 @@ class BrainWrapper:
         self._injection_points: list[InjectionPoint] = []
         for i, block in enumerate(self.container):
             self._injection_points.extend(
-                self.block_wrapper.get_injection_points(block, i, rank=self.rank)
+                self.block_wrapper.get_injection_points(
+                    block,
+                    i,
+                    rank=self.rank,
+                    # U/V (the linear inverse) exist only for predictive coding.
+                    inv_rank=self.inv_rank if self.plasticity == "predictive_coding" else 0,
+                )
             )
         for ip in self._injection_points:
             ip.bias = ip.bias.to(self.device)
             if ip.A is not None and ip.B is not None:
                 ip.A = ip.A.to(self.device)
                 ip.B = ip.B.to(self.device)
-        if self.plasticity == "low_rank":
+            if ip.U is not None and ip.V is not None:
+                ip.U = ip.U.to(self.device)
+                ip.V = ip.V.to(self.device)
+        if self.plasticity in ("low_rank", "predictive_coding"):
             # Deadlock-break init (scaled random projection): A ~ N(0, 1/d_in),
             # B = 0. With B = 0 the injected term B@(A@x) is zero, so the
             # identity invariant holds at construction; but A ≠ 0 makes ΔB
@@ -257,6 +273,14 @@ class BrainWrapper:
             for ip in self._injection_points:
                 if ip.A is not None:
                     ip.A.normal_(0.0, 1.0 / math.sqrt(ip.in_features))
+        if self.plasticity == "predictive_coding":
+            # Inverse (predictor) init — same deadlock-break convention:
+            # U ~ N(0, 1/sqrt(d_in)), V = 0 ⇒ x̂ = U@(V@post) = 0 (identity
+            # invariant holds at construction), but U ≠ 0 makes ΔV nonzero on
+            # the first update, bootstrapping the reconstruction map.
+            for ip in self._injection_points:
+                if ip.U is not None:
+                    ip.U.normal_(0.0, 1.0 / math.sqrt(ip.in_features))
         self.log.info(
             "BrainWrapper: %d blocks, %d injection points, %d plastic params "
             "(%.1f KB fp32) plasticity=%s rank=%d",
@@ -456,7 +480,74 @@ class BrainWrapper:
 
                 # 6. Plastic update per injection point (float32, no backprop)
                 mean_abs_delta = 0.0
-                if self.plasticity == "low_rank":
+                if self.plasticity == "predictive_coding":
+                    # ── E033: error-driven reconstruction-error PC (PC-ERR) ──
+                    # Per injection site (48 sites: 24 o_proj + 24 down_proj):
+                    #   inverse prediction  x̂ = W_inv·post_frozen   (W_inv=U·V)
+                    #   reconstruction err  ε = pre − x̂   (signed, per-dim)
+                    #   inverse update (local recirculation, NOT M-gated — it
+                    #     tracks the local reconstruction statistics):
+                    #       ΔV = η_inv·mean((Uᵀε) ⊗ post)/(rms(Uᵀε)·rms(post))
+                    #       ΔU = η_inv·mean(ε ⊗ (V·post))/(rms(ε)·rms(V·post))
+                    #   plastic A/B update (error-driven; the ONLY difference
+                    #     from the E032 Hebbian is pre → ε in the two
+                    #     input-side slots — see the E033 doc for why this
+                    #     removes concentration + surprise positive feedback):
+                    #       ΔA = η·M·mean((Bᵀ·post) ⊗ ε)/(rms(Bᵀpost)·rms(ε))
+                    #       ΔB = η·M·mean(post ⊗ (A·ε))/(rms(post)·rms(A·ε))
+                    # post is the PRE-INJECTION frozen output (feedback-free),
+                    # so ε is a clean target-independent error signal.
+                    for ip in self._injection_points:
+                        pre = self._last_pre[ip.name]  # (B,S,d_in) float32
+                        post = self._last_post_frozen[ip.name]  # (B,S,d_out)
+                        n = pre.size(0) * pre.size(1)
+
+                        # inverse prediction + reconstruction error
+                        vpost = torch.einsum("ro,bso->bsr", ip.V, post)  # V·post
+                        xhat = torch.einsum("ir,bsr->bsi", ip.U, vpost)  # x̂
+                        eps = pre - xhat  # (B,S,d_in) signed error
+
+                        # inverse update (local recirculation, no backprop)
+                        rms_post = math.sqrt(float(post.pow(2).mean())) + 1e-8
+                        rms_eps = math.sqrt(float(eps.pow(2).mean())) + 1e-8
+                        ut_eps = torch.einsum("ir,bsi->bsr", ip.U, eps)  # Uᵀε
+                        rms_ut = math.sqrt(float(ut_eps.pow(2).mean())) + 1e-8
+                        dV = (self.inv_lr / (n * rms_ut * rms_post)) * torch.einsum(
+                            "bsr,bso->ro", ut_eps, post
+                        )
+                        rms_vpost = math.sqrt(float(vpost.pow(2).mean())) + 1e-8
+                        dU = (self.inv_lr / (n * rms_eps * rms_vpost)) * torch.einsum(
+                            "bsi,bsr->ir", eps, vpost
+                        )
+                        ip.V.add_(dV)
+                        ip.U.add_(dU)
+                        if self.inv_decay > 0:
+                            ip.V.mul_(1.0 - self.inv_decay)
+                            ip.U.mul_(1.0 - self.inv_decay)
+
+                        # plastic A/B update — error-driven, surprise-gated
+                        pB = post @ ip.B  # (B,S,r) = Bᵀ·post
+                        rms_pB = math.sqrt(float(pB.pow(2).mean())) + 1e-8
+                        dA = (
+                            self.lr * M / (n * rms_pB * rms_eps)
+                        ) * torch.einsum("bsr,bsi->ri", pB, eps)
+                        pA = torch.einsum("ri,bsi->bsr", ip.A, eps)  # A·ε
+                        rms_pA = math.sqrt(float(pA.pow(2).mean())) + 1e-8
+                        dB = (
+                            self.lr * M / (n * rms_post * rms_pA)
+                        ) * torch.einsum("bso,bsr->or", post, pA)
+                        ip.A.add_(dA)
+                        ip.B.add_(dB)
+                        if self.decay_rate > 0:
+                            ip.A.mul_(1.0 - self.decay_rate)
+                            ip.B.mul_(1.0 - self.decay_rate)
+                        mean_abs_delta += (
+                            dA.abs().mean().item()
+                            + dB.abs().mean().item()
+                            + dU.abs().mean().item()
+                            + dV.abs().mean().item()
+                        )
+                elif self.plasticity == "low_rank":
                     # Low-rank Hebbian (E032): with ΔW = η·M·mean_t(pre ⊗ post),
                     # project onto the low-rank manifold W = B·A (Frobenius):
                     #   ΔA = η·M·mean_t((Bᵀ·post_t) ⊗ pre_t)
@@ -673,7 +764,9 @@ class BrainWrapper:
         Vector-bias mode: ``plastic.{ip.name} → bias`` (E031-compatible).
         Low-rank mode additionally stores ``plastic.{ip.name}.A`` and
         ``plastic.{ip.name}.B``; the (unused) zero ``bias`` entry is kept so
-        the key schema is uniform across modes.
+        the key schema is uniform across modes. Predictive-coding mode stores
+        A/B (the matched-budget plastic weights) plus the auxiliary inverse
+        ``U``/``V`` factors.
         """
         sd: OrderedDict = OrderedDict()
         for ip in self._injection_points:
@@ -681,6 +774,9 @@ class BrainWrapper:
             if ip.A is not None and ip.B is not None:
                 sd[f"plastic.{ip.name}.A"] = ip.A.detach().clone().to(torch.float32)
                 sd[f"plastic.{ip.name}.B"] = ip.B.detach().clone().to(torch.float32)
+            if ip.U is not None and ip.V is not None:
+                sd[f"plastic.{ip.name}.U"] = ip.U.detach().clone().to(torch.float32)
+                sd[f"plastic.{ip.name}.V"] = ip.V.detach().clone().to(torch.float32)
         return sd
 
     def load_state_dict(self, state, strict: bool = True) -> BrainWrapper:
@@ -690,6 +786,9 @@ class BrainWrapper:
             if ip.A is not None and ip.B is not None:
                 expected.add(f"plastic.{ip.name}.A")
                 expected.add(f"plastic.{ip.name}.B")
+            if ip.U is not None and ip.V is not None:
+                expected.add(f"plastic.{ip.name}.U")
+                expected.add(f"plastic.{ip.name}.V")
         provided = set(state.keys())
         missing = expected - provided
         extra = provided - expected
@@ -725,12 +824,33 @@ class BrainWrapper:
                             f"got {tuple(t.shape)}"
                         )
                     ip.B.copy_(t)
+            if ip.U is not None and ip.V is not None:
+                ku, kv = f"plastic.{ip.name}.U", f"plastic.{ip.name}.V"
+                if ku in state:
+                    t = torch.as_tensor(state[ku]).detach().to(torch.float32).to(self.device)
+                    if tuple(t.shape) != (ip.in_features, ip.inv_rank):
+                        raise ValueError(
+                            f"shape mismatch for {ku}: expected {(ip.in_features, ip.inv_rank)}, "
+                            f"got {tuple(t.shape)}"
+                        )
+                    ip.U.copy_(t)
+                if kv in state:
+                    t = torch.as_tensor(state[kv]).detach().to(torch.float32).to(self.device)
+                    if tuple(t.shape) != (ip.inv_rank, ip.out_features):
+                        raise ValueError(
+                            f"shape mismatch for {kv}: expected {(ip.inv_rank, ip.out_features)}, "
+                            f"got {tuple(t.shape)}"
+                        )
+                    ip.V.copy_(t)
         return self
 
     def _config_dict(self) -> dict:
         return {
             "plasticity": self.plasticity,
             "rank": self.rank,
+            "inv_rank": self.inv_rank,
+            "inv_lr": self.inv_lr,
+            "inv_decay": self.inv_decay,
             "model_type": self.model.config.model_type,
             "n_layers": len(self.container),
             "hidden_size": self._injection_points[0].out_features
@@ -786,7 +906,14 @@ class BrainWrapper:
     # ── public helpers ──────────────────────────────────────────────
 
     def plastic_parameter_count(self) -> int:
-        """Total plastic parameters (bias in vector mode; A+B in low-rank mode)."""
+        """Total model-affecting plastic parameters (bias in vector mode;
+        A+B in low-rank/predictive-coding mode).
+
+        For predictive coding this deliberately counts **only A+B** — the
+        matched-budget comparison to the E032 LoRA baseline — and excludes the
+        auxiliary inverse factors U/V (reported separately via
+        :meth:`inverse_parameter_count`, like AdamW optimizer states).
+        """
         total = 0
         for ip in self._injection_points:
             if ip.A is not None and ip.B is not None:
@@ -798,6 +925,51 @@ class BrainWrapper:
     def plastic_memory_bytes(self) -> int:
         return self.plastic_parameter_count() * 4  # float32
 
+    def inverse_parameter_count(self) -> int:
+        """Auxiliary predictive-coding inverse factors (U+V), 0 when absent."""
+        total = 0
+        for ip in self._injection_points:
+            if ip.U is not None and ip.V is not None:
+                total += int(ip.U.numel()) + int(ip.V.numel())
+        return total
+
+    @torch.no_grad()
+    def mean_inverse_error(
+        self, ids: torch.Tensor, batch_size: int = 4, seq_len: int = 256
+    ) -> float:
+        """Mean per-site reconstruction error ``mean|ε|`` on a sample batch.
+
+        Runs one forward pass with capture and averages ``|ε| =
+        |pre − W_inv·post_frozen|`` over every injection site. The injection
+        does not affect ``ε`` (it uses the pre-injection frozen post), so this
+        measures the PC error signal the plastic weights act on.
+        """
+        if self.plasticity != "predictive_coding":
+            return 0.0
+        ids = ids.to(self.device)
+        n_needed = batch_size * seq_len
+        if ids.numel() < n_needed:
+            ids = ids.repeat(n_needed // max(ids.numel(), 1) + 1)
+        ids = ids[:n_needed].view(batch_size, seq_len)
+        self._capture = True
+        try:
+            self.model(input_ids=ids)
+        finally:
+            self._capture = False
+        total = 0.0
+        n = 0
+        for ip in self._injection_points:
+            if ip.U is None or ip.V is None:
+                continue
+            pre = self._last_pre[ip.name]
+            post = self._last_post_frozen[ip.name]
+            vpost = torch.einsum("ro,bso->bsr", ip.V, post)
+            xhat = torch.einsum("ir,bsr->bsi", ip.U, vpost)
+            eps = pre - xhat
+            total += float(eps.abs().mean())
+            n += 1
+        return total / n if n else 0.0
+
     def injection_point_names(self) -> list[str]:
         return [ip.name for ip in self._injection_points]
 
@@ -808,10 +980,15 @@ class BrainWrapper:
             "injection_points": len(self._injection_points),
             "plastic_params": self.plastic_parameter_count(),
             "plastic_bytes": self.plastic_memory_bytes(),
+            "inverse_params": self.inverse_parameter_count(),
+            "inverse_bytes": self.inverse_parameter_count() * 4,
             "plasticity": self.plasticity,
             "rank": self.rank,
+            "inv_rank": self.inv_rank,
             "lr": self.lr,
             "decay_rate": self.decay_rate,
+            "inv_lr": self.inv_lr,
+            "inv_decay": self.inv_decay,
             "modulator_mode": self.modulator.mode,
             "min_free_gb": self.min_free_gb,
         }
@@ -823,6 +1000,9 @@ class BrainWrapper:
             if ip.A is not None and ip.B is not None:
                 ip.A = ip.A.to(self.device)
                 ip.B = ip.B.to(self.device)
+            if ip.U is not None and ip.V is not None:
+                ip.U = ip.U.to(self.device)
+                ip.V = ip.V.to(self.device)
         return self
 
     def set_lr(self, eta: float) -> None:
