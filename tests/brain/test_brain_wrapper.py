@@ -352,7 +352,10 @@ class TestMisc:
 
     def test_unsupported_plasticity(self):
         with pytest.raises(NotImplementedError):
-            make_brain(plasticity="low_rank")
+            make_brain(plasticity="rank3_tensor")
+        # low_rank is now supported (Phase 1.2) but requires rank >= 1
+        with pytest.raises(ValueError):
+            make_brain(plasticity="low_rank", rank=0)
 
     def test_invalid_modulator_cfg(self):
         with pytest.raises(ValueError):

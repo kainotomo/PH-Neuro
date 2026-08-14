@@ -1,7 +1,7 @@
 # PH-Neuro — Product Roadmap
 
-> **Last updated:** 2026-08-12
-> **Status:** Infrastructure (Phases 0–2.5) COMPLETE ✅ → **Brain Phase 0 COMPLETE ✅ → Brain Phase 1.1: Minimal Viable Experiment COMPLETE 🟡 (PARTIAL SUCCESS) → Brain Phase 1.2: Ablations (next)**
+> **Last updated:** 2026-08-13
+> **Status:** Infrastructure (Phases 0–2.5) COMPLETE ✅ → **Brain Phase 0 COMPLETE ✅ → Brain Phase 1.1: Minimal Viable Experiment COMPLETE 🟡 (PARTIAL SUCCESS) → Brain Phase 1.2: Capacity & Gain Experiment COMPLETE ❌ (LOW-RANK HEBBIAN REJECTED; LoRA bound met) → next: error-based local rules / GPT-2 replication**
 
 ---
 
@@ -164,7 +164,7 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 | Step | What | Key Question | Status |
 |:----:|:-----|:-------------|:------:|
 | **1.1** | Minimal Viable Experiment | Frozen SmolLM2-1.7B (primary) + vector bias per transformer block + surprise-modulated Hebbian. WikiText-2 → PubMed, 100K tokens (primary), 10K go/no-go. Does ppl improve? | 🟡 **PARTIAL SUCCESS** — mechanism works; surprise modulator ESSENTIAL (constM control: +10.7% catastrophic forgetting, −0.57 tgt; surprise: +0.03 tgt, +0.37% forgetting, p=0.003); Δppl=+0.034 ≪ 0.5 practical bar. [Report](docs/brain/05-e031-minimal-viable.md) |
-| **1.2** | Ablation Experiments | 2×2×2 grid: surprise vs constant LR, Hebbian vs random update, decay vs no decay. Which components are necessary? | ⬜ |
+| **1.2** | Capacity & Gain Experiment (re-scoped; protocol §11 deviation) | E031 identified capacity + modulator conservatism as bottlenecks. E032 tests low-rank capacity (r=1/2/4), a full gain sweep (η, s₀, k, M_max), the untested decay axis, and a matched-budget **backprop LoRA upper bound**; plus a 1M anneal. [Report](docs/brain/06-e032-capacity-gain.md) | ❌ **NEGATIVE — LOW-RANK HEBBIAN REJECTED** — capacity destroys (r1/2/4 = −1.35/−1648/−3172), every gain knob destructive, decay neutral, 1M compounds to −7381; **LoRA at the same 344K-param budget exceeds the 0.5 bar** (+1.52). Missing ingredient = **credit assignment**, not capacity/gain/decay. |
 | **1.3** | Architectural Generalization | Repeat on GPT-2 124M (gen-test, classic pre-norm, no RoPE/SwiGLU). Does the method transfer across architectures? | ⬜ |
 
 **Go/No-go gate (1.1) — LOCKED in [04-evaluation-protocol.md](docs/brain/04-evaluation-protocol.md):** at the 100K-token primary point — Δppl ≥ **0.5 ppl** on PubMed (practical bar; ≥~0.23 ppl is the detectable floor), p < 0.05 (paired, across ≥3 seeds), Δppl > random-plastic baseline, <1% source (WikiText-2) degradation, and surprise-modulated ≥ constant-M. Quick 10K run = mechanism go/no-go only (M≈const there).
@@ -177,7 +177,7 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 
 | Step | What | Key Question | Status |
 |:----:|:-----|:-------------|:------:|
-| **2.1** | Low-Rank Plastic Matrices | LoRA-style BA^T updated via local (non-backprop) Hebbian rules. Does rank>1 help more than vector bias? | ⬜ |
+| **2.1** | Low-Rank Plastic Matrices | LoRA-style BA^T updated via local (non-backprop) Hebbian rules. Does rank>1 help more than vector bias? | ❌ **ANSWERED NEGATIVE in E032** — local low-rank Hebbian is catastrophically unstable (rank-1 −1.35 … rank-4 −3172, 1M −7381). Re-scope required: either **error-based local rules** (credit assignment without backprop) or promote **backprop LoRA** (the proven +1.52 bound) as the scaling mechanism. |
 | **2.2** | Ternary Plastic Weights | Convert plastic weights from float to {-1, 0, +1} using existing DQT/hysteresis infrastructure. Does ternary match float adaptation quality? | ⬜ |
 | **2.3** | Consolidation Mechanism | Sleep-inspired memory transfer: important plastic changes move to long-term store with slower decay. Does this reduce forgetting across sequential domains? | ⬜ |
 
@@ -197,20 +197,24 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 
 ## Current Focus (August 2026)
 
-> **Brain Phase 1.1 (E031): ✅ COMPLETE — 🟡 PARTIAL SUCCESS (2026-08-12).**
-> **Result at the 100K primary point:** 5/6 pre-registered checks pass.
-> Surprise-modulated vector-bias Hebbian works: Δppl = **+0.034** on PubMed
-> (p = 0.003, all 3 seeds positive), source forgetting **+0.37%** (≪ 1%).
-> The surprise modulator is **essential** — its constant-M=1.0 control is
-> catastrophically destructive (+10.7% forgetting, −0.57 target), while
-> surprise keeps the model intact. But Δppl = +0.034 is **far below the
-> 0.5-ppl practical bar** → partial success, not a full GO.
-> **Next: Phase 1.2 (Ablation Experiments)** — 2×2×2 grid (surprise vs
-> constant LR, Hebbian vs random update, decay vs no decay) + **low-rank
-> plastic matrices** (more capacity per injection point, same 98,304-param
-> budget) and a **stronger surprise gain**, targeting the 0.5-ppl bar.
-> Baseline rules for Phase 1.1 were pre-registered — no post-hoc metric
-> selection was used.
+> **Brain Phase 1.2 (E032): ✅ COMPLETE — ❌ NEGATIVE (2026-08-13).**
+> **Result (51 cells, 0 failures, pre-registered):** the two E031 bottleneck
+> hypotheses are answered **decisively in the negative** for local
+> plasticity. Capacity **destroys** (rank 1/2/4 = −1.35/−1648/−3172 Δppl),
+> every gain knob (η↑, s₀↓, k↓, M_max↑) is monotonically destructive
+> (−1.35 → −126K), decay is neutral, and the 1M anneal compounds to
+> **Δppl ≈ −7381** (+201,000% forgetting). The damage mechanism is surprise
+> positive feedback + Hebbian concentration (documented in the report).
+> **Matched-budget backprop LoRA (344K params, same init) exceeds the 0.5
+> practical bar at every lr** (+0.86/+1.32/+1.52) with the source
+> *improved* (−6.5 to −8.5%). **The missing ingredient is credit
+> assignment, not capacity/gain/decay.** Low-rank Hebbian is rejected;
+> E031's vector-bias (+0.034) remains the only stable local config.
+> **Next (options, report §12):** (1) error-based local rules
+> (predictive-coding / target propagation) — the honest next test of the
+> "no backprop" thesis; (2) re-scope Phase 1.3 (GPT-2) as a cheap
+> replication of the E032 verdict. Protocol amendment for the 1.2
+> re-scoping is logged in [04-evaluation-protocol.md §11](docs/brain/04-evaluation-protocol.md).
 
 ### Why This Direction
 

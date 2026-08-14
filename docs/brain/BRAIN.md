@@ -1,8 +1,9 @@
 # PH-Neuro Brain — Overview
 
-> **Status:** Phase 0 ✅ COMPLETE (2026-08-12) · **Phase 1.1 (E031) ✅ COMPLETE — PARTIAL SUCCESS** (2026-08-12)
+> **Status:** Phase 0 ✅ COMPLETE (2026-08-12) · **Phase 1.1 (E031) ✅ COMPLETE — PARTIAL SUCCESS** (2026-08-12) · **Phase 1.2 (E032) ✅ COMPLETE — NEGATIVE / LOW-RANK HEBBIAN REJECTED** (2026-08-13)
 > **Principle:** Investigate → Decide → Implement. No code before investigation is documented.
 > **Phase 1.1 verdict:** 5/6 pre-registered checks pass at 100K. Surprise-modulated plasticity **works** and is validated as **essential** (constant-M control: +10.7% catastrophic forgetting, −0.57 target; surprise: +0.03 target, +0.37% forgetting, p=0.003) — but Δppl = +0.034 ≪ the 0.5-practical bar → **partial success, not a full GO**. See [05-e031-minimal-viable.md](05-e031-minimal-viable.md).
+> **Phase 1.2 verdict:** the two E031 bottleneck hypotheses are answered **decisively in the negative** for local plasticity. Capacity (rank) **destroys** (best rank-1 Δppl = −1.35; rank 2/4 ≈ −1650/−3170); every gain knob (η↑, s₀↓, k↓, M_max↑) is monotonically destructive; decay is neutral; 1M budget compounds damage to Δppl ≈ −7381. **Matched-budget backprop LoRA exceeds the 0.5 bar at every lr** (+0.86/+1.32/+1.52, source *improved*). → **The missing ingredient is credit assignment, not capacity/gain/decay.** Low-rank Hebbian **rejected**; vector-bias (+0.034) remains the only stable local config. See [06-e032-capacity-gain.md](06-e032-capacity-gain.md).
 
 ---
 
@@ -37,7 +38,7 @@ Our 19 Hebbian experiments (E001–E019, see [`research/docs/RESEARCH_SUMMARY.md
 | Step | Document | Question |
 |:----:|:---------|:---------|
 | 1.1 | [Minimal Viable Experiment](05-e031-minimal-viable.md) | Frozen SmolLM2-1.7B (primary) + vector bias + surprise-modulated Hebbian. Does it work? | 🟡 **PARTIAL SUCCESS** — mechanism works, surprise modulator essential (vs constM's +10.7% forgetting), but Δppl=+0.034 ≪ 0.5 bar |
-| 1.2 | [Ablation Experiments](06-e032-ablation.md) | Which components are necessary? |
+| 1.2 | [Capacity & Gain Experiment](06-e032-capacity-gain.md) | Low-rank capacity + gain sweep + decay ablation + matched-budget LoRA upper bound. Does capacity/gain rescue local plasticity? | ❌ **NEGATIVE — LOW-RANK HEBBIAN REJECTED.** Capacity destroys (rank-1 −1.35 → rank-4 −3172); all gain knobs destructive; decay neutral; 1M compounds to −7381. Backprop LoRA at the same 344K-param budget **exceeds 0.5 bar** (+1.52, source improved). Missing ingredient = **credit assignment**, not capacity/gain/decay. |
 | 1.3 | [Architectural Generalization](07-e033-generalization.md) | Does it work on a different architecture — GPT-2 124M (gen-test, classic pre-norm, no RoPE/GQA)? |
 
 ### Phase 2: Scaling Plasticity
@@ -82,10 +83,28 @@ Our 19 Hebbian experiments (E001–E019, see [`research/docs/RESEARCH_SUMMARY.md
 
 **PARTIAL SUCCESS:** mechanism works and the surprise modulator is essential
 (it prevents constant-M's catastrophic forgetting), but the effect is too
-small to be practically meaningful at vector-bias capacity. Phase 1.2:
-low-rank plastic matrices + stronger surprise gain.
+small to be practically meaningful at vector-bias capacity. Phase 1.2
+(low-rank + gain) was then run and answered this decisively.
+
+### Capacity & Gain (Phase 1.2) — verdict (2026-08-13)
+| Criterion | Result |
+|:----------|:------:|
+| Δppl ≥ 0.5 at 100K (practical bar) | ❌ no local config (best low-rank −1.35; E031 vector-bias +0.034); ✅ **every** LoRA config |
+| Capacity (rank) rescues | ❌ rank 1/2/4 = −1.35 / −1648 / −3172 (p=0.014 at rank 4 — destruction is significant) |
+| Gain (η↑, s₀↓, k↓, M_max↑) rescues | ❌ monotonic in the destructive direction (−1.35 → −126K at η=1e-2) |
+| Decay (λ 1e-5/1e-4) rescues | ❌ neutral (−1.36 / −1.28 ≈ λ=0 −1.35) |
+| 1M anneal saturates | ❌ compounds: Δppl ≈ **−7381**, +201,000% forgetting |
+| LoRA (same 344K budget) beats local | ✅ Δppl = +0.86/+1.32/+1.52, source **improved** (−6.5 to −8.5%) — ratio ≈ −0.84 (opposite sign) |
+
+**NEGATIVE:** surprise-modulated Hebbian with matrix capacity is **structurally
+unstable** (surprise positive feedback + Hebbian concentration); the missing
+ingredient is **credit assignment** (backprop), not capacity/gain/decay.
+Low-rank Hebbian is **rejected**; vector-bias (+0.034) remains the safe
+default. Next step options in §12 of the report (error-based local rules /
+GPT-2 replication).
 
 ### Strong Signal (Phase 2)
+- ~~Low-rank plasticity > vector bias plasticity (capacity matters)~~ **FALSIFIED (E032)** — capacity destroys local Hebbian
 - Low-rank plasticity > vector bias plasticity (capacity matters)
 - Ternary plastic weights ≥90% of float adaptation quality
 - Consolidation reduces forgetting across sequential domains

@@ -232,7 +232,7 @@ SmolLM2-1.7B = 1,711,376,384 params. State-only minimums (activations, CUDA cont
 
 | Date | Deviation | Reason | Approved by |
 |:-----|:----------|:-------|:------------|
-| — | none yet | — | — |
+| 2026-08-13 | **Step 1.2 scope re-scoped (explicit, not silent).** The Step 1.2 plan in `ROADMAP.md`/`BRAIN.md` was a "2×2×2 ablation grid" (surprise vs constant LR, Hebbian vs random update, decay vs no decay). E031 already answered **two** axes at the 100K primary point with full cross-seed statistics (surprise vs constant-M: surprise +0.034 vs constM −0.573 / +10.7% forgetting; Hebbian vs random update: +0.034 vs random −0.044). Step 1.2 (E032) therefore runs the **remaining untested axis (decay, λ ∈ {1e-5, 1e-4})** plus the capacity (low-rank plastic matrices, rank sweep r ∈ {1,2,4}) and gain (η / s₀ / k / M_max) investigation that E031's verdict explicitly queued. The **measurement protocol is unchanged** (metric, domains, budgets, window/stride, baselines, statistics, thresholds). | E031's cross-seed results made two grid axes moot before Step 1.2 ran; E031's verdict explicitly directed the capacity + gain follow-up. Recorded as a deviation so the re-scoping is not silent. See [06-e032-capacity-gain.md](06-e032-capacity-gain.md) §9. | |
 
 ---
 
