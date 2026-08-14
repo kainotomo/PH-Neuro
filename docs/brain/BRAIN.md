@@ -42,11 +42,11 @@ Our 19 Hebbian experiments (E001–E019, see [`research/docs/RESEARCH_SUMMARY.md
 | 1.3 | [Architectural Generalization](07-e033-generalization.md) | Does it work on a different architecture — GPT-2 124M (gen-test, classic pre-norm, no RoPE/GQA)? |
 
 ### Phase 2: Scaling Plasticity
-| Step | Document | Question |
-|:----:|:---------|:---------|
-| 2.1 | [Low-Rank Plastic Matrices](08-e034-low-rank.md) | Does more capacity → better adaptation? |
-| 2.2 | [Ternary Plastic Weights](09-e035-ternary-plasticity.md) | Can we make plasticity tiny AND effective? |
-| 2.3 | [Consolidation Mechanism](10-e036-consolidation.md) | Can we build long-term memory from short-term plasticity? |
+| Step | Document | Question | Status |
+|:----:|:---------|:---------|:------:|
+| 2.1 | [Low-Rank Plastic Matrices](08-e034-low-rank.md) | Does more capacity → better adaptation? | ❌ **ANSWERED NEGATIVE in E032** — local low-rank Hebbian is catastrophically unstable (rank-1 −1.35 … rank-4 −3172, 1M −7381). Re-scope required: error-based local rules (credit assignment without backprop) or promote **backprop LoRA** (the proven +1.52 bound) as the scaling mechanism |
+| 2.2 | [Ternary Plastic Weights](09-e035-ternary-plasticity.md) | Can we make plasticity tiny AND effective? | ⬜ |
+| 2.3 | [Consolidation Mechanism](10-e036-consolidation.md) | Can we build long-term memory from short-term plasticity? | ⬜ |
 
 ### Phase 3: Continual Learning at Scale
 | Step | Document | Question |
