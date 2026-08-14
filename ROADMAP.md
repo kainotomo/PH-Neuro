@@ -177,7 +177,7 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 
 | Step | What | Key Question | Status |
 |:----:|:-----|:-------------|:------:|
-| **2.1** | Low-Rank Plastic Matrices | LoRA-style BA^T updated via local (non-backprop) Hebbian rules. Does rank>1 help more than vector bias? | ❌ **ANSWERED NEGATIVE (E032 + E033) — LOCAL RULES REJECTED.** E032: local low-rank Hebbian is catastrophically unstable (rank-1 −1.35 … rank-4 −3172, 1M −7381). E033 (Step 1.3 re-scope): error-based predictive coding at the same matched budget is stable but **inert** (Δppl +0.001, p=0.737). **The Phase 2 scaling mechanism is backprop LoRA** (proven +1.52, the product path). |
+| **2.1** | Surprise-Gated LoRA (re-scoped — first brain-machinery value-add on backprop LoRA) | Does E031's surprise gate add value on top of the proven backprop LoRA (the product path)? Reuse E032's minimal LoRA (o_proj+down_proj, rank 1 = 344,064 params, AdamW) and replace the constant lr with the **gated lr** `η·M_t` (M = sigmoid on relative loss deviation from EMA; M=0 during WikiText warmup). Single-domain (WikiText-2 → PubMed, 100K) + sequential two-domain (→ CNN/DailyMail, apache-2.0, 100K) selectivity test. [Report](docs/brain/08-e034-surprise-gated-lora.md) | ✅ **E034 — GATE ADDS VALUE ON BACKPROP.** Single-domain gated Δppl = **+0.902 ± 0.182** (p=0.013, seeds +0.693/+1.025/+0.988) **≥ 0.5 bar**, source *improved* −2.66%. Two-domain (→ CNN/DailyMail): gated backward transfer on PubMed **BT = −0.009 ≈ 0** vs plain **+1.854** (3/3 seeds) — gated **preserves** domain 1 (PubMed still +0.911 over frozen) while plain **wipes its own PubMed gain** (ends worse than frozen) → **selectivity confirmed**. **Step 2.2 (ternary LoRA) uses gated LoRA.** Optional control (const_reduced, single-domain): gated ≈ constant reduced lr (Δppl +0.902 vs +0.947, p≈0.14) — single-domain gain explained by lower avg lr; gate's value = two-domain selectivity. Local low-rank Hebbian (E032) / predictive coding (E033) remain rejected. |
 | **2.2** | Ternary Plastic Weights | Convert plastic weights from float to {-1, 0, +1} using existing DQT/hysteresis infrastructure. Does ternary match float adaptation quality? | ⬜ |
 | **2.3** | Consolidation Mechanism | Sleep-inspired memory transfer: important plastic changes move to long-term store with slower decay. Does this reduce forgetting across sequential domains? | ⬜ |
 
@@ -221,6 +221,32 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 > adapters. Protocol amendments for the 1.2 and 1.3 re-scopings are logged in
 > [04-evaluation-protocol.md §11](docs/brain/04-evaluation-protocol.md);
 > full report [07-e033-predictive-coding.md](docs/brain/07-e033-predictive-coding.md).
+
+> **Brain Step 2.1 (E034): ✅ COMPLETE — SURPRISE GATE ADDS VALUE ON BACKPROP
+> (2026-08-14).**
+> **Result (single-domain + two-domain, pre-registered):** the first
+> value-add of the brain machinery on top of backprop LoRA — reuse E032's
+> minimal LoRA (o_proj+down_proj, rank 1 = 344,064 params, AdamW) and replace
+> the constant lr with the **surprise-gated lr** `η·M_t` (E031's modulator:
+> M = sigmoid on relative loss deviation from EMA, M=0 during WikiText
+> warmup). **Single-domain** (WikiText-2 → PubMed, 100K, 3 seeds): gated Δppl
+> = **+0.902 ± 0.182** (p=0.013; seeds +0.693/+1.025/+0.988) — **exceeds the
+> 0.5 practical bar** with the source *improved* (−2.66%), at ~1/10th the
+> total effective learning (eff mean lr 1.0e-4 vs plain 1e-3). **Sequential
+> two-domain** (WikiText → PubMed → CNN/DailyMail, apache-2.0): gated
+> backward transfer on PubMed **BT_gated ≪ BT_plain** (per-seed gated
+> −0.018/−0.012 vs plain +1.645/+2.056 — plain LoRA's PubMed gains are wiped
+> by CNN training, gated LoRA preserves them while still adapting to CNN)
+> → **the surprise gate makes LoRA selective: it learns at domain boundaries
+and protects earlier domains.** **Optional control** (const_reduced,
+single-domain, 3 seeds): gated ≈ constant reduced lr (Δppl **+0.902** vs
+**+0.947**, paired p≈0.14) — the single-domain gain is explained by the lower
+*average* lr; the gate's distinctive value remains the two-domain
+selectivity (BT −0.009 vs +1.854). **Verdict: the gate adds value on top of
+> backprop → Step 2.2 (ternary LoRA via DQT/hysteresis) uses gated LoRA.**
+> Protocol amendment for the Phase-2 re-scope is logged in
+> [04-evaluation-protocol.md §11](docs/brain/04-evaluation-protocol.md);
+> full report [08-e034-surprise-gated-lora.md](docs/brain/08-e034-surprise-gated-lora.md).
 
 ### Why This Direction
 

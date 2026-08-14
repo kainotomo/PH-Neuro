@@ -1,0 +1,29 @@
+{
+  "second_domain": "cnn_dailymail",
+  "hf_id": "abisee/cnn_dailymail",
+  "config": "3.0.0",
+  "license": "apache-2.0",
+  "document_field": "article",
+  "eval_tokens": 500000,
+  "eval_seed": 42,
+  "window": 512,
+  "stride": 256,
+  "frozen_ppl_table": {
+    "domain": {
+      "wikitext2": 10.663747829494856,
+      "pubmed": 11.45718667056774,
+      "cnn_dailymail": 11.970562593393355
+    },
+    "shift_vs_wikitext_pct": {
+      "wikitext2": 0.0,
+      "pubmed": 7.44,
+      "cnn_dailymail": 12.25
+    }
+  },
+  "caches": {
+    "wikitext2": true,
+    "pubmed": true,
+    "cnn_dailymail": true
+  },
+  "verified": "2026-08-14"
+}

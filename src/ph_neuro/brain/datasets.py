@@ -181,3 +181,91 @@ def make_combined_batch_iter(
         yield next(wiki_iter)
     while True:
         yield next(pub_iter)
+
+
+# ── E034: second domain — CNN/DailyMail (news, apache-2.0) ─────────
+
+
+def load_cnn_dailymail(split: str = "train") -> list[str]:
+    """Load a CNN/DailyMail split as a list of news ``article`` strings.
+
+    E034 second domain (verified 2026-08-14): ``abisee/cnn_dailymail``
+    config ``3.0.0``, license **apache-2.0** (permissive — product-path
+    compatible; unlike ``pile-of-law``'s cc-by-nc-sa-4.0 or
+    ``codeparrot/github-code``'s ``other``). Frozen ppl on the 500K test
+    subsample: **11.971** — a moderate (+12.3% vs WikiText-2, +4.5% vs
+    PubMed) shift that keeps the surprise sigmoid in its sensitive range.
+    """
+    from datasets import load_dataset
+
+    ds = load_dataset("abisee/cnn_dailymail", "3.0.0", split=split)
+    return [row["article"] for row in ds]
+
+
+def cnn_dailymail_train_ids(
+    tokenizer, *, max_tokens: int = TRAIN_BUFFER_TOKENS
+) -> torch.Tensor:
+    """Flat CNN/DailyMail train token ids (cached, truncated incrementally)."""
+    tag = f"{tokenizer.name_or_path.replace('/', '__')}_cnn_train_max{max_tokens}"
+    return tokenized_cache(
+        tag, tokenizer, texts=load_cnn_dailymail("train"), max_tokens=max_tokens
+    )
+
+
+def cnn_dailymail_eval_ids(
+    tokenizer, *, max_tokens: int = PUBMED_EVAL_TOKENS, seed: int = PUBMED_EVAL_SEED
+) -> torch.Tensor:
+    """Flat CNN/DailyMail eval token ids — deterministic 500K subsample of test.
+
+    Document permutation uses ``random.Random(seed)`` (protocol §2 convention:
+    seed 42), accumulating articles until ≥ ``max_tokens`` — bit-identical
+    across seeds/configs, so paired statistics are valid.
+    """
+    tag = f"{tokenizer.name_or_path.replace('/', '__')}_cnn_test_sub{max_tokens}_s{seed}"
+    path = _cache_path(tag)
+    if path.exists():
+        return torch.load(path, weights_only=True)
+    texts = load_cnn_dailymail("test")
+    rng = random.Random(seed)
+    order = list(range(len(texts)))
+    rng.shuffle(order)
+    collected: list[int] = []
+    total = 0
+    for i in order:
+        toks = tokenizer(texts[i], add_special_tokens=False).input_ids
+        collected.extend(toks)
+        total += len(toks)
+        if total >= max_tokens:
+            break
+    ids = torch.tensor(collected, dtype=torch.long)
+    torch.save(ids, path)
+    return ids
+
+
+def make_three_domain_batch_iter(
+    wiki_train_ids: torch.Tensor,
+    pubmed_train_ids: torch.Tensor,
+    cnn_train_ids: torch.Tensor,
+    warmup_steps: int,
+    phase1_steps: int,
+    batch_size: int,
+    seq_len: int,
+    seed: int | None,
+):
+    """Yield the E034 two-domain learn stream.
+
+    ``warmup_steps`` WikiText batches (M=0 warmup), then ``phase1_steps``
+    PubMed batches (domain 1), then CNN/DailyMail batches forever (domain 2).
+    Deterministic given ``(seed, tokens)`` — regenerating the iterator and
+    skipping ``start_step`` items reproduces the same stream, so checkpoints
+    resume onto the identical data sequence.
+    """
+    wiki_iter = cyclic_batch_iter(wiki_train_ids, batch_size, seq_len, seed)
+    pub_iter = cyclic_batch_iter(pubmed_train_ids, batch_size, seq_len, seed)
+    cnn_iter = cyclic_batch_iter(cnn_train_ids, batch_size, seq_len, seed)
+    for _ in range(warmup_steps):
+        yield next(wiki_iter)
+    for _ in range(phase1_steps):
+        yield next(pub_iter)
+    while True:
+        yield next(cnn_iter)
