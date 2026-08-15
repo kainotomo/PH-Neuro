@@ -1,0 +1,416 @@
+{
+  "single": {
+    "ta_q": {
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "n": 3,
+      "adapter": "ta",
+      "tag": "ta_q",
+      "target_ppl_delta": {
+        "n": 3,
+        "mean": 0.6180888445473768,
+        "sd": 0.14991575607910904,
+        "t": 7.141085836119012,
+        "p": 0.01905113957869158,
+        "cohens_d": 4.122907829789535
+      },
+      "forgetting_pct": {
+        "n": 3,
+        "mean": -1.9897664541638918,
+        "sd": 0.47615682996448094,
+        "t": -7.23790225599644,
+        "p": 0.01855888550748383,
+        "cohens_d": -4.178804815867744
+      },
+      "target_block_cohens_d": {
+        "n": 3,
+        "mean": 3.6585164363879876,
+        "sd": 0.2684706160441055,
+        "t": 23.60309087646597,
+        "p": 0.001790172291100948,
+        "cohens_d": 13.627250871234828
+      },
+      "target_ppl_delta_per_seed": [
+        0.4453,
+        0.714,
+        0.6949
+      ],
+      "target_ppl_plastic": [
+        11.0119,
+        10.7431,
+        10.7623
+      ],
+      "target_ppl_frozen": 11.45718667056774,
+      "source_ppl_frozen": 10.663747829494856,
+      "mean_surprise_M": 0.0,
+      "mean_step_time_s": 0.0,
+      "storage": {
+        "n_params": 344064,
+        "float32_bytes": 1376256,
+        "packed_bytes": 86016,
+        "scale_bytes": 384,
+        "total_packed_bytes": 86400,
+        "reduction_factor": 15.928888888888888,
+        "packed": true,
+        "disk_bytes": 86016,
+        "packed_path": "/home/phalo/PH-Neuro/results/brain/e035/smolllm2_1p7b_pubmed_ta_q_seed42.ternary2bit"
+      },
+      "plastic_params": 344064
+    },
+    "ta_qft": {
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "n": 3,
+      "adapter": "ta",
+      "tag": "ta_qft",
+      "target_ppl_delta": {
+        "n": 3,
+        "mean": 0.689293352324062,
+        "sd": 0.14429209435962956,
+        "t": 8.274126956457708,
+        "p": 0.014294377174036732,
+        "cohens_d": 4.777069425619997
+      },
+      "forgetting_pct": {
+        "n": 3,
+        "mean": -2.2394955528102405,
+        "sd": 0.41980246064801274,
+        "t": -9.239869806394971,
+        "p": 0.011511149177462428,
+        "cohens_d": -5.334641319999232
+      },
+      "target_block_cohens_d": {
+        "n": 3,
+        "mean": 3.6173269024417785,
+        "sd": 0.2605095988392252,
+        "t": 24.050530232022762,
+        "p": 0.001724353258217189,
+        "cohens_d": 13.885580103611575
+      },
+      "target_ppl_delta_per_seed": [
+        0.523,
+        0.7808,
+        0.7641
+      ],
+      "target_ppl_plastic": [
+        10.9342,
+        10.6764,
+        10.6931
+      ],
+      "target_ppl_frozen": 11.45718667056774,
+      "source_ppl_frozen": 10.663747829494856,
+      "mean_surprise_M": 0.0,
+      "mean_step_time_s": 0.0,
+      "storage": {
+        "n_params": 344064,
+        "float32_bytes": 1376256,
+        "packed_bytes": 86016,
+        "scale_bytes": 384,
+        "total_packed_bytes": 86400,
+        "reduction_factor": 15.928888888888888,
+        "packed": true,
+        "disk_bytes": 86016,
+        "packed_path": "/home/phalo/PH-Neuro/results/brain/e035/smolllm2_1p7b_pubmed_ta_qft_seed42.ternary2bit"
+      },
+      "plastic_params": 344064
+    },
+    "tb": {
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "n": 3,
+      "adapter": "tb",
+      "tag": "tb",
+      "target_ppl_delta": {
+        "n": 3,
+        "mean": 6.213150120023177e-06,
+        "sd": 0.0009166341911938391,
+        "t": 0.011740225038864054,
+        "p": 0.9916089451915254,
+        "cohens_d": 0.006778222086534946
+      },
+      "forgetting_pct": {
+        "n": 3,
+        "mean": -0.007171258020373846,
+        "sd": 0.0008767403726779603,
+        "t": -14.167230838856005,
+        "p": 0.004945373644224469,
+        "cohens_d": -8.179454538485084
+      },
+      "target_block_cohens_d": {
+        "n": 3,
+        "mean": 0.00010665068439674856,
+        "sd": 0.034202478885484854,
+        "t": 0.00540090689495482,
+        "p": 0.9763898922891922,
+        "cohens_d": 0.0031182150496702715
+      },
+      "target_ppl_delta_per_seed": [
+        -0.0006,
+        0.0011,
+        -0.0004
+      ],
+      "target_ppl_plastic": [
+        11.4578,
+        11.4561,
+        11.4576
+      ],
+      "target_ppl_frozen": 11.45718667056774,
+      "source_ppl_frozen": 10.663747829494856,
+      "mean_surprise_M": 0.2743,
+      "mean_step_time_s": 0.4159,
+      "storage": {
+        "n_params": 344064,
+        "float32_bytes": 1376256,
+        "packed_bytes": 86016,
+        "scale_bytes": 384,
+        "total_packed_bytes": 86400,
+        "reduction_factor": 15.928888888888888,
+        "packed": true,
+        "disk_bytes": 86016,
+        "packed_path": "/home/phalo/PH-Neuro/results/brain/e035/smolllm2_1p7b_pubmed_tb_seed42.ternary2bit"
+      },
+      "plastic_params": 344064
+    },
+    "tc": {
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "n": 3,
+      "adapter": "tc",
+      "tag": "tc",
+      "target_ppl_delta": {
+        "n": 3,
+        "mean": 0.8915721422463486,
+        "sd": 0.20610455367459038,
+        "t": 7.492547939633829,
+        "p": 0.017350899702462265,
+        "cohens_d": 4.325824569863767
+      },
+      "forgetting_pct": {
+        "n": 3,
+        "mean": -2.257652882858019,
+        "sd": 0.15081382240290853,
+        "t": -25.92845560612899,
+        "p": 0.0014841541929547938,
+        "cohens_d": -14.969800823869834
+      },
+      "target_block_cohens_d": {
+        "n": 3,
+        "mean": 3.554846255159499,
+        "sd": 0.1899428182995395,
+        "t": 32.41593644947584,
+        "p": 0.0009503059383609397,
+        "cohens_d": 18.71534963513868
+      },
+      "target_ppl_delta_per_seed": [
+        0.655,
+        1.0324,
+        0.9873
+      ],
+      "target_ppl_plastic": [
+        10.8022,
+        10.4248,
+        10.4699
+      ],
+      "target_ppl_frozen": 11.45718667056774,
+      "source_ppl_frozen": 10.663747829494856,
+      "mean_surprise_M": 0.2034,
+      "mean_step_time_s": 0.4875,
+      "storage": {
+        "n_params": 344064,
+        "float32_bytes": 1376256,
+        "packed_bytes": 86016,
+        "scale_bytes": 384,
+        "total_packed_bytes": 86400,
+        "reduction_factor": 15.928888888888888,
+        "packed": true,
+        "disk_bytes": 86016,
+        "packed_path": "/home/phalo/PH-Neuro/results/brain/e035/smolllm2_1p7b_pubmed_tc_seed42.ternary2bit"
+      },
+      "plastic_params": 344064
+    }
+  },
+  "two": {
+    "tc:tc2": {
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "n": 3,
+      "adapter": "tc",
+      "tag": "tc2",
+      "target_ppl_delta": {
+        "n": 3,
+        "mean": 0.9033049730746731,
+        "sd": 0.19907546908214402,
+        "t": 7.859180818754648,
+        "p": 0.01580709279725664,
+        "cohens_d": 4.53750016131794
+      },
+      "forgetting_pct": {
+        "n": 3,
+        "mean": -2.7970980707787327,
+        "sd": 0.4023588500725643,
+        "t": -12.04078392079091,
+        "p": 0.006826928128651738,
+        "cohens_d": -6.95174983792275
+      },
+      "target_block_cohens_d": {
+        "n": 3,
+        "mean": 3.6237495419151187,
+        "sd": 0.26934801469271397,
+        "t": 23.302634428777967,
+        "p": 0.0018365057655797693,
+        "cohens_d": 13.4537822602824
+      },
+      "target_ppl_delta_per_seed": [
+        0.6762,
+        1.0477,
+        0.986
+      ],
+      "target_ppl_plastic": [
+        10.781,
+        10.4095,
+        10.4712
+      ],
+      "target_ppl_frozen": 11.45718667056774,
+      "source_ppl_frozen": 10.663747829494856,
+      "mean_surprise_M": 0.1884,
+      "mean_step_time_s": 0.467,
+      "storage": {
+        "n_params": 344064,
+        "float32_bytes": 1376256,
+        "packed_bytes": 86016,
+        "scale_bytes": 384,
+        "total_packed_bytes": 86400,
+        "reduction_factor": 15.928888888888888,
+        "packed": true,
+        "disk_bytes": 86016,
+        "packed_path": "/home/phalo/PH-Neuro/results/brain/e035/smolllm2_1p7b_pubmed_tc2_seed42.ternary2bit"
+      },
+      "plastic_params": 344064
+    }
+  },
+  "two_phase2": {
+    "tc:tc2": {
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "n": 3,
+      "phase2_ppl_delta": {
+        "n": 3,
+        "mean": 0.13040076635640574,
+        "sd": 0.023510275754809445,
+        "t": 9.606895088374673,
+        "p": 0.01066214552842544,
+        "cohens_d": 5.546543465349612
+      },
+      "phase2_ppl_delta_per_seed": [
+        0.1036,
+        0.1477,
+        0.1399
+      ],
+      "phase2_ppl_plastic": [
+        11.8669,
+        11.8229,
+        11.8307
+      ],
+      "phase2_ppl_frozen": 11.970562593393355
+    }
+  },
+  "bar_checks": {
+    "ta_q": {
+      "delta_mean": 0.6180888445473768,
+      "delta_sd": 0.14991575607910904,
+      "p": 0.01905113957869158,
+      "ge_90pct_bar": false,
+      "forgetting_lt_1pct": true,
+      "storage_16x": true,
+      "reduction_factor": 15.928888888888888,
+      "packed_bytes": 86016,
+      "disk_bytes": 86016,
+      "mean_step_time_s": 0.0
+    },
+    "ta_qft": {
+      "delta_mean": 0.689293352324062,
+      "delta_sd": 0.14429209435962956,
+      "p": 0.014294377174036732,
+      "ge_90pct_bar": false,
+      "forgetting_lt_1pct": true,
+      "storage_16x": true,
+      "reduction_factor": 15.928888888888888,
+      "packed_bytes": 86016,
+      "disk_bytes": 86016,
+      "mean_step_time_s": 0.0
+    },
+    "tb": {
+      "delta_mean": 6.213150120023177e-06,
+      "delta_sd": 0.0009166341911938391,
+      "p": 0.9916089451915254,
+      "ge_90pct_bar": false,
+      "forgetting_lt_1pct": true,
+      "storage_16x": true,
+      "reduction_factor": 15.928888888888888,
+      "packed_bytes": 86016,
+      "disk_bytes": 86016,
+      "mean_step_time_s": 0.4159
+    },
+    "tc": {
+      "delta_mean": 0.8915721422463486,
+      "delta_sd": 0.20610455367459038,
+      "p": 0.017350899702462265,
+      "ge_90pct_bar": true,
+      "forgetting_lt_1pct": true,
+      "storage_16x": true,
+      "reduction_factor": 15.928888888888888,
+      "packed_bytes": 86016,
+      "disk_bytes": 86016,
+      "mean_step_time_s": 0.4875
+    }
+  },
+  "best_variant": "tc",
+  "backward_transfer": {
+    "best_variant": "tc",
+    "two_tag": "tc:tc2",
+    "seeds": [
+      42,
+      43,
+      44
+    ],
+    "per_seed": {
+      "42": -0.0212,
+      "43": -0.0153,
+      "44": 0.0013
+    },
+    "mean": -0.0118,
+    "sd": 0.0117,
+    "n": 3,
+    "lt_0_1": true
+  },
+  "verdict": {
+    "float_gated_baseline_delta": 0.902,
+    "ternary_bar_90pct": 0.8118,
+    "bt_bar": 0.1,
+    "e034_float_delta": 0.9019234778035775,
+    "best_variant": "tc",
+    "any_variant_ge_90pct": true,
+    "best_ge_90pct": true,
+    "best_forgetting_lt_1pct": true,
+    "storage_16x_confirmed": true,
+    "selectivity_bt_lt_0_1": true
+  }
+}

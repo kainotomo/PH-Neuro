@@ -1,0 +1,164 @@
+{
+  "experiment": "e035_ternary_lora",
+  "step": "2.2",
+  "tag": "ta_qft",
+  "adapter": "ta",
+  "ternary_mode": "ta",
+  "calib_steps": 20,
+  "float_ckpt_used": true,
+  "load_note": "reused float ckpt /home/phalo/PH-Neuro/results/brain/e034/checkpoints/surprise_1p_gated_budget100000_seed42/brain_ckpt_step198.pt",
+  "gate": "surprise_ema",
+  "phases": 1,
+  "phase2_domain": null,
+  "rank": 1,
+  "model": "HuggingFaceTB/SmolLM2-1.7B",
+  "model_short": "smolllm2_1p7b",
+  "modulator": {
+    "mode": "surprise_ema",
+    "alpha": 0.99,
+    "s0": 0.05,
+    "k": 60.0,
+    "M_max": 1.0
+  },
+  "source_domain": "wikitext2",
+  "target_domain": "pubmed",
+  "adaptation_tokens": 100000,
+  "adaptation_steps": 98,
+  "phase1_steps": 98,
+  "phase2_tokens": null,
+  "warmup_steps": 100,
+  "seed": 42,
+  "lr": 0.001,
+  "decay_rate": 0.0,
+  "eval": {
+    "window": 512,
+    "stride": 256,
+    "aggregation": "unweighted"
+  },
+  "metrics": {
+    "source_ppl_frozen": 10.663747829494856,
+    "source_ppl_plastic": 10.47660772276748,
+    "source_ppl_delta": -0.18714010672737658,
+    "target_ppl_frozen": 11.45718667056774,
+    "target_ppl_plastic": 10.934226889400126,
+    "target_ppl_delta": 0.5229597811676143,
+    "target_ppl_delta_ci95": [
+      0.5124130852939839,
+      0.5337607199969909
+    ],
+    "target_block_paired_t": 146.98916523507182,
+    "target_block_paired_p": 0.0,
+    "target_block_cohens_d": 3.3235399100958025,
+    "source_block_paired_t": 90.87030356692739,
+    "source_block_paired_p": 0.0,
+    "source_block_cohens_d": 2.645336810176708,
+    "forgetting_pct": -1.7549187182555603,
+    "calib_mean_loss": 2.6409530997276307,
+    "calib_loss_first": 2.7674312591552734,
+    "calib_loss_last": 2.2769880294799805,
+    "calib_n_steps": 20
+  },
+  "storage": {
+    "n_params": 344064,
+    "float32_bytes": 1376256,
+    "packed_bytes": 86016,
+    "scale_bytes": 384,
+    "total_packed_bytes": 86400,
+    "reduction_factor": 15.928888888888888,
+    "packed": true,
+    "disk_bytes": 86016,
+    "packed_path": "/home/phalo/PH-Neuro/results/brain/e035/smolllm2_1p7b_pubmed_ta_qft_seed42.ternary2bit"
+  },
+  "plastic_weights": {
+    "count": 344064,
+    "bytes": 1376256,
+    "mean_magnitude": 1.0,
+    "max_magnitude": 1.0,
+    "sparsity": 0.0
+  },
+  "n_target_blocks": 1956,
+  "n_source_blocks": 1180,
+  "train_metrics": [],
+  "calib_metrics": [
+    {
+      "step": 0,
+      "loss": 2.7674312591552734
+    },
+    {
+      "step": 1,
+      "loss": 2.77315354347229
+    },
+    {
+      "step": 2,
+      "loss": 2.750366687774658
+    },
+    {
+      "step": 3,
+      "loss": 2.4917752742767334
+    },
+    {
+      "step": 4,
+      "loss": 2.800326108932495
+    },
+    {
+      "step": 5,
+      "loss": 2.6914703845977783
+    },
+    {
+      "step": 6,
+      "loss": 2.9590351581573486
+    },
+    {
+      "step": 7,
+      "loss": 2.800356388092041
+    },
+    {
+      "step": 8,
+      "loss": 2.331141233444214
+    },
+    {
+      "step": 9,
+      "loss": 2.425615072250366
+    },
+    {
+      "step": 10,
+      "loss": 2.809098482131958
+    },
+    {
+      "step": 11,
+      "loss": 2.6781835556030273
+    },
+    {
+      "step": 12,
+      "loss": 2.4227993488311768
+    },
+    {
+      "step": 13,
+      "loss": 2.361417531967163
+    },
+    {
+      "step": 14,
+      "loss": 2.9367380142211914
+    },
+    {
+      "step": 15,
+      "loss": 2.4540584087371826
+    },
+    {
+      "step": 16,
+      "loss": 3.097337484359741
+    },
+    {
+      "step": 17,
+      "loss": 2.5270535945892334
+    },
+    {
+      "step": 18,
+      "loss": 2.4647164344787598
+    },
+    {
+      "step": 19,
+      "loss": 2.2769880294799805
+    }
+  ]
+}

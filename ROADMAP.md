@@ -1,7 +1,7 @@
 # PH-Neuro — Product Roadmap
 
-> **Last updated:** 2026-08-14
-> **Status:** Infrastructure (Phases 0–2.5) COMPLETE ✅ → **Brain Phase 0 COMPLETE ✅ → Brain Phase 1.1 COMPLETE 🟡 (PARTIAL SUCCESS) → Brain Phase 1.2 COMPLETE ❌ (LOW-RANK HEBBIAN REJECTED; LoRA bound met) → Brain Phase 1.3 COMPLETE ❌ (PREDICTIVE CODING INERT; LOCAL-RULE QUESTION CLOSED) → next: pivot to backprop-LoRA product path**
+> **Last updated:** 2026-08-15
+> **Status:** Infrastructure (Phases 0–2.5) COMPLETE ✅ → **Brain Phase 0 COMPLETE ✅ → Brain Phase 1.1 COMPLETE 🟡 (PARTIAL SUCCESS) → Brain Phase 1.2 COMPLETE ❌ (LOW-RANK HEBBIAN REJECTED; LoRA bound met) → Brain Phase 1.3 COMPLETE ❌ (PREDICTIVE CODING INERT; LOCAL-RULE QUESTION CLOSED) → Brain Phase 2.1 COMPLETE ✅ (SURPRISE GATE ADDS VALUE) → Brain Phase 2.2 COMPLETE ✅ (TERNARY LORA: 2-BIT PRESERVES ≥90% OF FLOAT AT 16×) → next: Step 2.3 consolidation (E036)**
 
 ---
 
@@ -178,7 +178,7 @@ in ~7 GB VRAM. This is **5× the current 300M ceiling.**
 | Step | What | Key Question | Status |
 |:----:|:-----|:-------------|:------:|
 | **2.1** | Surprise-Gated LoRA (re-scoped — first brain-machinery value-add on backprop LoRA) | Does E031's surprise gate add value on top of the proven backprop LoRA (the product path)? Reuse E032's minimal LoRA (o_proj+down_proj, rank 1 = 344,064 params, AdamW) and replace the constant lr with the **gated lr** `η·M_t` (M = sigmoid on relative loss deviation from EMA; M=0 during WikiText warmup). Single-domain (WikiText-2 → PubMed, 100K) + sequential two-domain (→ CNN/DailyMail, apache-2.0, 100K) selectivity test. [Report](docs/brain/08-e034-surprise-gated-lora.md) | ✅ **E034 — GATE ADDS VALUE ON BACKPROP.** Single-domain gated Δppl = **+0.902 ± 0.182** (p=0.013, seeds +0.693/+1.025/+0.988) **≥ 0.5 bar**, source *improved* −2.66%. Two-domain (→ CNN/DailyMail): gated backward transfer on PubMed **BT = −0.009 ≈ 0** vs plain **+1.854** (3/3 seeds) — gated **preserves** domain 1 (PubMed still +0.911 over frozen) while plain **wipes its own PubMed gain** (ends worse than frozen) → **selectivity confirmed**. **Step 2.2 (ternary LoRA) uses gated LoRA.** Optional control (const_reduced, single-domain): gated ≈ constant reduced lr (Δppl +0.902 vs +0.947, p≈0.14) — single-domain gain explained by lower avg lr; gate's value = two-domain selectivity. Local low-rank Hebbian (E032) / predictive coding (E033) remain rejected. |
-| **2.2** | Ternary Plastic Weights | Convert plastic weights from float to {-1, 0, +1} using existing DQT/hysteresis infrastructure. Does ternary match float adaptation quality? | ⬜ |
+| **2.2** | Ternary Plastic Weights | Convert plastic weights from float to {-1, 0, +1}. Does ternary match float adaptation quality? | ✅ **E035 — TERNARY LORA: 2-BIT PRESERVES ≥90% OF FLOAT AT 16×.** Three ternarization paths on the gated-LoRA protocol (344K, 100K, 3 seeds): **T-C (STE latent scores + trainable scales) Δppl = +0.892 ± 0.206 = 99% of float (+0.902) ≥ 0.81 bar**, source improved −2.26%, storage **15.93×** (86,016 B packed on disk), two-domain **BT −0.0118 < 0.1** — selectivity survives quantization (matches float's −0.009). T-A (post-train quantize) 69–76% (below bar; calibration recovers some). T-B (DQT stochastic rounding) **inert** (+0.000 — flips ~7%/step never coalesce at rank-1). **Product adapter = STE ternary gated LoRA; on-device stack complete.** [Report](docs/brain/09-e035-ternary-lora.md) |
 | **2.3** | Consolidation Mechanism | Sleep-inspired memory transfer: important plastic changes move to long-term store with slower decay. Does this reduce forgetting across sequential domains? | ⬜ |
 
 ---
@@ -247,6 +247,28 @@ selectivity (BT −0.009 vs +1.854). **Verdict: the gate adds value on top of
 > Protocol amendment for the Phase-2 re-scope is logged in
 > [04-evaluation-protocol.md §11](docs/brain/04-evaluation-protocol.md);
 > full report [08-e034-surprise-gated-lora.md](docs/brain/08-e034-surprise-gated-lora.md).
+
+> **Brain Step 2.2 (E035): ✅ COMPLETE — TERNARY LORA: 2-BIT PRESERVES ≥90%
+> OF FLOAT QUALITY AT 16× STORAGE (2026-08-15).**
+> **Result (15 cells, 0 failures, pre-registered):** the on-device product
+> test — does ternary {-1, 0, +1} 2-bit packing preserve the float gated-LoRA
+> quality (+0.902)? Three ternarization paths on the **same 344K budget /
+> gated protocol** (100K, 3 seeds): **T-C (STE with latent scores + trainable
+> per-matrix scales) Δppl = +0.892 ± 0.206 = 99% of float (≥ the 0.81 bar)**,
+> source *improved* −2.26%, storage **15.93×** (1.38 MB → **86,016 B** packed
+> on disk), ~5% training overhead. **Sequential two-domain** (→ CNN/DailyMail):
+> backward transfer **BT = −0.0118 ± 0.0117 < 0.1** (3/3 seeds), PubMed still
+> +0.903 while adapting to CNN (+0.130) — **selectivity survives
+> quantization**, matching float's BT (−0.009). **T-A** post-training
+> quantize: 69–76% (+0.618/+0.689, below the bar; a 20-step STE calibration
+> recovers +0.078). **T-B (DQT stochastic rounding): INERT** (+0.000 ± 0.001,
+> p=0.992 — flips ~7%/step never coalesce into a coherent rank-1 adapter
+> under the gate). **Verdict: the complete on-device product stack HOLDS —
+> surprise-gated, ternary, continually-learning adapters** (86 KB per domain,
+> selective, ~100% of float quality). Step 2.3 (consolidation) uses T-C as
+> the short-term store. Protocol note for the T-B DQT-init amendment is in
+> the report §1/§8; full report
+> [09-e035-ternary-lora.md](docs/brain/09-e035-ternary-lora.md).
 
 ### Why This Direction
 
