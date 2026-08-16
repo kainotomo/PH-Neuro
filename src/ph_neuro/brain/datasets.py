@@ -269,3 +269,152 @@ def make_three_domain_batch_iter(
         yield next(pub_iter)
     while True:
         yield next(cnn_iter)
+
+
+# ── E036: third domain — C4 (Common Crawl web text, odc-by) ─────────
+#
+# D3 for the E036 consolidation sequence (WikiText-2 → PubMed → CNN/DailyMail
+# → C4). Verified 2026-08-15:
+# * ``allenai/c4`` config ``en`` — a colossal cleaned version of Common
+#   Crawl's web corpus (Google's C4; Rafel et al. 2020), **license ODC-BY**
+#   (Open Data Commons Attribution 1.0 — attribution-only, no non-commercial
+#   / no share-alike restriction → product-path compatible; consistent with
+#   the project's permissive-license rule that rejects only NC/SA-restricted
+#   licenses like pile-of-law's cc-by-nc-sa).
+# * **Frozen ppl (500K eval subsample) = 13.568** — harder than WikiText-2
+#   (10.66), PubMed (11.46), CNN/DailyMail (11.97) → the surprise gate opens
+#   at the D3 boundary (loss *rises* past the EMA). Legal corpora (SCOTUS
+#   8.41, LEDGAR 8.46, EUR-LEX 6.51) were all *easier* than the source —
+#   the gate would have stayed closed (loss falls) → D3 adaptation ~0 → a
+#   vacuous forward-transfer test. C4's difficulty gradient (10.66 → 11.46 →
+#   11.97 → 13.57) keeps the gate open at every boundary and makes D3 the
+#   strongest forward-transfer probe.
+# * ``text`` field (raw web document); train ~364M docs / validation ~364K
+#   docs. Splits load natively via parquet/streaming (verified).
+#
+# Determinism: the eval/probe corpora are fixed 500K/50K-token subsamples of
+# the **validation** split (doc permutation seed 42 / 43 over a fixed 4000-doc
+# stream head); the train buffer is a fixed 300K-token slice (permuted seed
+# over a fixed 3000-doc head). All bit-identical across seeds/configs.
+
+C4_EVAL_HEAD_DOCS = 4_000
+C4_TRAIN_HEAD_DOCS = 3_000
+
+
+def _load_c4_head(split: str, max_docs: int) -> list[str]:
+    """Fetch a deterministic head of the C4 ``en`` split as raw web documents.
+
+    Iterates the streaming dataset in shard order (deterministic file order)
+    and takes the first ``max_docs`` ``text`` fields.
+    """
+    import itertools
+
+    from datasets import load_dataset
+
+    ds = load_dataset("allenai/c4", "en", split=split, streaming=True)
+    return [row["text"] for row in itertools.islice(ds, max_docs)]
+
+
+def _permuted_token_subsample(
+    tokenizer, texts: list[str], *, max_tokens: int, seed: int
+) -> torch.Tensor:
+    """Deterministic document-permuted token subsample (protocol §2 convention)."""
+    rng = random.Random(seed)
+    order = list(range(len(texts)))
+    rng.shuffle(order)
+    collected: list[int] = []
+    total = 0
+    for i in order:
+        toks = tokenizer(texts[i], add_special_tokens=False).input_ids
+        collected.extend(toks)
+        total += len(toks)
+        if total >= max_tokens:
+            break
+    return torch.tensor(collected[:max_tokens], dtype=torch.long)
+
+
+def c4_train_ids(
+    tokenizer, *, max_tokens: int = TRAIN_BUFFER_TOKENS
+) -> torch.Tensor:
+    """Flat C4 train token ids (cached, deterministic 300K-token slice)."""
+    tag = f"{tokenizer.name_or_path.replace('/', '__')}_c4_train_max{max_tokens}"
+    path = _cache_path(tag)
+    if path.exists():
+        return torch.load(path, weights_only=True)
+    texts = _load_c4_head("train", C4_TRAIN_HEAD_DOCS)
+    ids = _permuted_token_subsample(tokenizer, texts, max_tokens=max_tokens, seed=42)
+    torch.save(ids, path)
+    return ids
+
+
+def c4_eval_ids(
+    tokenizer, *, max_tokens: int = PUBMED_EVAL_TOKENS, seed: int = PUBMED_EVAL_SEED
+) -> torch.Tensor:
+    """Flat C4 eval token ids — deterministic 500K subsample of validation.
+
+    Doc permutation seed 42 over a fixed 4000-doc stream head (protocol §2
+    convention) — bit-identical across seeds/configs, so paired statistics
+    are valid. Frozen ppl on this corpus: **13.568** (measured 2026-08-15).
+    """
+    tag = f"{tokenizer.name_or_path.replace('/', '__')}_c4_test_sub{max_tokens}_s{seed}"
+    path = _cache_path(tag)
+    if path.exists():
+        return torch.load(path, weights_only=True)
+    texts = _load_c4_head("validation", C4_EVAL_HEAD_DOCS)
+    ids = _permuted_token_subsample(tokenizer, texts, max_tokens=max_tokens, seed=seed)
+    torch.save(ids, path)
+    return ids
+
+
+def c4_probe_ids(
+    tokenizer, *, max_tokens: int = 50_000, seed: int = 43
+) -> torch.Tensor:
+    """A small deterministic C4 probe for in-training adaptation-speed evals.
+
+    A fixed 50,000-token subsample of the C4 validation split (doc permutation
+    seed 43 — distinct from the 500K locked eval corpus seed 42, so the probe
+    is an independent quick signal). Bit-identical across seeds/configs.
+    """
+    tag = f"{tokenizer.name_or_path.replace('/', '__')}_c4_test_probe{max_tokens}_s{seed}"
+    path = _cache_path(tag)
+    if path.exists():
+        return torch.load(path, weights_only=True)
+    texts = _load_c4_head("validation", C4_EVAL_HEAD_DOCS)
+    ids = _permuted_token_subsample(tokenizer, texts, max_tokens=max_tokens, seed=seed)
+    torch.save(ids, path)
+    return ids
+
+
+def make_four_domain_batch_iter(
+    wiki_train_ids: torch.Tensor,
+    pubmed_train_ids: torch.Tensor,
+    cnn_train_ids: torch.Tensor,
+    c4_train_ids: torch.Tensor,
+    warmup_steps: int,
+    phase1_steps: int,
+    phase2_steps: int,
+    batch_size: int,
+    seq_len: int,
+    seed: int | None,
+):
+    """Yield the E036 three-domain learn stream (WikiText → PubMed → CNN → C4).
+
+    ``warmup_steps`` WikiText batches (M=0 warmup), then ``phase1_steps``
+    PubMed batches (domain 1), then ``phase2_steps`` CNN/DailyMail batches
+    (domain 2), then C4 (web) batches forever (domain 3). Deterministic given
+    ``(seed, tokens)`` — regenerating the iterator and skipping ``start_step``
+    items reproduces the same stream, so checkpoints resume onto the identical
+    data sequence.
+    """
+    wiki_iter = cyclic_batch_iter(wiki_train_ids, batch_size, seq_len, seed)
+    pub_iter = cyclic_batch_iter(pubmed_train_ids, batch_size, seq_len, seed)
+    cnn_iter = cyclic_batch_iter(cnn_train_ids, batch_size, seq_len, seed)
+    c4_iter = cyclic_batch_iter(c4_train_ids, batch_size, seq_len, seed)
+    for _ in range(warmup_steps):
+        yield next(wiki_iter)
+    for _ in range(phase1_steps):
+        yield next(pub_iter)
+    for _ in range(phase2_steps):
+        yield next(cnn_iter)
+    while True:
+        yield next(c4_iter)

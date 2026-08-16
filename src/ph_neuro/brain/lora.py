@@ -567,3 +567,169 @@ def ternary_storage_report(
         "total_packed_bytes": total_packed,
         "reduction_factor": float(float32_bytes / max(total_packed, 1)),
     }
+
+
+# ═══════════════════════════════════════════════════════════════════
+# E036 — consolidation machinery (Step 2.3)
+#
+# Sleep-like consolidation on top of the T-C (STE) ternary LoRA adapter: a
+# persistent LONG-TERM store (LT) accumulates the top-K% (by |ΔW| magnitude)
+# of each domain's SHORT-TERM (ST) latent-score changes; ST is reset and
+# warm-started from LT before each new domain. See 10-e036-consolidation.md
+# for the pre-registered design (K = 10%, add rule, no LT decay).
+#
+# LT is represented as a list of per-adapter **latent states** — detached
+# float32 copies of ``{A_latent, B_latent, A_scale, B_scale}`` (the same
+# tensors a T-C adapter carries). ST is the live T-C adapter attached to the
+# model. The transfer only moves latent-score **signs** into LT (LT keeps the
+# init scale factors, so the injection magnitude stays ~0.01); the per-domain
+# sparse deltas are stored for the storage accounting.
+# ═══════════════════════════════════════════════════════════════════
+
+
+def tc_latent_state(adapter: TernaryLoRAAdapter) -> OrderedDict:
+    """Detached **CPU** float32 copy of a T-C adapter's latent scores + scales.
+
+    All E036 latent states (LT and ST snapshots) live on CPU float32 — the
+    delta math (``latent_change_topk``, ``add_delta_to_lt``) is pure tensor
+    bookkeeping and stays off the CUDA graph; ``tc_set_latent_state`` moves
+    back to the adapter's device on warm-start.
+    """
+    return OrderedDict(
+        [
+            ("A_latent", adapter.A_latent.detach().cpu().to(torch.float32)),
+            ("B_latent", adapter.B_latent.detach().cpu().to(torch.float32)),
+            ("A_scale", adapter.A_scale.detach().cpu().to(torch.float32)),
+            ("B_scale", adapter.B_scale.detach().cpu().to(torch.float32)),
+        ]
+    )
+
+
+def tc_set_latent_state(adapter: TernaryLoRAAdapter, state) -> None:
+    """Overwrite a T-C adapter's latent scores + scales from a saved state."""
+    adapter.A_latent.data.copy_(state["A_latent"].to(adapter.device))
+    adapter.B_latent.data.copy_(state["B_latent"].to(adapter.device))
+    adapter.A_scale.data.copy_(state["A_scale"].to(adapter.device))
+    adapter.B_scale.data.copy_(state["B_scale"].to(adapter.device))
+
+
+def zero_lt_state(adapters: list[TernaryLoRAAdapter]) -> list[OrderedDict]:
+    """A fresh (empty) long-term store: zero latents, canonical init scales.
+
+    ``sign(0) = 0`` → a fresh LT injects nothing (identity). Scales are set to
+    the canonical T-C init (``A_scale = 1/sqrt(d_in)``, ``B_scale = 1e-2``) so
+    LT's injection magnitude matches the float adapter (~0.01) once signs
+    accumulate.
+    """
+    out: list[OrderedDict] = []
+    for ad in adapters:
+        din = ad.in_features
+        out.append(
+            OrderedDict(
+                [
+                    ("A_latent", torch.zeros(ad.rank, din, dtype=torch.float32)),
+                    ("B_latent", torch.zeros(ad.out_features, ad.rank, dtype=torch.float32)),
+                    ("A_scale", torch.tensor(1.0 / math.sqrt(din), dtype=torch.float32)),
+                    ("B_scale", torch.tensor(1e-2, dtype=torch.float32)),
+                ]
+            )
+        )
+    return out
+
+
+def latent_change_topk(
+    init_states: list[OrderedDict],
+    final_states: list[OrderedDict],
+    k: float = 0.10,
+) -> dict:
+    """Top-K% (by |ΔW| magnitude) latent-score change from init → final.
+
+    Args:
+        init_states / final_states: per-adapter latent states (E036 ST init
+            vs ST final — the ST init is the warm-started LT copy, so ΔW is
+            the domain's own change).
+        k: fraction of the **global** budget (all A+B entries across all
+            adapters) to transfer, by |ΔW| magnitude.
+
+    Returns:
+        ``{"delta": [per-adapter OrderedDict with sparse A_latent/B_latent —
+        nonzero only at the kept positions, holding the true float ΔW],
+        "n_kept": int, "kept_frac": float, "k": k, "threshold": float}``.
+    """
+    # Flatten all per-adapter A/B changes to pick the global top-K threshold.
+    all_abs: list[torch.Tensor] = []
+    for init, fin in zip(init_states, final_states):
+        dA = fin["A_latent"].to(torch.float32) - init["A_latent"].to(torch.float32)
+        dB = fin["B_latent"].to(torch.float32) - init["B_latent"].to(torch.float32)
+        all_abs.append(dA.abs().flatten())
+        all_abs.append(dB.abs().flatten())
+    mags = torch.cat(all_abs)
+    n_total = mags.numel()
+    n_keep = int(round(n_total * k))
+    n_keep = min(max(n_keep, 1), n_total)
+    # The k-th largest magnitude = the keep threshold (k=0.10 → the 90th pct).
+    threshold = float(torch.topk(mags, n_keep, largest=True).values.min())
+
+    delta: list[OrderedDict] = []
+    for init, fin in zip(init_states, final_states):
+        dA = fin["A_latent"].to(torch.float32) - init["A_latent"].to(torch.float32)
+        dB = fin["B_latent"].to(torch.float32) - init["B_latent"].to(torch.float32)
+        mA = (dA.abs() >= threshold).to(dA.dtype)
+        mB = (dB.abs() >= threshold).to(dB.dtype)
+        delta.append(
+            OrderedDict(
+                [
+                    ("A_latent", dA * mA),
+                    ("B_latent", dB * mB),
+                ]
+            )
+        )
+    kept = int((mags >= threshold).sum().item())
+    return {
+        "delta": delta,
+        "n_kept": kept,
+        "kept_frac": float(kept) / n_total,
+        "k": k,
+        "threshold": threshold,
+    }
+
+
+def add_delta_to_lt(lt_states: list[OrderedDict], delta: dict) -> list[OrderedDict]:
+    """In place: ``lt += delta`` (the E036 add rule; sparse top-K add)."""
+    for i, st in enumerate(lt_states):
+        d = delta["delta"][i]
+        st["A_latent"] = st["A_latent"] + d["A_latent"].to(torch.float32)
+        st["B_latent"] = st["B_latent"] + d["B_latent"].to(torch.float32)
+    return lt_states
+
+
+def warm_start_st_from_lt(adapters: list[TernaryLoRAAdapter], lt_states) -> None:
+    """Warm-start the short-term adapters from the long-term store.
+
+    Copies LT's latent scores + scales into ST, so the next domain begins by
+    injecting the accumulated store (the forward-transfer mechanism). ST's
+    ΔW for the next transfer is then measured relative to this warm-start.
+    """
+    for ad, st in zip(adapters, lt_states):
+        tc_set_latent_state(ad, st)
+
+
+def sparse_delta_storage(n_params: int, n_kept: int) -> dict:
+    """On-disk bytes for one sparse ternary delta (bitmap + packed signs).
+
+    The delta is stored as (a) a 1-bit presence mask over the full parameter
+    budget, (b) the 2-bit packed ternary signs of the kept entries, (c) two
+    fp32 per-A/B scales. This is the on-device sparse-ternary format
+    (bitmap-CSR variant); the conservative int32-index variant is reported
+    separately by the runner.
+    """
+    mask_bytes = math.ceil(n_params / 8)
+    sign_bytes = math.ceil(n_kept / 4)  # 2-bit packed
+    scale_bytes = 8
+    return {
+        "mask_bytes": mask_bytes,
+        "sign_bytes": sign_bytes,
+        "scale_bytes": scale_bytes,
+        "total_bytes": mask_bytes + sign_bytes + scale_bytes,
+        "int32_index_variant_bytes": n_kept * 4 + sign_bytes + scale_bytes,
+    }
